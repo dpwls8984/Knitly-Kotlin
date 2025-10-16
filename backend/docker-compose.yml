@@ -3,7 +3,7 @@ services:
     image: mysql:8.0
     container_name: knitly_db-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${DB_PW}
       MYSQL_DATABASE: knitly_db
     ports:
       - "3306:3306"

@@ -43,3 +43,8 @@ out/
 
 ### env ###
 /backend/.env
+# env files (all environments)
+.env
+**/.env
+*.env
+.env.*
