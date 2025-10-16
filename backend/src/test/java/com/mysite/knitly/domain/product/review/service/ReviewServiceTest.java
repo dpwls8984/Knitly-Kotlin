@@ -51,8 +51,8 @@ class ReviewServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        reviewService.uploadDir = "static/review/";
-        reviewService.urlPrefix = "/static/review/";
+        reviewService.uploadDir = "resources/static/review/";
+        reviewService.urlPrefix = "/resources/static/review/";
     }
 
     @Test
