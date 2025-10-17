@@ -66,7 +66,9 @@ public class ReviewService {
         if (request.reviewImageUrls() != null && !request.reviewImageUrls().isEmpty()) {
             new File(uploadDir).mkdirs();
 
-            for (MultipartFile file : request.reviewImageUrls()) {
+            List<MultipartFile> imageFiles = request.reviewImageUrls();
+            for (int i = 0; i < imageFiles.size(); i++) {
+                MultipartFile file = imageFiles.get(i);
                 if (file.isEmpty()) continue;
 
                 String originalFilename = file.getOriginalFilename();
@@ -79,11 +81,12 @@ public class ReviewService {
                     Path path = Paths.get(uploadDir, filename);
                     Files.write(path, file.getBytes());
 
-                    String url = urlPrefix + filename; // 클라이언트 접근 URL
+                    String url = urlPrefix + filename;
                     reviewImageUrls.add(url);
 
                     ReviewImage reviewImage = ReviewImage.builder()
                             .reviewImageUrl(url)
+                            .sortOrder(i)
                             .build();
                     reviewImages.add(reviewImage);
 
