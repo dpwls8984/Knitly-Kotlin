@@ -3,6 +3,7 @@ package com.mysite.knitly.domain.product.review.dto;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -15,5 +16,6 @@ public record ReviewCreateRequest(
 
         String content,
 
+        @Size(max = 10, message = "REVIEW_IMAGES_TOO_MANY")
         List<MultipartFile> reviewImageUrls
 ) {}
