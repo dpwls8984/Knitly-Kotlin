@@ -11,8 +11,10 @@ import java.util.List;
 
 @Repository
 public interface ReviewRepository extends JpaRepository<Review, Long> {
-    @EntityGraph(attributePaths = {"reviewImages"})
+    @EntityGraph(attributePaths = {"user", "reviewImages"})
     List<Review> findByProduct_ProductIdAndIsDeletedFalse(Long productId);
     // 추후 페이징용
+
+    @EntityGraph(attributePaths = {"user", "reviewImages"})
     List<Review> findByProduct_ProductIdAndIsDeletedFalse(Long productId, Pageable pageable);
 }

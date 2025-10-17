@@ -11,6 +11,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -31,7 +33,7 @@ public class Review {
     private String content;
 
     @CreatedDate
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -43,19 +45,22 @@ public class Review {
     private User user;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean isDeleted = false;
+
+    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ReviewImage> reviewImages = new ArrayList<>();
 
     public void setIsDeleted(boolean isDeleted) {
         this.isDeleted = isDeleted;
     }
-}
 
-//CREATE TABLE `reviews` (
-//        `review_id`	BIGINT	NOT NULL	DEFAULT AUTO_INCREMENT,
-//        `rating`	TINYINT	NOT NULL	COMMENT 'CHECK(1 <= rating AND rating <= 5)',
-//        `content`	VARCHAR(300)	NOT NULL,
-//	      `created_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
-//        `product_id`	BIGINT	NOT NULL	DEFAULT AUTO_INCREMENT,
-//        `user_id`	BIGINT	NOT NULL,
-//        `is_deleted`	BOOLEAN	NOT NULL	DEFAULT FALSE	COMMENT '소프트 딜리트'
-//);
+    public void addReviewImages(List<ReviewImage> images) {
+        this.reviewImages.clear();
+        if (images != null) {
+            this.reviewImages.addAll(images);
+            images.forEach(image -> image.setReview(this)); // 양방향 연관관계 설정
+        }
+    }
+}

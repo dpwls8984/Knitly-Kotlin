@@ -24,7 +24,7 @@ public class ReviewController {
             @PathVariable Long productId,
             @RequestParam UUID userId,
             @RequestParam("content") String content,
-            @RequestParam("rating") Byte rating,
+            @RequestParam("rating") Integer rating,
             @RequestParam(value = "images", required = false) List<MultipartFile> images
     ) {
         ReviewCreateRequest request = new ReviewCreateRequest(rating, content, images);

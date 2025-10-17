@@ -26,11 +26,16 @@ public class ReviewImage {
 
     private String reviewImageUrl;
 
+    @Builder.Default
     private Integer sortOrder = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "review_id", nullable = false)
     private Review review;
+
+    public void setReview(Review review) {
+        this.review = review;
+    }
 }
 
 //CREATE TABLE `review_images` (

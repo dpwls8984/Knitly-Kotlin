@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
-    private final ReviewImageRepository reviewImageRepository;
     //conflict 안생기도록 일단 이름 임시로. 추후에 Tmp > 그냥 리포로 변경하고 tmp 파일 삭제
     private final ProductRepositoryTmp productRepository;
     private final UserRepositoryTmp userRepository;
@@ -59,41 +58,44 @@ public class ReviewService {
                 .product(product)
                 .rating(request.rating())
                 .content(request.content())
-                .isDeleted(false)
                 .build();
-
-        Review savedReview = reviewRepository.save(review);
 
         List<String> reviewImageUrls = new ArrayList<>();
         List<ReviewImage> reviewImages = new ArrayList<>();
-        new File(uploadDir).mkdirs();
 
-        for (MultipartFile file : request.reviewImageUrls()) {
-            String originalFilename = file.getOriginalFilename();
-            if (originalFilename == null || !originalFilename.matches("(?i).*\\.(jpg|jpeg|png)$")) {
-                throw new ServiceException(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
-            }
+        if (request.reviewImageUrls() != null && !request.reviewImageUrls().isEmpty()) {
+            new File(uploadDir).mkdirs();
 
-            try {
-                String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
-                Path path = Paths.get(uploadDir + filename);
-                Files.write(path, file.getBytes());
+            for (MultipartFile file : request.reviewImageUrls()) {
+                if (file.isEmpty()) continue;
 
-                String url = "/static/review/" + filename; // 클라이언트 접근 URL
-                reviewImageUrls.add(url);
+                String originalFilename = file.getOriginalFilename();
+                if (originalFilename == null || !originalFilename.matches("(?i).*\\.(jpg|jpeg|png)$")) {
+                    throw new ServiceException(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
+                }
 
-                ReviewImage reviewImage = ReviewImage.builder()
-                        .review(savedReview)
-                        .reviewImageUrl(url)
-                        .build();
-                reviewImages.add(reviewImage);
+                try {
+                    String filename = UUID.randomUUID() + "_" + originalFilename;
+                    Path path = Paths.get(uploadDir, filename);
+                    Files.write(path, file.getBytes());
 
-            } catch (IOException e) {
-                throw new ServiceException(ErrorCode.REVIEW_IMAGE_SAVE_FAILED);
+                    String url = urlPrefix + filename; // 클라이언트 접근 URL
+                    reviewImageUrls.add(url);
+
+                    ReviewImage reviewImage = ReviewImage.builder()
+                            .reviewImageUrl(url)
+                            .build();
+                    reviewImages.add(reviewImage);
+
+                } catch (IOException e) {
+                    throw new ServiceException(ErrorCode.REVIEW_IMAGE_SAVE_FAILED);
+                }
             }
         }
 
-        reviewImageRepository.saveAll(reviewImages);
+        review.addReviewImages(reviewImages);
+
+        Review savedReview = reviewRepository.save(review);
 
         return ReviewListResponse.from(savedReview, reviewImageUrls);
     }
@@ -108,7 +110,6 @@ public class ReviewService {
             throw new ServiceException(ErrorCode.REVIEW_NOT_AUTHORIZED);
         }
 
-        // DTO에서 하지 않음
         review.setIsDeleted(true);
     }
 
@@ -121,8 +122,7 @@ public class ReviewService {
         //해당 리뷰의 이미지 조회
         return reviews.stream()
                 .map(review -> {
-                    List<String> imageUrls = reviewImageRepository.findByReview_ReviewId(review.getReviewId())
-                            .stream()
+                    List<String> imageUrls = review.getReviewImages().stream()
                             .map(ReviewImage::getReviewImageUrl)
                             .toList();
                     return ReviewListResponse.from(review, imageUrls);
