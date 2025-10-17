@@ -6,7 +6,6 @@ import com.mysite.knitly.domain.product.review.dto.ReviewListResponse;
 import com.mysite.knitly.domain.product.review.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,7 +15,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping
-public class ReivewController {
+public class ReviewController {
     private final ReviewService reviewService;
 
     // 1️. 리뷰 등록
