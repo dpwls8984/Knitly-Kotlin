@@ -48,13 +48,6 @@ public class ReviewService {
     // 1️. 리뷰 등록
     @Transactional
     public ReviewListResponse createReview(Long productId, UUID userId, ReviewCreateRequest request) {
-        if (request.rating() < 1 || request.rating() > 5) {
-            throw new ServiceException(ErrorCode.REVIEW_RATING_INVALID);
-        }
-        if (request.content() == null || request.content().isBlank()) {
-            throw new ServiceException(ErrorCode.REVIEW_CANNOT_BE_EMPTY);
-        }
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 

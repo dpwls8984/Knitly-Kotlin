@@ -1,14 +1,13 @@
 package com.mysite.knitly.domain.product.review.dto;
 
 import com.mysite.knitly.domain.product.review.entity.Review;
-import com.mysite.knitly.domain.product.review.service.ReviewService;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 public record ReviewListResponse(
         Long reviewId,
-        Byte rating,
+        Integer rating,
         String content,
         LocalDateTime createdAt,
         String userName,

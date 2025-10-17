@@ -25,7 +25,7 @@ public class Review {
     private Long reviewId;
 
     @Column(nullable = false)
-    private Byte rating; // TINYINT, 1~5 범위
+    private Integer rating; // TINYINT, 1~5 범위
 
     @Column(nullable = false, length = 300)
     private String content;
