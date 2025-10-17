@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/community/posts")
+@RequestMapping("/community/posts")
 @RequiredArgsConstructor
 public class PostController {
 
@@ -27,12 +27,12 @@ public class PostController {
         return ResponseEntity.ok(postService.getPostList(category, page, size));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{postId}")
     public ResponseEntity<PostResponse> getPost(
-            @PathVariable Long id,
+            @PathVariable("postId") Long postId,
             @RequestParam(required = false) UUID currentUserId
     ) {
-        return ResponseEntity.ok(postService.getPost(id, currentUserId));
+        return ResponseEntity.ok(postService.getPost(postId, currentUserId));
     }
 
     @PostMapping
@@ -42,21 +42,21 @@ public class PostController {
         return ResponseEntity.ok(postService.create(request));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{postId}")
     public ResponseEntity<PostResponse> update(
-            @PathVariable Long id,
+            @PathVariable("postId") Long postId,
             @Valid @RequestBody PostUpdateRequest request,
             @RequestParam UUID currentUserId
     ) {
-        return ResponseEntity.ok(postService.update(id, request, currentUserId));
+        return ResponseEntity.ok(postService.update(postId, request, currentUserId));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{postid}")
     public ResponseEntity<Void> delete(
-            @PathVariable Long id,
+            @PathVariable("postId") Long postId,
             @RequestParam UUID currentUserId
     ) {
-        postService.delete(id, currentUserId);
+        postService.delete(postId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 }

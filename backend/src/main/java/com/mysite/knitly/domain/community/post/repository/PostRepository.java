@@ -26,4 +26,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                     "ORDER BY p.createdAt DESC"
     )
     Page<PostListRow> findListRows(@Param("category") PostCategory category, Pageable pageable);
+    @Query("SELECT COUNT(c.id) FROM Comment c WHERE c.post.id = :postId AND c.deleted = false")
+    long countCommentsByPostId(@Param("postId") Long postId);
 }

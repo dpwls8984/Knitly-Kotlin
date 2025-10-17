@@ -52,7 +52,7 @@ public class PostService {
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
 
-        long commentCount = (p.getComments() == null) ? 0 : p.getComments().size();
+        long commentCount = postRepository.countCommentsByPostId(id);
 
         boolean mine = currentUserIdOrNull != null
                 && p.getAuthor() != null
