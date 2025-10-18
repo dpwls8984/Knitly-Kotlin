@@ -6,6 +6,7 @@ import com.mysite.knitly.domain.product.product.dto.ProductModifyResponse;
 import com.mysite.knitly.domain.product.product.dto.ProductRegisterRequest;
 import com.mysite.knitly.domain.product.product.dto.ProductRegisterResponse;
 import com.mysite.knitly.domain.product.product.service.ProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +26,7 @@ public class ProductController {
     public ResponseEntity<ProductRegisterResponse> registerProduct(
             @PathVariable("userId") UUID userId,
             @PathVariable Long designId,
-            @RequestBody ProductRegisterRequest request
+            @RequestBody @Valid ProductRegisterRequest request
     ) {
         ProductRegisterResponse response = productService.registerProduct(userId, designId, request);
         return ResponseEntity.ok(response);
@@ -35,7 +36,7 @@ public class ProductController {
     public ResponseEntity<ProductModifyResponse> modifyProduct(
             @PathVariable("userId") UUID userId,
             @PathVariable Long productId,
-            @RequestBody ProductModifyRequest request
+            @RequestBody @Valid ProductModifyRequest request
     ) {
         ProductModifyResponse response = productService.modifyProduct(userId, productId, request);
         return ResponseEntity.ok(response);

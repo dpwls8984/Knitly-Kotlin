@@ -1,12 +1,13 @@
 package com.mysite.knitly.domain.product.product.dto;
 
 import com.mysite.knitly.domain.product.product.entity.Product;
+import com.mysite.knitly.domain.product.product.entity.ProductCategory;
 
 public record ProductRegisterResponse (
         Long productId,
         String title,
         String description,
-        String productCategory,
+        ProductCategory productCategory,
         String sizeInfo,
         Double price,
         String createdAt,

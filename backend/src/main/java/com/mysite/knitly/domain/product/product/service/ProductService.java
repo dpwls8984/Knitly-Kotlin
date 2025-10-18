@@ -7,6 +7,7 @@ import com.mysite.knitly.domain.product.product.dto.ProductModifyResponse;
 import com.mysite.knitly.domain.product.product.dto.ProductRegisterRequest;
 import com.mysite.knitly.domain.product.product.dto.ProductRegisterResponse;
 import com.mysite.knitly.domain.product.product.entity.Product;
+import com.mysite.knitly.domain.product.product.entity.ProductCategory;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.repository.UserRepositoryTmp;
@@ -36,6 +37,7 @@ public class ProductService {
 
         //design.startSale() TODO: 나중에 구현 - 도안 상태 변경
 
+        //TODO: newProduct인지 Product인지 이름 통일
         Product newProduct = Product.builder()
                 .title(request.title())
                 .description(request.description())
@@ -56,6 +58,10 @@ public class ProductService {
 
     public ProductModifyResponse modifyProduct(UUID userId, Long productId, ProductModifyRequest request) {
         Product product = findProductById(productId);
+
+        if (product.getIsDeleted()) {
+            throw new ServiceException(ErrorCode.PRODUCT_ALREADY_DELETED);
+        }
 
         if (!product.getUser().getUserId().equals(userId)) {
             throw new ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED);

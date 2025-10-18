@@ -33,8 +33,10 @@ public class Product {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false, columnDefinition = "ENUM('TOP', 'BOTTOM', 'OUTER', 'BAG', 'ETC')")
-    private String productCategory; // 'TOP', 'BOTTOM', 'OUTER', 'BAG', 'ETC'
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProductCategory productCategory; // 'TOP', 'BOTTOM', 'OUTER', 'BAG', 'ETC'
 
     @Column(nullable = false)
     private String sizeInfo;
@@ -72,7 +74,7 @@ public class Product {
     private Double avgReviewRating; // DECIMAL(3,2)
 
     //상품 수정하는 로직 추가
-    public void update(String description, String productCategory, String sizeInfo, Integer stockQuantity) {
+    public void update(String description, ProductCategory productCategory, String sizeInfo, Integer stockQuantity) {
         this.description = description;
         this.productCategory = productCategory;
         this.sizeInfo = sizeInfo;

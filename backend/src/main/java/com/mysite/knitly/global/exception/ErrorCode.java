@@ -15,6 +15,7 @@ public enum ErrorCode {
     PRODUCT_NOT_FOUND("2001", HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다."),
     PRODUCT_MODIFY_UNAUTHORIZED("2002", HttpStatus.FORBIDDEN, "상품 수정 권한이 없습니다."),
     PRODUCT_DELETE_UNAUTHORIZED("2003", HttpStatus.FORBIDDEN, "상품 삭제 권한이 없습니다."),
+    PRODUCT_ALREADY_DELETED("2004", HttpStatus.BAD_REQUEST, "이미 삭제된 상품입니다."),
     // Order 3000
 
     // Post 4000
