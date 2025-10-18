@@ -72,4 +72,19 @@ public class LocalFileStorage {
         return Paths.get(uploadDir).toAbsolutePath().normalize().resolve(rel).normalize();
     }
 
+    public void deleteFile(String fileUrl) throws IOException {
+        try {
+            String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+            Path filePath = Paths.get(uploadDir).resolve(fileName);
+
+            if (Files.exists(filePath)) {
+                Files.delete(filePath);
+                log.info("파일 삭제 완료: {}", filePath);
+            } else {
+                log.warn("삭제할 파일이 존재하지 않음: {}", filePath);
+            }
+        } catch (IOException e) {
+            log.error("파일 삭제 실패: url={}", fileUrl, e);
+        }
+    }
 }
