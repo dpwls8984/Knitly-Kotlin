@@ -33,6 +33,9 @@ public class ProductService {
 
         Design design = designRepository.findById(designId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.DESIGN_NOT_FOUND));
+
+        //design.startSale() TODO: 나중에 구현 - 도안 상태 변경
+
         Product newProduct = Product.builder()
                 .title(request.title())
                 .description(request.description())
@@ -52,15 +55,12 @@ public class ProductService {
     }
 
     public ProductModifyResponse modifyProduct(UUID userId, Long productId, ProductModifyRequest request) {
-        // 1. 상품 정보 조회
         Product product = findProductById(productId);
 
-        // 2. (핵심) 상품 소유자의 ID와 현재 로그인한 사용자의 userId가 같은지 비교
         if (!product.getUser().getUserId().equals(userId)) {
             throw new ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED);
         }
 
-        // 3. 엔티티 내부의 update 메서드를 호출하여 값 변경 (Dirty Checking 활용)
         product.update(
                 request.description(),
                 request.productCategory(),
@@ -69,6 +69,16 @@ public class ProductService {
         );
 
         return ProductModifyResponse.from(product);
+    }
+
+    public void deleteProduct(UUID userId, Long productId) {
+        Product product = findProductById(productId);
+
+        if (!product.getUser().getUserId().equals(userId)) {
+            throw new ServiceException(ErrorCode.PRODUCT_DELETE_UNAUTHORIZED);
+        }
+        product.softDelete();
+        //product.getDesign().stopSale(); TODO: 나중에 구현 - 도안 상태 변경
     }
 
     private Product findProductById(Long productId){

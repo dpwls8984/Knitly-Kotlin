@@ -19,9 +19,10 @@ public class ProductController {
 
     private final ProductService productService;
 
+    //TODO: userId 삭제
+
     @PostMapping("/{designId}/sale")
     public ResponseEntity<ProductRegisterResponse> registerProduct(
-            //userId 이렇게 구현하면 보안 취약점 생길수있음. 나중에 고치기
             @PathVariable("userId") UUID userId,
             @PathVariable Long designId,
             @RequestBody ProductRegisterRequest request
@@ -38,5 +39,14 @@ public class ProductController {
     ) {
         ProductModifyResponse response = productService.modifyProduct(userId, productId, request);
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{productId}")
+    public ResponseEntity<Void> deleteProduct(
+            @PathVariable("userId") UUID userId,
+            @PathVariable Long productId
+    ) {
+        productService.deleteProduct(userId, productId);
+        return ResponseEntity.noContent().build();
     }
 }

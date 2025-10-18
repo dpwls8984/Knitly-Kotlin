@@ -78,6 +78,11 @@ public class Product {
         this.sizeInfo = sizeInfo;
         this.stockQuantity = stockQuantity;
     }
+
+    //소프트 딜리트 로직 추가
+    public void softDelete() {
+        this.isDeleted = true;
+    }
 }
 
 
