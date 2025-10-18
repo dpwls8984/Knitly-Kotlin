@@ -13,8 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.UUID;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -58,31 +58,27 @@ class PostServiceTest {
 
     @Test
     void create_success() {
-        PostCreateRequest req = PostCreateRequest.builder()
-                .category(PostCategory.FREE)
-                .title("첫 글")
-                .content("내용")
-                .imageUrl("https://example.com/a.jpg")
-                .authorId(authorId)
-                .build();
-
+        PostCreateRequest req = new PostCreateRequest(
+                PostCategory.FREE, "첫 글", "내용",
+                List.of("https://example.com/a.jpg"),
+                authorId
+        );
         PostResponse res = postService.create(req);
 
-        assertThat(res.getId()).isNotNull();
-        assertThat(res.getTitle()).isEqualTo("첫 글");
-        assertThat(res.getAuthorId()).isEqualTo(authorId);
-        assertThat(res.isMine()).isTrue();
+        assertThat(res.id()).isNotNull();
+        assertThat(res.title()).isEqualTo("첫 글");
+        assertThat(res.authorId()).isEqualTo(authorId);
+        assertThat(res.mine()).isTrue();
+        assertThat(res.imageUrls()).hasSize(1).containsExactly("https://example.com/a.jpg");
     }
 
     @Test
     void create_invalid_image_extension_throws() {
-        PostCreateRequest req = PostCreateRequest.builder()
-                .category(PostCategory.FREE)
-                .title("이미지 확장자 실패")
-                .content("내용")
-                .imageUrl("http://x/evil.gif") // png/jpg/jpeg만 허용
-                .authorId(authorId)
-                .build();
+        PostCreateRequest req = new PostCreateRequest(
+                PostCategory.FREE, "이미지 확장자 실패", "내용",
+                List.of("http://x/evil.gif"),
+                authorId
+        );
 
         assertThatThrownBy(() -> postService.create(req))
                 .isInstanceOf(ServiceException.class)
@@ -99,24 +95,19 @@ class PostServiceTest {
     @Test
     void update_forbidden_when_not_author() {
         // given
-        PostCreateRequest req = PostCreateRequest.builder()
-                .category(PostCategory.TIP)
-                .title("원본")
-                .content("내용")
-                .imageUrl("https://example.com/tip.jpg")
-                .authorId(authorId)
-                .build();
+        PostCreateRequest req = new PostCreateRequest(
+                PostCategory.TIP, "원본", "내용",
+                List.of("https://example.com/tip.jpg"),
+                authorId
+        );
         PostResponse created = postService.create(req);
 
-        PostUpdateRequest update = PostUpdateRequest.builder()
-                .category(PostCategory.TIP)
-                .title("수정제목")
-                .content("수정내용")
-                .imageUrl("https://example.com/new.jpg")
-                .build();
-
+        PostUpdateRequest update = new PostUpdateRequest(
+                PostCategory.TIP, "수정제목", "수정내용",
+                List.of("https://example.com/new.jpg")
+        );
         // when + then
-        assertThatThrownBy(() -> postService.update(created.getId(), update, otherUserId))
+        assertThatThrownBy(() -> postService.update(created.id(), update, otherUserId))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining(ErrorCode.POST_UPDATE_FORBIDDEN.getMessage());
     }
@@ -124,17 +115,16 @@ class PostServiceTest {
     @Test
     void delete_forbidden_when_not_author() {
         // given
-        PostCreateRequest req = PostCreateRequest.builder()
-                .category(PostCategory.QUESTION)
-                .title("질문")
-                .content("질문내용")
-                .imageUrl("https://example.com/q.jpg")
-                .authorId(authorId)
-                .build();
+        PostCreateRequest req = new PostCreateRequest(
+                PostCategory.QUESTION, "질문", "질문내용",
+                List.of("https://example.com/q.jpg"),
+                authorId
+        );
+
         PostResponse created = postService.create(req);
 
         // when + then
-        assertThatThrownBy(() -> postService.delete(created.getId(), otherUserId))
+        assertThatThrownBy(() -> postService.delete(created.id(), otherUserId))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining(ErrorCode.POST_DELETE_FORBIDDEN.getMessage());
     }
@@ -143,25 +133,21 @@ class PostServiceTest {
     void list_paging_and_filter() {
         // given: FREE 2건, TIP 1건
         for (int i = 0; i < 2; i++) {
-            postService.create(PostCreateRequest.builder()
-                    .category(PostCategory.FREE)
-                    .title("free-" + i)
-                    .content("c")
-                    .imageUrl("https://example.com/i.jpg")
-                    .authorId(authorId)
-                    .build());
+            postService.create(new PostCreateRequest(
+                    PostCategory.FREE, "free-" + i, "c",
+                    List.of("https://example.com/i.jpg"),
+                    authorId
+            ));
         }
-        postService.create(PostCreateRequest.builder()
-                .category(PostCategory.TIP)
-                .title("tip")
-                .content("c")
-                .imageUrl("https://example.com/i.jpg")
-                .authorId(authorId)
-                .build());
+        postService.create(new PostCreateRequest(
+                PostCategory.TIP, "tip", "c",
+                List.of("https://example.com/i.jpg"),
+                authorId
+        ));
 
         // when
-        var page0 = postService.getPostList(PostCategory.FREE, 0, 10);
-        var all = postService.getPostList(null, 0, 10);
+        var page0 = postService.getPostList(PostCategory.FREE, /*query*/ null, 0, 10);
+        var all   = postService.getPostList(null, /*query*/ null, 0, 10);
 
         // then
         assertThat(page0.getTotalElements()).isEqualTo(2);

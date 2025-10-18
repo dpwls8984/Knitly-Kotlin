@@ -14,8 +14,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.UUID;
+import java.util.List;
+import java.util.Objects;
 
 // 상세 기능:  mine(현재 사용자 = 작성자)
 // 등록,수정 기능, 이미지 확장자 검증(png/jpg/jpeg) + 엔티티 저장/수정
@@ -27,24 +28,27 @@ public class PostService {
     private final PostRepository postRepository;
     private final UserRepositoryTmp userRepository;
 
-    public Page<PostListItem> getPostList(PostCategory category, int page, int size) {
+    public Page<PostListItemResponse> getPostList(PostCategory category, String query, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<PostListRow> rows = postRepository.findListRows(category, pageable);
+        Page<Post> posts = postRepository.findListRows(category, query, pageable);
 
-        return rows.map(row -> {
-            String ex = (row.excerpt == null) ? "" :
-                    (row.excerpt.length() > 100 ? row.excerpt.substring(0, 100) : row.excerpt);
+        return posts.map(p -> {
+            String exRaw = p.getContent() == null ? "" : p.getContent();
+            String ex = exRaw.length() > 10 ? exRaw.substring(0, 10) + "..." : exRaw;
+            Long commentCount = postRepository.countCommentsByPostId(p.getId());
+            String thumbnail = (p.getImageUrls() == null || p.getImageUrls().isEmpty())
+                    ? null : p.getImageUrls().get(0);
 
-            return PostListItem.builder()
-                    .id(row.id)
-                    .category(row.category)
-                    .title(row.title)
-                    .excerpt(ex)
-                    .authorDisplay(Anonymizer.yarn(row.authorId))
-                    .createdAt(row.createdAt)
-                    .commentCount(row.commentCount)
-                    .thumbnailUrl(row.imageUrl)
-                    .build();
+            return new PostListItemResponse(
+                    p.getId(),
+                    p.getCategory(),
+                    p.getTitle(),
+                    ex,
+                    Anonymizer.yarn(p.getAuthor().getUserId()),
+                    p.getCreatedAt(),
+                    commentCount,
+                    thumbnail
+            );
         });
     }
 
@@ -58,37 +62,44 @@ public class PostService {
                 && p.getAuthor() != null
                 && p.getAuthor().getUserId().equals(currentUserIdOrNull);
 
-        return PostResponse.builder()
-                .id(p.getId())
-                .category(p.getCategory())
-                .title(p.getTitle())
-                .content(p.getContent())
-                .imageUrl(p.getImageUrl())
-                .authorId(p.getAuthor().getUserId())
-                .authorDisplay(Anonymizer.yarn(p.getAuthor().getUserId()))
-                .createdAt(p.getCreatedAt())
-                .updatedAt(p.getUpdatedAt())
-                .commentCount(commentCount)
-                .mine(mine)
-                .build();
+        return new PostResponse(
+                p.getId(),
+                p.getCategory(),
+                p.getTitle(),
+                p.getContent(),
+                p.getImageUrls(),
+                p.getAuthor().getUserId(),
+                Anonymizer.yarn(p.getAuthor().getUserId()),
+                p.getCreatedAt(),
+                p.getUpdatedAt(),
+                commentCount,
+                mine
+        );
     }
 
     @Transactional
     public PostResponse create(PostCreateRequest req) {
-        if (!ImageValidator.isAllowedImageUrl(req.getImageUrl())) {
+        List<String> urls = normalizeUrls(req.imageUrls());
+        if (urls.size() > 5) {
             throw new ServiceException(ErrorCode.POST_IMAGE_EXTENSION_INVALID);
         }
+        for (String u : urls) {
+            if (!ImageValidator.isAllowedImageUrl(u)) {
+                throw new ServiceException(ErrorCode.POST_IMAGE_EXTENSION_INVALID);
+            }
+        }
 
-        User author = userRepository.findByUserId(req.getAuthorId())
+        User author = userRepository.findByUserId(req.authorId())
                 .orElseThrow(() -> new ServiceException(ErrorCode.BAD_REQUEST));
 
         Post post = Post.builder()
-                .category(req.getCategory())
-                .title(req.getTitle())
-                .content(req.getContent())
-                .imageUrl(req.getImageUrl())
+                .category(req.category())
+                .title(req.title())
+                .content(req.content())
                 .author(author)
                 .build();
+
+        post.replaceImages(urls);
 
         Post saved = postRepository.save(post);
         return getPost(saved.getId(), author.getUserId());
@@ -96,9 +107,6 @@ public class PostService {
 
     @Transactional
     public PostResponse update(Long id, PostUpdateRequest req, UUID currentUserId) {
-        if (!ImageValidator.isAllowedImageUrl(req.getImageUrl())) {
-            throw new ServiceException(ErrorCode.POST_IMAGE_EXTENSION_INVALID);
-        }
 
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
@@ -107,7 +115,25 @@ public class PostService {
             throw new ServiceException(ErrorCode.POST_UPDATE_FORBIDDEN);
         }
 
-        p.update(req.getTitle(), req.getContent(), req.getImageUrl(), req.getCategory());
+        p.update(
+                req.title(),
+                req.content(),
+                req.category()
+        );
+
+        if (req.imageUrls() != null) {
+            List<String> urls = normalizeUrls(req.imageUrls());
+            if (urls.size() > 5) {
+                throw new ServiceException(ErrorCode.POST_IMAGE_EXTENSION_INVALID);
+            }
+            for (String u : urls) {
+                if (!ImageValidator.isAllowedImageUrl(u)) {
+                    throw new ServiceException(ErrorCode.POST_IMAGE_EXTENSION_INVALID);
+                }
+            }
+            p.replaceImages(urls);
+        }
+
         return getPost(p.getId(), currentUserId);
     }
 
@@ -121,5 +147,14 @@ public class PostService {
         }
 
         p.softDelete();
+    }
+
+    private List<String> normalizeUrls(List<String> raw) {
+        if (raw == null) return List.of();
+        return raw.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
 }
