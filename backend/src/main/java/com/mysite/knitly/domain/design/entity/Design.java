@@ -1,6 +1,5 @@
 package com.mysite.knitly.domain.design.entity;
 
-import com.mysite.knitly.domain.design.dto.DesignState;
 import com.mysite.knitly.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,6 +10,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -52,7 +52,7 @@ public class Design {
     }
 
     // 도안 작성자 확인 - userId 비교
-    public boolean isOwnedBy(Long userId) {
+    public boolean isOwnedBy(UUID userId) {
         return this.user.getUserId().equals(userId);
     }
 }

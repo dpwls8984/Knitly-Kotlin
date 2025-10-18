@@ -1,6 +1,7 @@
 package com.mysite.knitly.domain.design.dto;
 
 import com.mysite.knitly.domain.design.entity.Design;
+import com.mysite.knitly.domain.design.entity.DesignState;
 import lombok.Builder;
 import lombok.Getter;
 
