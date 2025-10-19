@@ -70,6 +70,6 @@ logging:
 custom:
   jwt:
     # ✅ Refresh Token 만료 시간 추가
-    accessTokenExpireSeconds: "#{15 * 60}"  # 15분
-    refreshTokenExpireSeconds: "#{7 * 24 * 60 * 60}"  # 7일
+    accessTokenExpireSeconds: 900 #{15 * 60} 15분
+    refreshTokenExpireSeconds: 604800 #{7 * 24 * 60 * 60} 7일
     secretKey: ${JWT_SECRET_KEY}  # 환경 변수로 관리

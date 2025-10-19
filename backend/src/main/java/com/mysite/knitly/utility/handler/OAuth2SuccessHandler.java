@@ -2,7 +2,10 @@ package com.mysite.knitly.utility.handler;
 
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.service.UserService;
+import com.mysite.knitly.utility.jwt.JwtProvider;
+import com.mysite.knitly.utility.jwt.TokenResponse;
 import com.mysite.knitly.utility.oauth.OAuth2UserInfo;
+import com.mysite.knitly.utility.redis.RefreshTokenService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,6 +27,8 @@ import java.util.Map;
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final UserService userService;
+    private final JwtProvider jwtProvider;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -51,15 +56,25 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         log.info("User processed - userId: {}", user.getUserId());
 
-        // - JWT 토큰 발급
-        // - Refresh Token 발급 및 Redis 저장
+        // 4. JWT 토큰 발급
+        TokenResponse tokens = jwtProvider.createTokens(user.getUserId());
 
-        // 5. 임시 리다이렉트 (테스트용)
+        log.info("=== JWT Tokens Created ===");
+        log.info("Access Token: {}...", tokens.getAccessToken().substring(0, 20));
+        log.info("Refresh Token: {}...", tokens.getRefreshToken().substring(0, 20));
+        log.info("Expires In: {} seconds", tokens.getExpiresIn());
+
+        // 5. Refresh Token을 Redis에 저장
+        refreshTokenService.saveRefreshToken(user.getUserId(), tokens.getRefreshToken());
+        log.info("Refresh Token saved to Redis");
+
+        // 6. 임시 리다이렉트 (테스트용) - 토큰 정보 포함
         String targetUrl = String.format(
-                "http://localhost:8080/login/success?userId=%s&email=%s&name=%s",
+                "http://localhost:8080/login/success?userId=%s&email=%s&name=%s&accessToken=%s",
                 user.getUserId(),
                 URLEncoder.encode(user.getEmail(), StandardCharsets.UTF_8),
-                URLEncoder.encode(user.getName(), StandardCharsets.UTF_8)  // "홍길동" → "%ED%99%8D%EA%B8%B8%EB%8F%99" // 한글이름이 안나오는 오류 해결
+                URLEncoder.encode(user.getName(), StandardCharsets.UTF_8),
+                tokens.getAccessToken()
         );
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
