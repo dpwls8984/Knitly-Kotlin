@@ -36,7 +36,25 @@ public enum ErrorCode {
     POST_CONTENT_TOO_SHORT("4005", HttpStatus.BAD_REQUEST, "게시글 내용은 최소 길이 요건을 충족해야 합니다."),
 
     // 이미지 확장자 검증 실패 (png/jpg/jpeg 외)
-    POST_IMAGE_EXTENSION_INVALID("4006", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다.");
+    POST_IMAGE_EXTENSION_INVALID("4006", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다."),
+
+
+    // 게시글 없음
+    COMMENT_NOT_FOUND("4007", HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
+
+    // 로그인 안 한 경우
+    COMMENT_UNAUTHORIZED("4008", HttpStatus.UNAUTHORIZED, "로그인이 필요한 요청입니다."),
+
+    // 작성자가 아님
+    COMMENT_UPDATE_FORBIDDEN("4009", HttpStatus.FORBIDDEN, "댓글 수정 권한이 없습니다."),
+
+    // 작성자가 아님
+    COMMENT_DELETE_FORBIDDEN("4010", HttpStatus.FORBIDDEN, "댓글 삭제 권한이 없습니다."),
+
+    COMMENT_ALREADY_DELETED("4011", HttpStatus.BAD_REQUEST, "이미 삭제된 댓글입니다."),
+
+    // 댓글 길이 제한
+    COMMENT_CONTENT_TOO_SHORT("4012", HttpStatus.BAD_REQUEST, "댓글은 1자 이상 300자 이하로 입력해 주세요.");
 
 
     // Review 5000

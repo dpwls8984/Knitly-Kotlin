@@ -6,6 +6,8 @@ import com.mysite.knitly.global.jpa.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Where;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -33,11 +35,23 @@ public class Comment extends BaseTimeEntity {
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
+    // 대댓글, 자기참조
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Comment parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
+    @Builder.Default
+    private List<Comment> children = new ArrayList<>();
+
     @Builder.Default
     @Column(name = "is_deleted", nullable = false)
     private boolean deleted = false;
 
     public void setPost(Post post) { this.post = post; }
+    public void setParent(Comment parent) { this.parent = parent; }
+    public boolean isRoot() { return this.parent == null; }
 
     public void softDelete() { this.deleted = true; }
 
