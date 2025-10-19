@@ -42,4 +42,4 @@ out/
 *.sql
 
 ### env ###
-/backend/.env
+/backend/.env.properties
