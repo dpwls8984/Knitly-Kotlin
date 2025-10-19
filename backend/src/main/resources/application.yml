@@ -63,6 +63,10 @@ logging:
     org.springframework.transaction.interceptor: TRACE
     com.rest1: DEBUG
 
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: TRACE
+    org.springframework.web: DEBUG
+
 custom:
   jwt:
     # ✅ Refresh Token 만료 시간 추가
