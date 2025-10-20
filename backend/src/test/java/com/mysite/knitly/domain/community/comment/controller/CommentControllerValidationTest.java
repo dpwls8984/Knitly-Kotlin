@@ -1,13 +1,10 @@
 package com.mysite.knitly.domain.community.comment.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mysite.knitly.domain.community.post.entity.Post;
-import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.repository.PostRepository;
-import com.mysite.knitly.domain.community.post.repository.UserRepository;
-import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.entity.UserProvider;
-import org.junit.jupiter.api.*;
+import com.mysite.knitly.domain.user.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,12 +13,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false) // 보안 필터는 필요하면 나중에
@@ -40,21 +37,21 @@ class CommentControllerValidationTest {
     @BeforeEach
     void setUp() {
 
-        User author = User.builder()
-                .socialId("cval-auth-" + UUID.randomUUID())
-                .name("Author")
-                .provider(UserProvider.GOOGLE)
-                .build();
-        authorId = userRepository.save(author).getUserId();
-
-        Post post = Post.builder()
-                .category(PostCategory.FREE)
-                .title("댓글 검증용 글")
-                .content("본문")
-                .imageUrls(List.of())
-                .author(author)
-                .build();
-        postId = postRepository.save(post).getId();
+//        User author = User.builder()
+//                .socialId("cval-auth-" + UUID.randomUUID())
+//                .name("Author")
+//                .provider(UserProvider.GOOGLE)
+//                .build();
+//        authorId = userRepository.save(author).getUserId();
+//
+//        Post post = Post.builder()
+//                .category(PostCategory.FREE)
+//                .title("댓글 검증용 글")
+//                .content("본문")
+//                .imageUrls(List.of())
+//                .author(author)
+//                .build();
+//        postId = postRepository.save(post).getId();
     }
 
     @Test
