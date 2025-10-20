@@ -40,9 +40,9 @@ public class ProductService {
         Design design = designRepository.findById(designId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.DESIGN_NOT_FOUND));
 
-        //design.startSale() TODO: 나중에 구현 - 도안 상태 변경
+        // 도안 등록시 [판매 중] 상태로 변경
+        design.startSale();
 
-        //TODO: newProduct인지 Product인지 이름 통일
         Product product = Product.builder()
                 .title(request.title())
                 .description(request.description())
@@ -88,8 +88,12 @@ public class ProductService {
         if (!product.getUser().getUserId().equals(currentUser.getUserId())) {
             throw new ServiceException(ErrorCode.PRODUCT_DELETE_UNAUTHORIZED);
         }
+
+        // 소프트 딜리트 처리 (isDeleted = true)
         product.softDelete();
-        //product.getDesign().stopSale(); TODO: 나중에 구현 - 도안 상태 변경
+
+        // [판매중] 도안을 [판매 중지]로 변경
+        product.getDesign().stopSale();
     }
 
     private Product findProductById(Long productId){

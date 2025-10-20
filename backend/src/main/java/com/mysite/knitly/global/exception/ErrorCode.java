@@ -80,6 +80,9 @@ public enum ErrorCode {
     DESIGN_FILE_SAVE_FAILED("2006", HttpStatus.INTERNAL_SERVER_ERROR, "PDF 파일 저장에 실패했습니다."),   // Image 7000
     DESIGN_UNAUTHORIZED_DELETE("2007", HttpStatus.FORBIDDEN, "본인의 도안만 삭제할 수 있습니다."),
     DESIGN_NOT_DELETABLE("2008", HttpStatus.BAD_REQUEST, "해당 상태의 도안은 삭제할 수 없습니다."),
+    DESIGN_ALREADY_ON_SALE("2009", HttpStatus.BAD_REQUEST, "이미 판매 중인 도안입니다."),
+    DESIGN_NOT_ON_SALE("2010", HttpStatus.BAD_REQUEST, "판매 중인 도안이 아닙니다."),
+    DESIGN_NOT_STOPPED("2011", HttpStatus.BAD_REQUEST, "판매 중지된 도안이 아닙니다."),
 
   // Event 6000
 
