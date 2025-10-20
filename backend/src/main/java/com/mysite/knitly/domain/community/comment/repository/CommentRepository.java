@@ -37,5 +37,5 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
         ORDER BY MIN(c.createdAt) ASC
     """)
 
-    List<UUID> findAuthorOrderForPost(@Param("postId") Long postId);
+    List<Long> findAuthorOrderForPost(@Param("postId") Long postId);
 }

@@ -61,7 +61,7 @@ public enum ErrorCode {
     COMMENT_ALREADY_DELETED("4011", HttpStatus.BAD_REQUEST, "이미 삭제된 댓글입니다."),
 
     // 댓글 길이 제한
-    COMMENT_CONTENT_TOO_SHORT("4012", HttpStatus.BAD_REQUEST, "댓글은 1자 이상 300자 이하로 입력해 주세요.");
+    COMMENT_CONTENT_TOO_SHORT("4012", HttpStatus.BAD_REQUEST, "댓글은 1자 이상 300자 이하로 입력해 주세요."),
 
 
     // Review 5000
@@ -79,7 +79,7 @@ public enum ErrorCode {
     DESIGN_PDF_GENERATION_FAILED("2005", HttpStatus.INTERNAL_SERVER_ERROR, "PDF 생성에 실패했습니다."),
     DESIGN_FILE_SAVE_FAILED("2006", HttpStatus.INTERNAL_SERVER_ERROR, "PDF 파일 저장에 실패했습니다."),   // Image 7000
     DESIGN_UNAUTHORIZED_DELETE("2007", HttpStatus.FORBIDDEN, "본인의 도안만 삭제할 수 있습니다."),
-    DESIGN_NOT_DELETABLE("2008", HttpStatus.BAD_REQUEST, "해당 상태의 도안은 삭제할 수 없습니다.");
+    DESIGN_NOT_DELETABLE("2008", HttpStatus.BAD_REQUEST, "해당 상태의 도안은 삭제할 수 없습니다."),
 
   // Event 6000
   

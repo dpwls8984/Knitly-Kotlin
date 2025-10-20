@@ -52,7 +52,7 @@ public class Design {
     }
 
     // 도안 작성자 확인 - userId 비교
-    public boolean isOwnedBy(UUID userId) {
+    public boolean isOwnedBy(Long userId) {
         return this.user.getUserId().equals(userId);
     }
 }

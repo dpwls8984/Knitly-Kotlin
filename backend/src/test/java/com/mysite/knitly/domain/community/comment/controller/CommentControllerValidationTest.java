@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mysite.knitly.domain.community.post.entity.Post;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.repository.PostRepository;
-import com.mysite.knitly.domain.community.post.repository.UserRepositoryTmp;
+import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.entity.UserProvider;
 import org.junit.jupiter.api.*;
@@ -30,7 +30,8 @@ class CommentControllerValidationTest {
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper om;
-    @Autowired UserRepositoryTmp userRepository;
+    @Autowired
+    UserRepository userRepository;
     @Autowired PostRepository postRepository;
 
     private Long postId;

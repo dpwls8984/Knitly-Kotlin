@@ -24,7 +24,7 @@ public class ProductController {
 
     @PostMapping("/{designId}/sale")
     public ResponseEntity<ProductRegisterResponse> registerProduct(
-            @PathVariable("userId") UUID userId,
+            @PathVariable("userId") Long userId,
             @PathVariable Long designId,
             @RequestBody @Valid ProductRegisterRequest request
     ) {
@@ -34,7 +34,7 @@ public class ProductController {
 
     @PatchMapping("/{productId}/modify")
     public ResponseEntity<ProductModifyResponse> modifyProduct(
-            @PathVariable("userId") UUID userId,
+            @PathVariable("userId") Long userId,
             @PathVariable Long productId,
             @RequestBody @Valid ProductModifyRequest request
     ) {
@@ -44,7 +44,7 @@ public class ProductController {
 
     @DeleteMapping("/{productId}")
     public ResponseEntity<Void> deleteProduct(
-            @PathVariable("userId") UUID userId,
+            @PathVariable("userId") Long userId,
             @PathVariable Long productId
     ) {
         productService.deleteProduct(userId, productId);

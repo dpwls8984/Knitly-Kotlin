@@ -22,7 +22,7 @@ public class ReviewController {
     @PostMapping("/products/{productId}/reviews")
     public ResponseEntity<ReviewListResponse> createReview(
             @PathVariable Long productId,
-            @RequestParam UUID userId,
+            @RequestParam Long userId,
             @RequestParam("content") String content,
             @RequestParam("rating") Integer rating,
             @RequestParam(value = "images", required = false) List<MultipartFile> images
@@ -37,7 +37,7 @@ public class ReviewController {
     public ResponseEntity<Void> deleteReview(
             @PathVariable Long productId,
             @PathVariable Long reviewId,
-            @RequestParam UUID userId
+            @RequestParam Long userId
     ) {
         ReviewDeleteRequest request = new ReviewDeleteRequest(userId);
         reviewService.deleteReview(reviewId, request);

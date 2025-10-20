@@ -1,5 +1,6 @@
 package com.mysite.knitly.domain.order.service;
 
+import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.order.dto.OrderCreateRequest;
 import com.mysite.knitly.domain.order.dto.OrderCreateResponse;
 import com.mysite.knitly.domain.order.entity.Order;
@@ -8,7 +9,6 @@ import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.order.repository.OrderRepository;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepositoryTmp;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -25,10 +25,10 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final UserRepositoryTmp userRepository;
+    private final UserRepository userRepository;
     private final ProductRepository productRepository;
 
-    public OrderCreateResponse createOrder(UUID userId, OrderCreateRequest request) {
+    public OrderCreateResponse createOrder(Long userId, OrderCreateRequest request) {
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));

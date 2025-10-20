@@ -42,7 +42,7 @@ public class Post extends BaseTimeEntity {
     private PostCategory category;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false, columnDefinition = "BINARY(16)")
+    @JoinColumn(name = "user_id", nullable = false)
     private User author;
 
     @Builder.Default

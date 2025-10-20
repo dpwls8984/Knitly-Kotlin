@@ -11,8 +11,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/community")
 @RequiredArgsConstructor
@@ -27,7 +25,7 @@ public class CommentController {
             @RequestParam(defaultValue = "asc") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) UUID currentUserId
+            @RequestParam(required = false) Long currentUserId
     ) {
         return ResponseEntity.ok(commentService.getComments(postId, sort, page, size, currentUserId));
     }
@@ -55,7 +53,7 @@ public class CommentController {
     public ResponseEntity<Void> update(
             @PathVariable Long commentId,
             @Valid @RequestBody CommentUpdateRequest request,
-            @RequestParam UUID currentUserId
+            @RequestParam Long currentUserId
     ) {
         commentService.update(commentId, request, currentUserId);
         return ResponseEntity.noContent().build();
@@ -65,7 +63,7 @@ public class CommentController {
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<Void> delete(
             @PathVariable Long commentId,
-            @RequestParam UUID currentUserId
+            @RequestParam Long currentUserId
     ) {
         commentService.delete(commentId, currentUserId);
         return ResponseEntity.noContent().build();

@@ -8,7 +8,7 @@ import com.mysite.knitly.domain.community.comment.entity.Comment;
 import com.mysite.knitly.domain.community.comment.repository.CommentRepository;
 import com.mysite.knitly.domain.community.post.entity.Post;
 import com.mysite.knitly.domain.community.post.repository.PostRepository;
-import com.mysite.knitly.domain.community.post.repository.UserRepositoryTmp;
+import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,10 +31,10 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
-    private final UserRepositoryTmp userRepository;
+    private final UserRepository userRepository;
 
     // 댓글 목록
-    public Page<CommentTreeResponse> getComments(Long postId, String sort, int page, int size, UUID currentUserId) {
+    public Page<CommentTreeResponse> getComments(Long postId, String sort, int page, int size, Long currentUserId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
 
@@ -45,7 +44,7 @@ public class CommentService {
                 ? commentRepository.findByPostAndParentIsNullAndDeletedFalseOrderByCreatedAtDesc(post, pageable)
                 : commentRepository.findByPostAndParentIsNullAndDeletedFalseOrderByCreatedAtAsc(post, pageable);
 
-        Map<UUID, Integer> authorNoMap = buildAuthorNoMap(postId);
+        Map<Long, Integer> authorNoMap = buildAuthorNoMap(postId);
 
         return roots.map(root -> toTreeResponse(root, currentUserId, authorNoMap));
     }
@@ -60,7 +59,7 @@ public class CommentService {
     public CommentResponse create(CommentCreateRequest req) {
         Post post = postRepository.findById(req.postId())
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
-        User author = userRepository.findByUserId(req.authorId())
+        User author = userRepository.findById(req.authorId())
                 .orElseThrow(() -> new ServiceException(ErrorCode.BAD_REQUEST));
 
         // parentId가 있으면 동일 게시글 소속인지 검증
@@ -82,13 +81,13 @@ public class CommentService {
                         .build()
         );
 
-        Map<UUID, Integer> authorNoMap = buildAuthorNoMap(req.postId());
+        Map<Long, Integer> authorNoMap = buildAuthorNoMap(req.postId());
         return toFlatResponse(saved, author.getUserId(), authorNoMap);
     }
 
     // 댓글 수정
     @Transactional
-    public void update(Long commentId, CommentUpdateRequest req, UUID currentUserId) {
+    public void update(Long commentId, CommentUpdateRequest req, Long currentUserId) {
         Comment c = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.COMMENT_NOT_FOUND));
 
@@ -103,7 +102,7 @@ public class CommentService {
 
     // 댓글 삭제
     @Transactional
-    public void delete(Long commentId, UUID currentUserId) {
+    public void delete(Long commentId, Long currentUserId) {
         Comment c = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.COMMENT_NOT_FOUND));
 
@@ -117,19 +116,19 @@ public class CommentService {
     }
 
     // 작성자 첫 댓글 시간 기준으로
-    private Map<UUID, Integer> buildAuthorNoMap(Long postId) {
-        List<UUID> order = commentRepository.findAuthorOrderForPost(postId);
-        Map<UUID, Integer> map = new HashMap<>();
+    private Map<Long, Integer> buildAuthorNoMap(Long postId) {
+        List<Long> order = commentRepository.findAuthorOrderForPost(postId);
+        Map<Long, Integer> map = new HashMap<>();
         int n = 1;
-        for (UUID uid : order) {
+        for (Long uid : order) {
             map.put(uid, n++);
         }
         return map;
     }
 
     // create 응답
-    private CommentResponse toFlatResponse(Comment c, UUID currentUserId, Map<UUID, Integer> authorNoMap) {
-        UUID uid = (c.getAuthor() == null) ? null : c.getAuthor().getUserId();
+    private CommentResponse toFlatResponse(Comment c, Long currentUserId, Map<Long, Integer> authorNoMap) {
+        Long uid = (c.getAuthor() == null) ? null : c.getAuthor().getUserId();
         int no = (uid != null && authorNoMap.containsKey(uid)) ? authorNoMap.get(uid) : 0;
         String display = (no > 0) ? "익명의 털실 " + no : "익명의 털실";
 
@@ -146,7 +145,7 @@ public class CommentService {
     }
 
     // 트리 응답 변환
-    private CommentTreeResponse toTreeResponse(Comment root, UUID currentUserId, Map<UUID, Integer> authorNoMap) {
+    private CommentTreeResponse toTreeResponse(Comment root, Long currentUserId, Map<Long, Integer> authorNoMap) {
         // 자식(대댓글) 조회
         List<Comment> children = commentRepository.findByParentIdAndDeletedFalseOrderByCreatedAtAsc(root.getId());
 
@@ -173,13 +172,13 @@ public class CommentService {
         );
     }
 
-    private boolean isMine(Comment c, UUID currentUserId) {
-        UUID uid = (c.getAuthor() == null) ? null : c.getAuthor().getUserId();
+    private boolean isMine(Comment c, Long currentUserId) {
+        Long uid = (c.getAuthor() == null) ? null : c.getAuthor().getUserId();
         return currentUserId != null && uid != null && uid.equals(currentUserId);
     }
 
-    private String displayName(Comment c, Map<UUID, Integer> authorNoMap) {
-        UUID uid = (c.getAuthor() == null) ? null : c.getAuthor().getUserId();
+    private String displayName(Comment c, Map<Long, Integer> authorNoMap) {
+        Long uid = (c.getAuthor() == null) ? null : c.getAuthor().getUserId();
         int no = (uid != null && authorNoMap.containsKey(uid)) ? authorNoMap.get(uid) : 0;
         return (no > 0) ? "익명의 털실 " + no : "익명의 털실";
     }

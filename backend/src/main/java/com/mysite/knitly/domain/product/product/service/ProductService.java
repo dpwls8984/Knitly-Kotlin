@@ -1,7 +1,8 @@
 package com.mysite.knitly.domain.product.product.service;
 
-import com.mysite.knitly.domain.product.design.entity.Design;
-import com.mysite.knitly.domain.product.design.repository.DesignRepositoryTmp;
+import com.mysite.knitly.domain.community.post.repository.UserRepository;
+import com.mysite.knitly.domain.design.entity.Design;
+import com.mysite.knitly.domain.design.repository.DesignRepository;
 import com.mysite.knitly.domain.product.product.dto.ProductModifyRequest;
 import com.mysite.knitly.domain.product.product.dto.ProductModifyResponse;
 import com.mysite.knitly.domain.product.product.dto.ProductRegisterRequest;
@@ -10,7 +11,6 @@ import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.entity.ProductCategory;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepositoryTmp;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -25,10 +25,10 @@ import java.util.UUID;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final UserRepositoryTmp userRepository;
-    private final DesignRepositoryTmp designRepository;
+    private final UserRepository userRepository;
+    private final DesignRepository designRepository;
 
-    public ProductRegisterResponse registerProduct(UUID userId, Long designId, ProductRegisterRequest request) {
+    public ProductRegisterResponse registerProduct(Long userId, Long designId, ProductRegisterRequest request) {
         User seller = userRepository.findById(userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 
@@ -56,7 +56,7 @@ public class ProductService {
         return ProductRegisterResponse.from(savedProduct);
     }
 
-    public ProductModifyResponse modifyProduct(UUID userId, Long productId, ProductModifyRequest request) {
+    public ProductModifyResponse modifyProduct(Long userId, Long productId, ProductModifyRequest request) {
         Product product = findProductById(productId);
 
         if (product.getIsDeleted()) {
@@ -77,7 +77,7 @@ public class ProductService {
         return ProductModifyResponse.from(product);
     }
 
-    public void deleteProduct(UUID userId, Long productId) {
+    public void deleteProduct(Long userId, Long productId) {
         Product product = findProductById(productId);
 
         if (!product.getUser().getUserId().equals(userId)) {

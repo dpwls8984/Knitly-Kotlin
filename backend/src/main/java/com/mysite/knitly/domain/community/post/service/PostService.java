@@ -1,12 +1,12 @@
 package com.mysite.knitly.domain.community.post.service;
 
-import com.mysite.knitly.domain.community.common.util.Anonymizer;
-import com.mysite.knitly.domain.community.common.util.ImageValidator;
+import com.mysite.knitly.domain.util.Anonymizer;
+import com.mysite.knitly.domain.util.ImageValidator;
 import com.mysite.knitly.domain.community.post.dto.*;
 import com.mysite.knitly.domain.community.post.entity.Post;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.repository.PostRepository;
-import com.mysite.knitly.domain.community.post.repository.UserRepositoryTmp;
+import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.UUID;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -26,7 +26,7 @@ import java.util.Objects;
 public class PostService {
 
     private final PostRepository postRepository;
-    private final UserRepositoryTmp userRepository;
+    private final UserRepository userRepository;
 
     public Page<PostListItemResponse> getPostList(PostCategory category, String query, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -52,7 +52,7 @@ public class PostService {
         });
     }
 
-    public PostResponse getPost(Long id, UUID currentUserIdOrNull) {
+    public PostResponse getPost(Long id, Long currentUserIdOrNull) {
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
 
@@ -89,7 +89,7 @@ public class PostService {
             }
         }
 
-        User author = userRepository.findByUserId(req.authorId())
+        User author = userRepository.findById(req.authorId())
                 .orElseThrow(() -> new ServiceException(ErrorCode.BAD_REQUEST));
 
         Post post = Post.builder()
@@ -106,7 +106,7 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponse update(Long id, PostUpdateRequest req, UUID currentUserId) {
+    public PostResponse update(Long id, PostUpdateRequest req, Long currentUserId) {
 
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
@@ -138,7 +138,7 @@ public class PostService {
     }
 
     @Transactional
-    public void delete(Long id, UUID currentUserId) {
+    public void delete(Long id, Long currentUserId) {
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
 

@@ -1,16 +1,15 @@
 package com.mysite.knitly.domain.product.review.service;
 
+import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
-import com.mysite.knitly.domain.product.product.repository.ProductRepositoryTmp;
+import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest;
 import com.mysite.knitly.domain.product.review.dto.ReviewDeleteRequest;
 import com.mysite.knitly.domain.product.review.dto.ReviewListResponse;
 import com.mysite.knitly.domain.product.review.entity.Review;
 import com.mysite.knitly.domain.product.review.entity.ReviewImage;
-import com.mysite.knitly.domain.product.review.repository.ReviewImageRepository;
 import com.mysite.knitly.domain.product.review.repository.ReviewRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepositoryTmp;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,8 +33,8 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     //conflict 안생기도록 일단 이름 임시로. 추후에 Tmp > 그냥 리포로 변경하고 tmp 파일 삭제
-    private final ProductRepositoryTmp productRepository;
-    private final UserRepositoryTmp userRepository;
+    private final ProductRepository productRepository;
+    private final UserRepository userRepository;
 
     @Value("${review.upload-dir}")
     String uploadDir;
@@ -46,7 +44,7 @@ public class ReviewService {
 
     // 1️. 리뷰 등록
     @Transactional
-    public ReviewListResponse createReview(Long productId, UUID userId, ReviewCreateRequest request) {
+    public ReviewListResponse createReview(Long productId, Long userId, ReviewCreateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 

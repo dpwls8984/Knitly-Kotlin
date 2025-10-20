@@ -15,10 +15,9 @@ import java.util.UUID;
 public class User extends BaseTimeEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Convert(converter = UUIDBinaryConverter.class)
-    @Column(name = "user_id", columnDefinition = "BINARY(16)")
-    private UUID userId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
+    private Long userId;
 
     @Column(nullable = false, unique = true)
     private String socialId;

@@ -13,7 +13,7 @@ public record PostResponse(
     String title,
     String content,
     List<String> imageUrls,
-    UUID authorId,
+    Long authorId,
     String authorDisplay,
     LocalDateTime createdAt,
     LocalDateTime updatedAt,

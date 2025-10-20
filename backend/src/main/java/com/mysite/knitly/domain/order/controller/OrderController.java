@@ -20,7 +20,7 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<OrderCreateResponse> createOrder(
             // TODO: JWT 인증 적용 후 @AuthenticationPrincipal로 변경
-            @PathVariable("userId") UUID userId,
+            @PathVariable("userId") Long userId,
             @RequestBody @Valid OrderCreateRequest request
     ) {
         OrderCreateResponse response = orderService.createOrder(userId, request);

@@ -2,6 +2,7 @@ package com.mysite.knitly.domain.design.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.design.dto.DesignListResponse;
 import com.mysite.knitly.domain.design.dto.DesignRequest;
 import com.mysite.knitly.domain.design.dto.DesignResponse;
@@ -11,7 +12,6 @@ import com.mysite.knitly.domain.design.repository.DesignRepository;
 import com.mysite.knitly.domain.design.util.LocalFileStorage;
 import com.mysite.knitly.domain.design.util.PdfGenerator;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepositoryTmp;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -29,14 +29,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DesignService {
     private final DesignRepository designRepository;
-    private final UserRepositoryTmp userRepository; // 충돌 방지용 임시 네이밍
+    private final UserRepository userRepository; // 충돌 방지용 임시 네이밍
     private final PdfGenerator pdfGenerator;
     private final LocalFileStorage localFileStorage;
     private final ObjectMapper objectMapper;
 
     // 도안 생성
     @Transactional
-    public DesignResponse createDesign(UUID userId, DesignRequest request) {
+    public DesignResponse createDesign(Long userId, DesignRequest request) {
         // gridData 입력 검증
         if(!request.isValidGridSize()) throw new ServiceException(ErrorCode.DESIGN_INVALID_GRID_SIZE);
 
@@ -71,7 +71,7 @@ public class DesignService {
 
     // 본인 도안 조회
     @Transactional(readOnly = true)
-    public List<DesignListResponse> getMyDesigns (UUID userId){
+    public List<DesignListResponse> getMyDesigns (Long userId){
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 
@@ -84,7 +84,7 @@ public class DesignService {
 
 
     // 도안 삭제 - BEFORE_SALE 상태인 도안만 삭제 가능, ON_SALE 또는 STOPPED 상태인 도안은 삭제 불가
-    public void deleteDesign(UUID userId, Long designId){
+    public void deleteDesign(Long userId, Long designId){
         Design design = designRepository.findById(designId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.DESIGN_NOT_FOUND));
 

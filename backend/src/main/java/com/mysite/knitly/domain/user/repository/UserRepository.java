@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface UserRepositoryTmp extends JpaRepository<User, UUID> {
-    Optional<User> findByUserId(UUID userId);
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findById(Long userId);
     Optional<User> findBySocialId(String socialId);
 }

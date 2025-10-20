@@ -9,7 +9,7 @@ public record PostListRowResponse(
         PostCategory category,
         String title,
         String excerpt,
-        UUID authorId,
+        Long authorId,
         LocalDateTime createdAt,
         Long commentCount,
         String thumbnailUrl

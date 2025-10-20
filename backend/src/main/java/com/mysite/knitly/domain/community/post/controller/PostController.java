@@ -32,7 +32,7 @@ public class PostController {
     @GetMapping("/{postId}")
     public ResponseEntity<PostResponse> getPost(
             @PathVariable("postId") Long postId,
-            @RequestParam(required = false) UUID currentUserId
+            @RequestParam(required = false) Long currentUserId
     ) {
         return ResponseEntity.ok(postService.getPost(postId, currentUserId));
     }
@@ -51,7 +51,7 @@ public class PostController {
     public ResponseEntity<PostResponse> update(
             @PathVariable("postId") Long postId,
             @Valid @RequestBody PostUpdateRequest request,
-            @RequestParam UUID currentUserId
+            @RequestParam Long currentUserId
     ) {
         if (request.imageUrls() != null && request.imageUrls().size() > 5) {
             throw new IllegalArgumentException("이미지는 최대 5개까지 업로드할 수 있습니다.");
@@ -62,7 +62,7 @@ public class PostController {
     @DeleteMapping("/{postId}")
     public ResponseEntity<Void> delete(
             @PathVariable("postId") Long postId,
-            @RequestParam UUID currentUserId
+            @RequestParam Long currentUserId
     ) {
         postService.delete(postId, currentUserId);
         return ResponseEntity.noContent().build();

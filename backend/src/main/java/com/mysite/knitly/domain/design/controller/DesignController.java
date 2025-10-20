@@ -24,7 +24,7 @@ public class DesignController {
     // 도안 생성
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<DesignResponse> createDesign(
-            @RequestParam UUID userId,
+            @RequestParam Long userId,
             @Valid @RequestBody DesignRequest request
 
     ) {
@@ -42,7 +42,7 @@ public class DesignController {
     // 도안 목록 조회
     @GetMapping("/my")
     public ResponseEntity<List<DesignListResponse>> getMyDesigns(
-            @RequestParam UUID userId
+            @RequestParam Long userId
     ) {
         List<DesignListResponse> designs = designService.getMyDesigns(userId);
         return ResponseEntity.ok(designs);
@@ -51,7 +51,7 @@ public class DesignController {
     // 도안 삭제
     @DeleteMapping("/{designId}")
     public ResponseEntity<Void> deleteDesign(
-            @RequestParam UUID userId,
+            @RequestParam Long userId,
             @PathVariable Long designId){
         designService.deleteDesign(userId, designId);
         return ResponseEntity.noContent().build();
