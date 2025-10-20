@@ -1,17 +1,15 @@
-/*
 package com.mysite.knitly.domain.product.review.service;
 
 import com.mysite.knitly.domain.product.product.entity.Product;
-import com.mysite.knitly.domain.product.product.repository.ProductRepositoryTmp;
+import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest;
 import com.mysite.knitly.domain.product.review.dto.ReviewDeleteRequest;
 import com.mysite.knitly.domain.product.review.dto.ReviewListResponse;
 import com.mysite.knitly.domain.product.review.entity.Review;
 import com.mysite.knitly.domain.product.review.entity.ReviewImage;
-import com.mysite.knitly.domain.product.review.repository.ReviewImageRepository;
 import com.mysite.knitly.domain.product.review.repository.ReviewRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepositoryTmp;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +40,7 @@ class ReviewServiceTest {
     private ReviewRepository reviewRepository;
 
     @Mock
-    private ProductRepositoryTmp productRepository;
+    private ProductRepository productRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -66,7 +64,7 @@ class ReviewServiceTest {
     @DisplayName("리뷰 등록: 정상")
     void createReview_ValidInput_ShouldReturnResponse() {
         Long productId = 1L;
-        UUID userId = UUID.randomUUID();
+        Long userId = 3L;
         ReviewCreateRequest request = new ReviewCreateRequest((int) 5, "좋아요", Collections.emptyList());
 
         User user = User.builder().userId(userId).name("홍길동").build();
@@ -97,7 +95,7 @@ class ReviewServiceTest {
     @Test
     @DisplayName("리뷰 삭제: 정상")
     void deleteReview_ValidUser_ShouldSetDeleted() {
-        UUID userId = UUID.randomUUID();
+        Long userId = 3L;
         Long reviewId = 1L;
         ReviewDeleteRequest request = new ReviewDeleteRequest(userId);
 
@@ -114,8 +112,8 @@ class ReviewServiceTest {
     @Test
     @DisplayName("리뷰 삭제: 권한 없는 유저가 요청시 실패")
     void deleteReview_NotOwner_ShouldThrowException() {
-        UUID requesterId = UUID.randomUUID();
-        UUID ownerId = UUID.randomUUID();
+        Long requesterId = 3L;
+        Long ownerId = 3L;
         Long reviewId = 1L;
         ReviewDeleteRequest request = new ReviewDeleteRequest(requesterId);
 
@@ -134,7 +132,8 @@ class ReviewServiceTest {
     @DisplayName("리뷰 목록 조회: 삭제되지 않은 리뷰만 반환")
     void getReviewsByProduct_ShouldReturnOnlyNonDeletedReviews() {
         Long productId = 1L;
-        User user = User.builder().userId(UUID.randomUUID()).name("사용자1").build();
+        Long userId = 3L;
+        User user = User.builder().userId(userId).name("사용자1").build();
 
         Review review1 = Review.builder()
                 .reviewId(1L)
@@ -167,7 +166,7 @@ class ReviewServiceTest {
         User user = User.builder().userId(userId).name("홍길동").build();
         Product product = Product.builder().productId(productId).build();
 
-        when(userRepository.findByUserId(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -182,9 +181,9 @@ class ReviewServiceTest {
     @Test
     @DisplayName("리뷰 목록 조회: 삭제되지 않은 리뷰와 이미지 URL 반환")
     void getReviewsByProduct_ShouldReturnOnlyNonDeletedReviewsWithImages() {
-        // given
         Long productId = 1L;
-        User user = User.builder().userId(UUID.randomUUID()).name("홍길동").build();
+        Long userId = 3L;
+        User user = User.builder().userId(userId).name("홍길동").build();
 
         Review review = Review.builder()
                 .reviewId(1L)
@@ -216,7 +215,7 @@ class ReviewServiceTest {
     @DisplayName("리뷰 등록: 지원하지 않는 이미지 형식")
     void createReview_InvalidImageFormat_ShouldThrowException() throws Exception {
         Long productId = 1L;
-        UUID userId = UUID.randomUUID();
+        Long userId = 3L;
 
         MultipartFile invalidFile = new MockMultipartFile("file", "document.txt", "text/plain", new byte[]{1, 2, 3});
         ReviewCreateRequest request = new ReviewCreateRequest(5, "좋아요", List.of(invalidFile));
@@ -232,4 +231,4 @@ class ReviewServiceTest {
 
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
     }
-}*/
+}
