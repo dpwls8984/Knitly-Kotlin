@@ -57,7 +57,7 @@ class ReviewServiceTest {
 
         // @TempDir을 사용하도록 uploadDir 설정 변경
         reviewService.uploadDir = tempDir.toString();
-        reviewService.urlPrefix = "/static/review/";
+        reviewService.urlPrefix = "/resources/static/review/";
     }
 
     @Test
@@ -113,7 +113,7 @@ class ReviewServiceTest {
     @DisplayName("리뷰 삭제: 권한 없는 유저가 요청시 실패")
     void deleteReview_NotOwner_ShouldThrowException() {
         Long requesterId = 3L;
-        Long ownerId = 3L;
+        Long ownerId = 9L;
         Long reviewId = 1L;
         ReviewDeleteRequest request = new ReviewDeleteRequest(requesterId);
 
@@ -175,7 +175,9 @@ class ReviewServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.content()).isEqualTo("이미지 리뷰");
         assertThat(response.reviewImageUrls()).hasSize(1);
-        assertThat(response.reviewImageUrls().get(0)).startsWith("/static/review/").endsWith("_image.jpg");
+        assertThat(response.reviewImageUrls().get(0))
+                .startsWith("/resources/static/review/")
+                .contains("image.jpg");
     }
 
     @Test
