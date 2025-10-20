@@ -11,15 +11,22 @@ public enum ErrorCode {
     // User 1000
     USER_NOT_FOUND("1001", HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
 
-  // Product 2000
+    // Product 2000
     PRODUCT_NOT_FOUND("2001", HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다."),
+    PRODUCT_MODIFY_UNAUTHORIZED("2002", HttpStatus.FORBIDDEN, "상품 수정 권한이 없습니다."),
+    PRODUCT_DELETE_UNAUTHORIZED("2003", HttpStatus.FORBIDDEN, "상품 삭제 권한이 없습니다."),
+    PRODUCT_ALREADY_DELETED("2004", HttpStatus.BAD_REQUEST, "이미 삭제된 상품입니다."),
+    PRODUCT_STOCK_INSUFFICIENT("2005", HttpStatus.BAD_REQUEST, "상품 재고보다 많은 수량을 주문할 수 없습니다. 남은 재고를 확인해주세요."),
+
     // Order 3000
+    OUT_OF_STOCK("3001", HttpStatus.BAD_REQUEST, "품절된 상품입니다."),
 
     // Post 4000
 
     // Comment 4000
 
     // Review 5000
+
     REVIEW_NOT_FOUND("5001", HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_NOT_AUTHORIZED("5002", HttpStatus.FORBIDDEN, "리뷰 삭제 권한이 없습니다."),
     REVIEW_CANNOT_BE_EMPTY("5003", HttpStatus.BAD_REQUEST, "리뷰 내용은 필수입니다."),
@@ -36,7 +43,7 @@ public enum ErrorCode {
     DESIGN_NOT_DELETABLE("2008", HttpStatus.BAD_REQUEST, "해당 상태의 도안은 삭제할 수 없습니다.");
 
   // Event 6000
-
+  
     // Image 7000
     IMAGE_FORMAT_NOT_SUPPORTED("7501", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다."),
     REVIEW_IMAGE_SAVE_FAILED("7502", HttpStatus.INTERNAL_SERVER_ERROR, "리뷰 이미지 저장에 실패했습니다."),
