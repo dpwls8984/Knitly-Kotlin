@@ -42,6 +42,9 @@ public class SecurityConfig {
                         // JWT 인증 필요
                         .requestMatchers("/users/**").authenticated()
 
+                        // Swagger 사용
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+
                         // 나머지 모두 인증 필요
                         .anyRequest().authenticated()
                 )
