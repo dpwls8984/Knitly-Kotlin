@@ -35,10 +35,8 @@ public class ReviewService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
 
-    @Value("${REVIEW_UPLOAD_DIR}")
-    String uploadDir;
-    @Value("${REVIEW_URL_PREFIX}")
-    String urlPrefix;
+    String uploadDir = "resources/static/review/";
+    String urlPrefix = "/resources/static/review/";
 
 
     // 1️. 리뷰 등록
