@@ -1,6 +1,6 @@
-#spring.application.name=knitly
-
 spring:
+  config:
+    import: optional:file:.env.properties
   profiles:
     active: dev
   output:
@@ -10,13 +10,14 @@ spring:
     hikari:
       auto-commit: false
   jpa:
+    hibernate:
+      ddl-auto: create
     properties:
       hibernate:
         format_sql: true
         highlight_sql: true
         use_sql_comments: true
-    hibernate:
-      ddl-auto: create
+        dialect: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
   mvc:
     hiddenmethod:
@@ -26,6 +27,36 @@ spring:
     resources:
       static-locations:
         - classpath:/static/
+
+  # OAuth 2.0 설정 추가
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
+
+  # Redis 설정 추가
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      # password: ${REDIS_PASSWORD}  # 비밀번호 설정 시 사용
+
+file:
+  upload-dir: uploads/designs
+  public-prefix: /files
 
 springdoc:
   default-produces-media-type: application/json
@@ -37,7 +68,13 @@ logging:
     org.springframework.transaction.interceptor: TRACE
     com.rest1: DEBUG
 
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: TRACE
+    org.springframework.web: DEBUG
+
 custom:
   jwt:
-    expireSeconds: "#{30 * 60}"
-    secretPattern: ${JWT_PATTERN}
+    # Refresh Token 만료 시간 추가
+    accessTokenExpireSeconds: 900 #{15 * 60} 15분
+    refreshTokenExpireSeconds: 604800 #{7 * 24 * 60 * 60} 7일
+    secretKey: ${JWT_SECRET_KEY}  # 환경 변수로 관리
