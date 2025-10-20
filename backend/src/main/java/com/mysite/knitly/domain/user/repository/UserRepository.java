@@ -1,7 +1,7 @@
 package com.mysite.knitly.domain.user.repository;
 
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.entity.enums.Provider;
+import com.mysite.knitly.domain.user.entity.Provider;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

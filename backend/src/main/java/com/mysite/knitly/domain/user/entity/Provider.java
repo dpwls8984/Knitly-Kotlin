@@ -1,5 +1,5 @@
 package com.mysite.knitly.domain.user.entity;
 
-public enum UserProvider {
+public enum Provider {
     KAKAO, GOOGLE
 }

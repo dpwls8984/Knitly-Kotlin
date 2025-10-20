@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.entity.UserProvider;
+import com.mysite.knitly.domain.user.entity.Provider;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -38,7 +38,7 @@ class PostControllerValidationTest {
         User author = User.builder()
                 .socialId("pval-auth-" + UUID.randomUUID())
                 .name("Author")
-                .provider(UserProvider.GOOGLE)
+                .provider(Provider.GOOGLE)
                 .build();
         authorId = userRepository.save(author).getUserId();
     }
