@@ -19,6 +19,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,6 +32,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -144,10 +146,10 @@ class ReviewServiceTest {
                 .isDeleted(false)
                 .build();
 
-        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId))
+        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(eq(productId), any(Pageable.class)))
                 .thenReturn(List.of(review1));
 
-        List<ReviewListResponse> responses = reviewService.getReviewsByProduct(productId);
+        List<ReviewListResponse> responses = reviewService.getReviewsByProduct(productId, 0, 10);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).reviewId()).isEqualTo(1L);
@@ -199,10 +201,10 @@ class ReviewServiceTest {
         ReviewImage image2 = ReviewImage.builder().reviewImageUrl("/static/review/img2.png").build();
         review.addReviewImages(List.of(image1, image2));
 
-        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId))
+        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(eq(productId), any(Pageable.class)))
                 .thenReturn(List.of(review));
         // when
-        List<ReviewListResponse> responses = reviewService.getReviewsByProduct(productId);
+        List<ReviewListResponse> responses = reviewService.getReviewsByProduct(productId, 0, 10);
 
         // then
         assertThat(responses).hasSize(1);

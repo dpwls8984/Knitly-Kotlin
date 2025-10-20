@@ -47,9 +47,11 @@ public class ReviewController {
     // 3. 특정 상품 리뷰 목록 조회
     @GetMapping("/products/{productId}/reviews")
     public ResponseEntity<List<ReviewListResponse>> getReviewsByProduct(
-            @PathVariable Long productId
+            @PathVariable Long productId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        List<ReviewListResponse> reviews = reviewService.getReviewsByProduct(productId);
+        List<ReviewListResponse> reviews = reviewService.getReviewsByProduct(productId, page, size);
         return ResponseEntity.ok(reviews);
     }
 }

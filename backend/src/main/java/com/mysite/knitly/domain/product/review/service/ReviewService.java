@@ -15,6 +15,8 @@ import com.mysite.knitly.global.exception.ServiceException;
 import com.mysite.knitly.global.util.FileNameUtils;
 import com.mysite.knitly.global.util.ImageValidator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -115,9 +117,10 @@ public class ReviewService {
 
     // 3️. 특정 상품 리뷰 목록 조회
     @Transactional(readOnly = true)
-    public List<ReviewListResponse> getReviewsByProduct(Long productId) {
+    public List<ReviewListResponse> getReviewsByProduct(Long productId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
         //delete 되지 않은 상품을 조회
-        List<Review> reviews = reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId);
+        List<Review> reviews = reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId, pageable);
 
         //해당 리뷰의 이미지 조회
         return reviews.stream()
