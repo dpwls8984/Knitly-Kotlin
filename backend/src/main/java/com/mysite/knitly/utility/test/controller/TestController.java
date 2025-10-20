@@ -58,4 +58,50 @@ public class TestController {
                 </html>
                 """, userId, decodedEmail, decodedName, accessToken);
     }
+
+    @GetMapping("/login/error")
+    public String loginError(@RequestParam(required = false) String message) {
+        String errorMessage = message != null ?
+                URLDecoder.decode(message, StandardCharsets.UTF_8) :
+                "알 수 없는 오류가 발생했습니다.";
+
+        return String.format("""
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { 
+                            font-family: Arial; 
+                            padding: 20px; 
+                            text-align: center;
+                        }
+                        .error-box {
+                            background: #fee;
+                            border: 1px solid #fcc;
+                            padding: 20px;
+                            border-radius: 5px;
+                            margin: 20px auto;
+                            max-width: 600px;
+                        }
+                        .btn {
+                            display: inline-block;
+                            margin-top: 20px;
+                            padding: 10px 20px;
+                            background: #007bff;
+                            color: white;
+                            text-decoration: none;
+                            border-radius: 5px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>❌ 로그인 실패</h1>
+                    <div class="error-box">
+                        <p><strong>오류:</strong> %s</p>
+                    </div>
+                    <a href="/" class="btn">다시 시도하기</a>
+                </body>
+                </html>
+                """, errorMessage);
+    }
 }

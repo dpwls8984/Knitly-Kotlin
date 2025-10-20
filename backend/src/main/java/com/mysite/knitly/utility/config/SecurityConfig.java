@@ -1,6 +1,8 @@
 package com.mysite.knitly.utility.config;
 
+import com.mysite.knitly.utility.handler.OAuth2FailureHandler;
 import com.mysite.knitly.utility.handler.OAuth2SuccessHandler;
+import com.mysite.knitly.utility.jwt.JwtAuthenticationFilter;
 import com.mysite.knitly.utility.oauth.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -9,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -17,7 +20,8 @@ public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
-    //private final OAuth2FailureHandler oAuth2FailureHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -33,6 +37,7 @@ public class SecurityConfig {
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/login/**", "/oauth2/**", "/api/auth/**").permitAll()
+                        .requestMatchers("/api/user/**").authenticated()  // JWT 인증 필요
                         .anyRequest().authenticated()
                 )
 
@@ -42,8 +47,11 @@ public class SecurityConfig {
                                 userInfo.userService(customOAuth2UserService)
                         )
                         .successHandler(oAuth2SuccessHandler)
-                        //.failureHandler(oAuth2FailureHandler)
-                );
+                        .failureHandler(oAuth2FailureHandler)
+                )
+
+                // JWT 인증 필터 추가
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

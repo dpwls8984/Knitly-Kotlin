@@ -40,7 +40,7 @@ public class UserService {
     /**
      * userId로 사용자 조회
      */
-    public User findById(java.util.UUID userId) {
+    public User findById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
     }
