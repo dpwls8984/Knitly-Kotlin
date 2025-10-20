@@ -1,7 +1,7 @@
 package com.mysite.knitly.domain.user.service;
 
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.entity.enums.Provider;
+import com.mysite.knitly.domain.user.entity.Provider;
 import com.mysite.knitly.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
