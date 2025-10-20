@@ -29,13 +29,13 @@ import java.util.stream.Collectors;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final UserRepository userRepository;
+    //private final UserRepository userRepository;
     private final DesignRepository designRepository;
     private final RedisProductService redisProductService;
 
-    public ProductRegisterResponse registerProduct(Long userId, Long designId, ProductRegisterRequest request) {
-        User seller = userRepository.findById(userId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+    public ProductRegisterResponse registerProduct(User seller, Long designId, ProductRegisterRequest request) {
+//        User seller = userRepository.findById(userId)
+//                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 
         Design design = designRepository.findById(designId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.DESIGN_NOT_FOUND));
@@ -43,7 +43,7 @@ public class ProductService {
         //design.startSale() TODO: 나중에 구현 - 도안 상태 변경
 
         //TODO: newProduct인지 Product인지 이름 통일
-        Product newProduct = Product.builder()
+        Product product = Product.builder()
                 .title(request.title())
                 .description(request.description())
                 .productCategory(request.productCategory())
@@ -57,18 +57,18 @@ public class ProductService {
                 .likeCount(0) // 초기값 설정
                 .build();
 
-        Product savedProduct = productRepository.save(newProduct);
+        Product savedProduct = productRepository.save(product);
         return ProductRegisterResponse.from(savedProduct);
     }
 
-    public ProductModifyResponse modifyProduct(Long userId, Long productId, ProductModifyRequest request) {
+    public ProductModifyResponse modifyProduct(User currentUser, Long productId, ProductModifyRequest request) {
         Product product = findProductById(productId);
 
         if (product.getIsDeleted()) {
             throw new ServiceException(ErrorCode.PRODUCT_ALREADY_DELETED);
         }
 
-        if (!product.getUser().getUserId().equals(userId)) {
+        if (!product.getUser().getUserId().equals(currentUser.getUserId())) {
             throw new ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED);
         }
 
@@ -82,10 +82,10 @@ public class ProductService {
         return ProductModifyResponse.from(product);
     }
 
-    public void deleteProduct(Long userId, Long productId) {
+    public void deleteProduct(User currentUser, Long productId) {
         Product product = findProductById(productId);
 
-        if (!product.getUser().getUserId().equals(userId)) {
+        if (!product.getUser().getUserId().equals(currentUser.getUserId())) {
             throw new ServiceException(ErrorCode.PRODUCT_DELETE_UNAUTHORIZED);
         }
         product.softDelete();
