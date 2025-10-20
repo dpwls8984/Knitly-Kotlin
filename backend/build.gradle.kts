@@ -38,8 +38,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    implementation("org.apache.pdfbox:pdfbox:2.0.29") // PDF 변환 라이브러리
-    implementation("commons-codec:commons-codec:1.16.0")
 }
 
 tasks.withType<Test> {
