@@ -1,4 +1,4 @@
-package com.mysite.knitly.domain.community.post.repository;
+package com.mysite.knitly.domain.user.repository;
 
 import com.mysite.knitly.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;

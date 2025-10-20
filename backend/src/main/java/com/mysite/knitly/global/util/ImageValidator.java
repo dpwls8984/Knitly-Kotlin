@@ -1,4 +1,4 @@
-package com.mysite.knitly.domain.util;
+package com.mysite.knitly.global.util;
 
 import java.util.regex.Pattern;
 

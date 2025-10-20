@@ -1,6 +1,5 @@
 package com.mysite.knitly.domain.product.product.service;
 
-import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.design.entity.Design;
 import com.mysite.knitly.domain.design.repository.DesignRepository;
 import com.mysite.knitly.domain.product.product.dto.ProductModifyRequest;
@@ -11,6 +10,7 @@ import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.entity.ProductCategory;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;

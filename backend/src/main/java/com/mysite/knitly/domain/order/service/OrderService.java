@@ -1,6 +1,5 @@
 package com.mysite.knitly.domain.order.service;
 
-import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.order.dto.OrderCreateRequest;
 import com.mysite.knitly.domain.order.dto.OrderCreateResponse;
 import com.mysite.knitly.domain.order.entity.Order;
@@ -9,6 +8,7 @@ import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.order.repository.OrderRepository;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;

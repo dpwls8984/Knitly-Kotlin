@@ -1,12 +1,12 @@
 package com.mysite.knitly.domain.community.post.service;
 
-import com.mysite.knitly.domain.util.Anonymizer;
-import com.mysite.knitly.domain.util.ImageValidator;
+import com.mysite.knitly.domain.user.repository.UserRepository;
+import com.mysite.knitly.global.util.Anonymizer;
+import com.mysite.knitly.global.util.ImageValidator;
 import com.mysite.knitly.domain.community.post.dto.*;
 import com.mysite.knitly.domain.community.post.entity.Post;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.repository.PostRepository;
-import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;

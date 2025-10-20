@@ -2,7 +2,6 @@ package com.mysite.knitly.domain.design.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.design.dto.DesignListResponse;
 import com.mysite.knitly.domain.design.dto.DesignRequest;
 import com.mysite.knitly.domain.design.dto.DesignResponse;
@@ -12,6 +11,7 @@ import com.mysite.knitly.domain.design.repository.DesignRepository;
 import com.mysite.knitly.domain.design.util.LocalFileStorage;
 import com.mysite.knitly.domain.design.util.PdfGenerator;
 import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;

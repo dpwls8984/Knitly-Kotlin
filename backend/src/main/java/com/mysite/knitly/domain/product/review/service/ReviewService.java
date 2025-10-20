@@ -1,6 +1,5 @@
 package com.mysite.knitly.domain.product.review.service;
 
-import com.mysite.knitly.domain.community.post.repository.UserRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest;
@@ -10,6 +9,7 @@ import com.mysite.knitly.domain.product.review.entity.Review;
 import com.mysite.knitly.domain.product.review.entity.ReviewImage;
 import com.mysite.knitly.domain.product.review.repository.ReviewRepository;
 import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -32,13 +32,12 @@ import java.util.UUID;
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
-    //conflict 안생기도록 일단 이름 임시로. 추후에 Tmp > 그냥 리포로 변경하고 tmp 파일 삭제
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
 
-    @Value("${review.upload-dir}")
+    @Value("${REVIEW_UPLOAD_DIR}")
     String uploadDir;
-    @Value("${review.url-prefix}")
+    @Value("${REVIEW_URL_PREFIX}")
     String urlPrefix;
 
 
