@@ -35,7 +35,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // 1. 요청 헤더에서 JWT 토큰 추출
             String token = extractTokenFromRequest(request);
 
+            log.info("===> JWT Filter: token = {}", token != null ? "EXISTS" : "NULL");
+
             if (token != null && jwtProvider.validateToken(token)) {
+                log.info("===> JWT Valid!");
                 // 2. 토큰에서 userId 추출
                 Long userId = jwtProvider.getUserIdFromToken(token);
 
@@ -58,6 +61,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
                 log.debug("JWT authenticated - userId: {}", userId);
+            } else {
+                log.warn("===> JWT Invalid or null!");
             }
 
         } catch (Exception e) {
