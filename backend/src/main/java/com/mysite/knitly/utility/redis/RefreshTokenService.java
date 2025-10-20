@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -25,7 +24,7 @@ public class RefreshTokenService {
      * Value: refreshToken
      * TTL: 7일
      */
-    public void saveRefreshToken(UUID userId, String refreshToken) {
+    public void saveRefreshToken(Long userId, String refreshToken) {
         String key = REFRESH_TOKEN_PREFIX + userId.toString();
 
         redisTemplate.opsForValue().set(
@@ -41,7 +40,7 @@ public class RefreshTokenService {
     /**
      * Redis에서 Refresh Token 조회
      */
-    public String getRefreshToken(UUID userId) {
+    public String getRefreshToken(Long userId) {
         String key = REFRESH_TOKEN_PREFIX + userId.toString();
         String refreshToken = redisTemplate.opsForValue().get(key);
 
@@ -56,7 +55,7 @@ public class RefreshTokenService {
      * Refresh Token 검증
      * - Redis에 저장된 토큰과 일치하는지 확인
      */
-    public boolean validateRefreshToken(UUID userId, String refreshToken) {
+    public boolean validateRefreshToken(Long userId, String refreshToken) {
         String storedToken = getRefreshToken(userId);
 
         if (storedToken == null) {
@@ -76,7 +75,7 @@ public class RefreshTokenService {
     /**
      * Refresh Token 삭제 (로그아웃 시 사용)
      */
-    public void deleteRefreshToken(UUID userId) {
+    public void deleteRefreshToken(Long userId) {
         String key = REFRESH_TOKEN_PREFIX + userId.toString();
         Boolean deleted = redisTemplate.delete(key);
 
@@ -90,7 +89,7 @@ public class RefreshTokenService {
     /**
      * Refresh Token 존재 여부 확인
      */
-    public boolean existsRefreshToken(UUID userId) {
+    public boolean existsRefreshToken(Long userId) {
         String key = REFRESH_TOKEN_PREFIX + userId.toString();
         Boolean exists = redisTemplate.hasKey(key);
         return Boolean.TRUE.equals(exists);

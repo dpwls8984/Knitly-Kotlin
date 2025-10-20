@@ -27,7 +27,7 @@ spring:
       static-locations:
         - classpath:/static/
 
-  # ✅ OAuth 2.0 설정 추가
+  # OAuth 2.0 설정 추가
   security:
     oauth2:
       client:
@@ -46,7 +46,7 @@ spring:
             user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
             user-name-attribute: sub
 
-  # ✅ Redis 설정 추가
+  # Redis 설정 추가
   data:
     redis:
       host: localhost
@@ -69,7 +69,7 @@ logging:
 
 custom:
   jwt:
-    # ✅ Refresh Token 만료 시간 추가
+    # Refresh Token 만료 시간 추가
     accessTokenExpireSeconds: 900 #{15 * 60} 15분
     refreshTokenExpireSeconds: 604800 #{7 * 24 * 60 * 60} 7일
     secretKey: ${JWT_SECRET_KEY}  # 환경 변수로 관리

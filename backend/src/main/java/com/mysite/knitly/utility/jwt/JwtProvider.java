@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.UUID;
 
 @Slf4j
 @Component
@@ -30,7 +29,7 @@ public class JwtProvider {
     /**
      * Access Token 생성
      */
-    public String createAccessToken(UUID userId) {
+    public String createAccessToken(Long userId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtProperties.getAccessTokenExpireSeconds() * 1000);
 
@@ -45,7 +44,7 @@ public class JwtProvider {
     /**
      * Refresh Token 생성
      */
-    public String createRefreshToken(UUID userId) {
+    public String createRefreshToken(Long userId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtProperties.getRefreshTokenExpireSeconds() * 1000);
 
@@ -60,14 +59,14 @@ public class JwtProvider {
     /**
      * 토큰에서 userId 추출
      */
-    public UUID getUserIdFromToken(String token) {
+    public Long getUserIdFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
 
-        return UUID.fromString(claims.getSubject());
+        return Long.parseLong(claims.getSubject());
     }
 
     /**
@@ -95,7 +94,7 @@ public class JwtProvider {
     /**
      * Access Token과 Refresh Token을 함께 생성
      */
-    public TokenResponse createTokens(UUID userId) {
+    public TokenResponse createTokens(Long userId) {
         String accessToken = createAccessToken(userId);
         String refreshToken = createRefreshToken(userId);
 

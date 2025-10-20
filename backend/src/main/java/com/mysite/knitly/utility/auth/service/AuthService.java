@@ -8,8 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.UUID;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,7 +27,7 @@ public class AuthService {
         }
 
         // 2. Refresh Token에서 userId 추출
-        UUID userId = jwtProvider.getUserIdFromToken(refreshToken);
+        Long userId = jwtProvider.getUserIdFromToken(refreshToken);
         log.info("Token refresh requested - userId: {}", userId);
 
         // 3. Redis에 저장된 Refresh Token과 비교
@@ -58,7 +56,7 @@ public class AuthService {
     /**
      * 로그아웃
      */
-    public void logout(UUID userId) {
+    public void logout(Long userId) {
         refreshTokenService.deleteRefreshToken(userId);
         log.info("User logged out - userId: {}", userId);
     }

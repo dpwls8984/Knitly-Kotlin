@@ -7,7 +7,6 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "users")
@@ -19,9 +18,8 @@ import java.util.UUID;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "BINARY(16)")
-    private UUID userId; // knitly 서비스 내에서의 키값
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long userId; // knitly 서비스 내에서의 키값
 
     @Column(nullable = false, unique = true)
     private String socialId; // 구글의 고유 ID (sub)
