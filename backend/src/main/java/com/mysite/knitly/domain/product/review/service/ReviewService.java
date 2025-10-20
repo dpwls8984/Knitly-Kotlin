@@ -12,6 +12,8 @@ import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
+import com.mysite.knitly.global.util.FileNameUtils;
+import com.mysite.knitly.global.util.ImageValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,12 +69,12 @@ public class ReviewService {
                 if (file.isEmpty()) continue;
 
                 String originalFilename = file.getOriginalFilename();
-                if (originalFilename == null || !originalFilename.matches("(?i).*\\.(jpg|jpeg|png)$")) {
+                if (!ImageValidator.isAllowedImageUrl(originalFilename)) {
                     throw new ServiceException(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
                 }
 
                 try {
-                    String filename = UUID.randomUUID() + "_" + originalFilename;
+                    String filename = UUID.randomUUID() + "_" + FileNameUtils.sanitize(originalFilename);
                     Path path = Paths.get(uploadDir, filename);
                     Files.write(path, file.getBytes());
 
