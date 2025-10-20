@@ -1,54 +1,41 @@
 package com.mysite.knitly.domain.user.entity;
 
-import com.mysite.knitly.global.jpa.BaseTimeEntity;
-import com.mysite.knitly.domain.user.entity.enums.Provider;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
-@Table(name = "users")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor
+@Table(name = "users")
 @AllArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-public class User extends BaseTimeEntity {
+public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
-    private Long userId; // knitly 서비스 내에서의 키값
-
-    @Column(nullable = false, unique = true)
-    private String socialId; // 구글의 고유 ID (sub)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID userId;
 
     @Column(nullable = false)
-    private String email; // 구글 이메일
+    private String socialId;
 
     @Column(nullable = false, length = 50)
-    private String name; // 구글에서 받아온 이름
+    private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
-    private Provider provider; // GOOGLE
+    @Column(nullable = false, columnDefinition = "ENUM('KAKAO', 'GOOGLE')")
+    private String provider; // 'GOOGLE'
 
+    @Column(nullable = false)
     @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    // 정적 팩토리 메서드
-    public static User createGoogleUser(String socialId, String email, String name) {
-        return User.builder()
-                .socialId(socialId)
-                .email(email)
-                .name(name)
-                .provider(Provider.GOOGLE)
-                .build();
-    }
+    private String createdAt;
 }
 
 //CREATE TABLE `users` (
