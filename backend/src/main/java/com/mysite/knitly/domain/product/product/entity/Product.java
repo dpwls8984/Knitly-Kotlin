@@ -1,17 +1,14 @@
 package com.mysite.knitly.domain.product.product.entity;
 
-import com.mysite.knitly.domain.product.design.entity.Design;
+import com.mysite.knitly.domain.design.entity.Design;
 import com.mysite.knitly.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.util.UUID;
 
 @Entity
 @Getter
