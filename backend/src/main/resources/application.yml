@@ -1,22 +1,24 @@
-#spring.application.name=knitly
-
 spring:
-  profiles:
-    active: dev
+  config:
+    activate:
+      on-profile: dev
   output:
     ansi:
       enabled: always
   datasource:
-    hikari:
-      auto-commit: false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PW}
   jpa:
+    hibernate:
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
         highlight_sql: true
         use_sql_comments: true
-    hibernate:
-      ddl-auto: create
+        dialect: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
   mvc:
     hiddenmethod:
