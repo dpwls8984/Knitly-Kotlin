@@ -104,11 +104,11 @@ public class ReviewService {
 
     // 2. 리뷰 소프트 삭제 (본인 리뷰만)
     @Transactional
-    public void deleteReview(Long reviewId, ReviewDeleteRequest request) {
+    public void deleteReview(Long reviewId, Long currentUserId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.REVIEW_NOT_FOUND));
 
-        if (!review.getUser().getUserId().equals(request.userId())) {
+        if (!review.getUser().getUserId().equals(currentUserId)) {
             throw new ServiceException(ErrorCode.REVIEW_NOT_AUTHORIZED);
         }
 

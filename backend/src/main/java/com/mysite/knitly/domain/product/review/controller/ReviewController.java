@@ -4,8 +4,10 @@ import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest;
 import com.mysite.knitly.domain.product.review.dto.ReviewDeleteRequest;
 import com.mysite.knitly.domain.product.review.dto.ReviewListResponse;
 import com.mysite.knitly.domain.product.review.service.ReviewService;
+import com.mysite.knitly.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,26 +23,29 @@ public class ReviewController {
     // 1️. 리뷰 등록
     @PostMapping("/products/{productId}/reviews")
     public ResponseEntity<ReviewListResponse> createReview(
+            @AuthenticationPrincipal User user,
             @PathVariable Long productId,
-            @RequestParam Long userId,
             @RequestParam("content") String content,
             @RequestParam("rating") Integer rating,
             @RequestParam(value = "images", required = false) List<MultipartFile> images
     ) {
+        Long currentUserId = user.getUserId();
+
         ReviewCreateRequest request = new ReviewCreateRequest(rating, content, images);
-        ReviewListResponse response = reviewService.createReview(productId, userId, request);
+        ReviewListResponse response = reviewService.createReview(productId, currentUserId, request);
         return ResponseEntity.ok(response);
     }
 
-    // 2️. 리뷰 소프트 삭제
+    // 2️. 리뷰 소프트 삭제(마이 페이지에서)
     @DeleteMapping("/reviews/{reviewId}")
     public ResponseEntity<Void> deleteReview(
-            @PathVariable Long productId,
-            @PathVariable Long reviewId,
-            @RequestParam Long userId
+            @AuthenticationPrincipal User user,
+            @PathVariable Long reviewId
     ) {
-        ReviewDeleteRequest request = new ReviewDeleteRequest(userId);
-        reviewService.deleteReview(reviewId, request);
+        Long currentUserId = user.getUserId();
+
+        ReviewDeleteRequest request = new ReviewDeleteRequest(currentUserId);
+        reviewService.deleteReview(reviewId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
