@@ -1,31 +1,10 @@
 spring:
-  application:
-    name: knitly
-  profiles:
-    active: dev
-  output:
-    ansi:
-      enabled: always
-
-logging:
-  level:
-    org.hibernate.orm.jdbc.bind: TRACE
-    org.hibernate.orm.jdbc.extract: TRACE
-    org.springframework.transaction.interceptor: TRACE
-
-springdoc:
-  default-produces-media-type: application/json
-
-custom:
-  jwt:
-    expireSeconds: "#{30 * 60}"
-    secretPattern: ${JWT_PATTERN}
-
----
-spring:
   config:
     activate:
       on-profile: dev
+  output:
+    ansi:
+      enabled: always
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL}
@@ -50,15 +29,21 @@ spring:
       static-locations:
         - classpath:/static/
 
----
-spring:
-  config:
-    activate:
-      on-profile: test
-  datasource:
-    url: jdbc:h2:mem:knitly_test;MODE=MySQL
-    driver-class-name: org.h2.Driver
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: false
+file:
+  upload-dir: uploads/designs
+  public-prefix: /files
+
+springdoc:
+  default-produces-media-type: application/json
+
+logging:
+  level:
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.orm.jdbc.extract: TRACE
+    org.springframework.transaction.interceptor: TRACE
+    com.rest1: DEBUG
+
+custom:
+  jwt:
+    expireSeconds: "#{30 * 60}"
+    secretPattern: ${JWT_PATTERN}
