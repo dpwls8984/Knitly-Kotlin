@@ -99,14 +99,13 @@ class ReviewServiceTest {
     void deleteReview_ValidUser_ShouldSetDeleted() {
         Long userId = 3L;
         Long reviewId = 1L;
-        ReviewDeleteRequest request = new ReviewDeleteRequest(userId);
 
         User user = User.builder().userId(userId).build();
         Review review = Review.builder().reviewId(reviewId).user(user).isDeleted(false).build();
 
         when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review));
 
-        reviewService.deleteReview(reviewId, request);
+        reviewService.deleteReview(reviewId, userId);
 
         assertThat(review.getIsDeleted()).isTrue();
     }
@@ -117,7 +116,6 @@ class ReviewServiceTest {
         Long requesterId = 3L;
         Long ownerId = 9L;
         Long reviewId = 1L;
-        ReviewDeleteRequest request = new ReviewDeleteRequest(requesterId);
 
         User owner = User.builder().userId(ownerId).build();
         Review review = Review.builder().reviewId(reviewId).user(owner).build();
@@ -125,7 +123,7 @@ class ReviewServiceTest {
         when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review));
 
         ServiceException ex = assertThrows(ServiceException.class,
-                () -> reviewService.deleteReview(reviewId, request));
+                () -> reviewService.deleteReview(reviewId, requesterId));
 
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.REVIEW_NOT_AUTHORIZED);
     }
