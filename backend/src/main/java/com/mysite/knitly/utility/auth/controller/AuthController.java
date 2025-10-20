@@ -1,18 +1,16 @@
 package com.mysite.knitly.utility.auth.controller;
 
-import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.utility.auth.dto.TokenRefreshRequest;
 import com.mysite.knitly.utility.auth.dto.TokenRefreshResponse;
 import com.mysite.knitly.utility.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -33,24 +31,6 @@ public class AuthController {
             log.error("Token refresh failed: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
-    }
-
-    /**
-     * 로그아웃 API
-     * POST /api/auth/logout
-     * JWT 인증 필요
-     */
-    @PostMapping("/logout")
-    public ResponseEntity<String> logout(@AuthenticationPrincipal User user) {
-        if (user == null) {
-            return ResponseEntity.status(401).body("인증이 필요합니다.");
-        }
-
-        log.info("Logout API called - userId: {}", user.getUserId());
-
-        authService.logout(user.getUserId());
-
-        return ResponseEntity.ok("로그아웃되었습니다.");
     }
 
     /**

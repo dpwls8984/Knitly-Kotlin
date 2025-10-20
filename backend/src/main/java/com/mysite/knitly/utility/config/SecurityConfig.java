@@ -36,9 +36,13 @@ public class SecurityConfig {
 
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login/**", "/oauth2/**", "/api/auth/refresh", "/api/auth/test").permitAll()
-                        .requestMatchers("/api/auth/logout").authenticated()  // 로그아웃은 인증 필요
-                        .requestMatchers("/api/user/**").authenticated()      // 사용자 API는 인증 필요
+                        // 인증 불필요
+                        .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/refresh", "/auth/test").permitAll()
+
+                        // JWT 인증 필요
+                        .requestMatchers("/users/**").authenticated()
+
+                        // 나머지 모두 인증 필요
                         .anyRequest().authenticated()
                 )
 
