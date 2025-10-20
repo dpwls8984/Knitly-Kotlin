@@ -50,4 +50,14 @@ public class ProductController {
         productService.deleteProduct(user, productId);
         return ResponseEntity.noContent().build();
     }
+
+    //재판매
+    @PostMapping("/{productId}/relist")
+    public ResponseEntity<Void> relistProduct(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long productId
+    ) {
+        productService.relistProduct(user, productId);
+        return ResponseEntity.ok().build();
+    }
 }

@@ -91,6 +91,19 @@ public class ProductService {
         product.getDesign().stopSale();
     }
 
+    @Transactional
+    public void relistProduct(User currentUser, Long productId) {
+        Product product = findProductById(productId);
+
+        if (!product.getUser().getUserId().equals(currentUser.getUserId())) {
+            throw new ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED); // 수정 권한 에러 재사용
+        }
+
+        // 3. Product와 Design 상태를 '판매 중'으로 원복
+        product.relist(); // Product의 isDeleted를 false로 변경
+        product.getDesign().relist(); // Design의 designState를 ON_SALE으로 변경
+    }
+
     private Product findProductById(Long productId){
         return productRepository.findByIdWithUser(productId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
