@@ -1,5 +1,6 @@
 package com.mysite.knitly.domain.user.entity;
 
+import com.mysite.knitly.global.jpa.BaseTimeEntity;
 import com.mysite.knitly.domain.user.entity.enums.Provider;
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,10 +16,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-public class User {
+public class User extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
     private Long userId; // knitly 서비스 내에서의 키값
 
     @Column(nullable = false, unique = true)

@@ -10,13 +10,14 @@ spring:
     hikari:
       auto-commit: false
   jpa:
+    hibernate:
+      ddl-auto: create
     properties:
       hibernate:
         format_sql: true
         highlight_sql: true
         use_sql_comments: true
-    hibernate:
-      ddl-auto: create
+        dialect: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
   mvc:
     hiddenmethod:
@@ -52,6 +53,10 @@ spring:
       host: localhost
       port: 6379
       # password: ${REDIS_PASSWORD}  # 비밀번호 설정 시 사용
+
+file:
+  upload-dir: uploads/designs
+  public-prefix: /files
 
 springdoc:
   default-produces-media-type: application/json

@@ -44,6 +44,8 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-api:0.12.5")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.5")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.5")
+    implementation("org.apache.pdfbox:pdfbox:2.0.29") // PDF 변환 라이브러리
+    implementation("commons-codec:commons-codec:1.16.0")
 }
 
 tasks.withType<Test> {
