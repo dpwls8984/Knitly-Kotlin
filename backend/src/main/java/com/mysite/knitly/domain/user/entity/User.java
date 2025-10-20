@@ -1,7 +1,6 @@
 package com.mysite.knitly.domain.user.entity;
 
 import com.mysite.knitly.global.jpa.BaseTimeEntity;
-import com.mysite.knitly.domain.user.entity.enums.Provider;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
