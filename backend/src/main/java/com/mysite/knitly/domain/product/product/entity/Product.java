@@ -87,6 +87,14 @@ public class Product {
         this.isDeleted = true;
     }
 
+    //재판매를 위한 메서드 (isDeleted 를 false 로 변경)
+    public void relist() {
+        if (!this.isDeleted) {
+            throw new ServiceException(ErrorCode.DESIGN_NOT_STOPPED);
+        }
+        this.isDeleted = false;
+    }
+
     //재고 수량 감소 메서드 추가
     public void decreaseStock(int quantity) {
         // 1. 상시 판매 상품(재고가 null)인 경우는 로직을 실행하지 않음
