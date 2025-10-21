@@ -51,6 +51,10 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.5")
     implementation("org.apache.pdfbox:pdfbox:2.0.29") // PDF 변환 라이브러리
     implementation("commons-codec:commons-codec:1.16.0")
+
+    // Swagger/OpenAPI
+    // SpringDoc OpenAPI (Swagger 3) - WebMVC 및 Swagger UI 포함
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.11")
 }
 
 tasks.withType<Test> {
