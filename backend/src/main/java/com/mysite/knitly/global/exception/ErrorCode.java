@@ -82,7 +82,10 @@ public enum ErrorCode {
     DESIGN_FILE_SAVE_FAILED("2006", HttpStatus.INTERNAL_SERVER_ERROR, "PDF 파일 저장에 실패했습니다."),   // Image 7000
     DESIGN_UNAUTHORIZED_DELETE("2007", HttpStatus.FORBIDDEN, "본인의 도안만 삭제할 수 있습니다."),
     DESIGN_NOT_DELETABLE("2008", HttpStatus.BAD_REQUEST, "해당 상태의 도안은 삭제할 수 없습니다."),
-
+    DESIGN_FILE_EMPTY("2009", HttpStatus.BAD_REQUEST, "업로드할 파일이 없습니다."),
+    DESIGN_FILE_INVALID_TYPE("2010", HttpStatus.BAD_REQUEST, "PDF 파일만 업로드 가능합니다."),
+    DESIGN_FILE_SIZE_EXCEEDED("2011", HttpStatus.BAD_REQUEST, "파일 크기는 10MB를 초과할 수 없습니다."),
+    DESIGN_FILE_NAME_INVALID("2012", HttpStatus.BAD_REQUEST, "파일명이 유효하지 않습니다."),
   // Event 6000
 
     // Image 7000
@@ -90,12 +93,13 @@ public enum ErrorCode {
     REVIEW_IMAGE_SAVE_FAILED("7502", HttpStatus.INTERNAL_SERVER_ERROR, "리뷰 이미지 저장에 실패했습니다."),
     REVIEW_IMAGES_TOO_MANY("7503", HttpStatus.BAD_REQUEST, "리뷰 이미지는 최대 10개까지 등록할 수 있습니다.");
 
+
     // File 7000
 
     // event 8000
 
     // System 9000
-    ;
+
 
 
     private final String code;
