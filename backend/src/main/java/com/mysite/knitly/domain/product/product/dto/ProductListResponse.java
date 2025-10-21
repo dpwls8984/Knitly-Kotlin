@@ -2,8 +2,6 @@ package com.mysite.knitly.domain.product.product.dto;
 
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.entity.ProductCategory;
-import lombok.Builder;
-import lombok.Getter;
 
 import java.time.LocalDateTime;
 
