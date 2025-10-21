@@ -1,8 +1,10 @@
 package com.mysite.knitly.domain.product.like.controller;
 
 import com.mysite.knitly.domain.product.like.service.ProductLikeService;
+import com.mysite.knitly.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -15,21 +17,25 @@ public class ProductLikeController {
     private final ProductLikeService productLikeService;
 
     @PostMapping
-    public ResponseEntity<Void> addLike(@PathVariable Long productId) {
-        // TODO: 현재는 userId를 임시로 씀. 추후 소셜로그인 기능 머지후에 수정예정
-        UUID temporaryUserId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+    public ResponseEntity<Void> addLike(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long productId) {
 
-        productLikeService.addLike(temporaryUserId, productId);
+        Long currentUserId = user.getUserId();
+        productLikeService.addLike(currentUserId, productId);
 
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> deleteLike(@PathVariable Long productId) {
-        // TODO: 현재는 userId를 임시로 씀. 추후 소셜로그인 기능 머지후에 수정예정
-        UUID temporaryUserId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+    public ResponseEntity<Void> deleteLike(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long productId) {
 
-        productLikeService.deleteLike(temporaryUserId, productId);
+        Long currentUserId = user.getUserId();
+        productLikeService.deleteLike(currentUserId, productId);
+
+        productLikeService.deleteLike(currentUserId, productId);
 
         return ResponseEntity.ok().build();
     }

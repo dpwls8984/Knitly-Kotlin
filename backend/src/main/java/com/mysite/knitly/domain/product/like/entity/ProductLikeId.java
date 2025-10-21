@@ -13,6 +13,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @EqualsAndHashCode
 public class ProductLikeId implements Serializable {
-    private UUID user;
+    private Long user;
     private Long product;
 }

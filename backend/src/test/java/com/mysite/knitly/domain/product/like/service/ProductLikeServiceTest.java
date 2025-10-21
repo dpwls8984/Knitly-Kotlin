@@ -39,7 +39,7 @@ class ProductLikeServiceTest {
     @Test
     @DisplayName("찜하기: Redis에 추가하고 RabbitMQ에 메시지 발행")
     void addLike_ShouldAddToRedisAndPublishMessage() {
-        UUID userId = UUID.randomUUID();
+        Long userId = 3L;
         Long productId = 1L;
         String redisKey = "likes:product:" + productId;
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
@@ -53,7 +53,7 @@ class ProductLikeServiceTest {
     @Test
     @DisplayName("찜 삭제: Redis에서 제거하고 RabbitMQ에 메시지 발행")
     void deleteLike_ShouldRemoveFromRedisAndPublishMessage() {
-        UUID userId = UUID.randomUUID();
+        Long userId = 3L;
         Long productId = 1L;
         String redisKey = "likes:product:" + productId;
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);

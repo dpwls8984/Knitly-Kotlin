@@ -6,8 +6,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 public class ProductLikeService {
@@ -19,14 +17,14 @@ public class ProductLikeService {
     private static final String LIKE_ROUTING_KEY = "like.add.routingkey";
     private static final String DISLIKE_ROUTING_KEY = "like.delete.routingkey";
 
-    public void addLike(UUID userId, Long productId) {
+    public void addLike(Long userId, Long productId) {
         String redisKey = "likes:product:" + productId;
         redisTemplate.opsForSet().add(redisKey, userId.toString());
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
         rabbitTemplate.convertAndSend(EXCHANGE_NAME, LIKE_ROUTING_KEY, eventDto);
     }
 
-    public void deleteLike(UUID userId, Long productId) {
+    public void deleteLike(Long userId, Long productId) {
         String redisKey = "likes:product:" + productId;
         redisTemplate.opsForSet().remove(redisKey, userId.toString());
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
