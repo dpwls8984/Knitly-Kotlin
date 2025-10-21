@@ -17,6 +17,8 @@ public enum ErrorCode {
     PRODUCT_DELETE_UNAUTHORIZED("2003", HttpStatus.FORBIDDEN, "상품 삭제 권한이 없습니다."),
     PRODUCT_ALREADY_DELETED("2004", HttpStatus.BAD_REQUEST, "이미 삭제된 상품입니다."),
     PRODUCT_STOCK_INSUFFICIENT("2005", HttpStatus.BAD_REQUEST, "상품 재고보다 많은 수량을 주문할 수 없습니다. 남은 재고를 확인해주세요."),
+    LIKE_ALREADY_EXISTS("2401", HttpStatus.CONFLICT, "이미 찜한 상품입니다."),
+    LIKE_NOT_FOUND("2402", HttpStatus.NOT_FOUND, "삭제할 찜을 찾을 수 없습니다."),
 
     // Order 3000
     OUT_OF_STOCK("3001", HttpStatus.BAD_REQUEST, "품절된 상품입니다."),
@@ -82,7 +84,7 @@ public enum ErrorCode {
     DESIGN_NOT_DELETABLE("2008", HttpStatus.BAD_REQUEST, "해당 상태의 도안은 삭제할 수 없습니다."),
 
   // Event 6000
-  
+
     // Image 7000
     IMAGE_FORMAT_NOT_SUPPORTED("7501", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다."),
     REVIEW_IMAGE_SAVE_FAILED("7502", HttpStatus.INTERNAL_SERVER_ERROR, "리뷰 이미지 저장에 실패했습니다."),
@@ -93,6 +95,7 @@ public enum ErrorCode {
     // event 8000
 
     // System 9000
+    ;
 
 
     private final String code;
