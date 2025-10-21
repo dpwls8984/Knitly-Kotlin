@@ -206,12 +206,12 @@ public class ProductService {
         return productRepository.findByIsDeletedFalse(pageable);
     }
 
-    public Page<ProductListResponse> getProductsByUserId(
-            User user,
+    public Page<ProductListResponse> findByUser_userIdAndIsDeletedFalse(
+            Long userId,
             Pageable pageable
     ) {
         // TODO : 특정 유저 id로 등록한 상품 조회
-        return productRepository.findByUserAndIsDeletedFalse(user, pageable).map(ProductListResponse::from);
+        return productRepository.findByUser_userIdAndIsDeletedFalse(userId, pageable).map(ProductListResponse::from);
     }
 
     // 정렬 조건 생성

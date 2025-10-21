@@ -2,7 +2,6 @@ package com.mysite.knitly.domain.product.product.repository;
 
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.entity.ProductCategory;
-import com.mysite.knitly.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -35,5 +34,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByProductIdInAndIsDeletedFalse(List<Long> productIds);
 
     // userId로 여러 개 조회
-    Page<Product> findByUserAndIsDeletedFalse(User user, Pageable pageable);
+    Page<Product> findByUser_userIdAndIsDeletedFalse(Long userId, Pageable pageable);
 }

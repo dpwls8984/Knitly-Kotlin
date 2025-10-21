@@ -1,9 +1,12 @@
+// UserController.java의 로그아웃과 회원탈퇴 메서드 수정
+
 package com.mysite.knitly.domain.user.controller;
 
 import com.mysite.knitly.domain.product.product.dto.ProductListResponse;
 import com.mysite.knitly.domain.product.product.service.ProductService;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.utility.auth.service.AuthService;
+import com.mysite.knitly.utility.cookie.CookieUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -11,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -32,6 +36,9 @@ public class UserController {
 
     private final AuthService authService;
     private final ProductService productService;
+    private final CookieUtil cookieUtil;  // 추가!
+
+    private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";  // 추가!
 
     /**
      * 현재 로그인한 사용자 정보 조회 (JWT 인증 필요)
@@ -82,12 +89,14 @@ public class UserController {
     }
 
     /**
-     * 로그아웃
+     * 로그아웃 (개선됨)
      * POST /users/logout
+     *
+     * Redis에서 Refresh Token 삭제 + HTTP-only 쿠키 삭제
      */
     @Operation(
             summary = "로그아웃",
-            description = "로그아웃하고 Redis에 저장된 Refresh Token을 삭제합니다. JWT 토큰이 필요합니다."
+            description = "로그아웃하고 Redis에 저장된 Refresh Token과 HTTP-only 쿠키를 삭제합니다. JWT 토큰이 필요합니다."
     )
     @ApiResponses({
             @ApiResponse(
@@ -102,7 +111,9 @@ public class UserController {
     })
     @SecurityRequirement(name = "Bearer Authentication")
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(@AuthenticationPrincipal User user) {
+    public ResponseEntity<String> logout(
+            @AuthenticationPrincipal User user,
+            HttpServletResponse response) {  // HttpServletResponse 추가!
 
         if (user == null) {
             return ResponseEntity.status(401).body("인증이 필요합니다.");
@@ -110,18 +121,26 @@ public class UserController {
 
         log.info("Logout requested - userId: {}", user.getUserId());
 
+        // 1. Redis에서 Refresh Token 삭제
         authService.logout(user.getUserId());
+        log.info("Refresh Token deleted from Redis - userId: {}", user.getUserId());
+
+        // 2. HTTP-only 쿠키 삭제
+        cookieUtil.deleteCookie(response, REFRESH_TOKEN_COOKIE_NAME);
+        log.info("Refresh Token cookie deleted");
 
         return ResponseEntity.ok("로그아웃되었습니다.");
     }
 
     /**
-     * 회원탈퇴
+     * 회원탈퇴 (개선됨)
      * DELETE /users/me
+     *
+     * DB에서 사용자 정보 삭제 + Redis에서 Refresh Token 삭제 + HTTP-only 쿠키 삭제
      */
     @Operation(
             summary = "회원탈퇴",
-            description = "회원탈퇴하고 DB와 Redis에서 모든 사용자 데이터를 삭제합니다. JWT 토큰이 필요합니다."
+            description = "회원탈퇴하고 DB와 Redis에서 모든 사용자 데이터를 삭제하며, HTTP-only 쿠키도 삭제합니다. JWT 토큰이 필요합니다."
     )
     @ApiResponses({
             @ApiResponse(
@@ -136,7 +155,9 @@ public class UserController {
     })
     @SecurityRequirement(name = "Bearer Authentication")
     @DeleteMapping("/me")
-    public ResponseEntity<String> deleteAccount(@AuthenticationPrincipal User user) {
+    public ResponseEntity<String> deleteAccount(
+            @AuthenticationPrincipal User user,
+            HttpServletResponse response) {  // HttpServletResponse 추가!
 
         if (user == null) {
             log.warn("User is null in DELETE /user/me");
@@ -145,24 +166,32 @@ public class UserController {
 
         log.info("Account deletion requested - userId: {}, email: {}", user.getUserId(), user.getEmail());
 
+        // 1. DB에서 사용자 삭제 + Redis에서 Refresh Token 삭제
         authService.deleteAccount(user.getUserId());
+        log.info("User account deleted from DB and Redis - userId: {}", user.getUserId());
+
+        // 2. HTTP-only 쿠키 삭제
+        cookieUtil.deleteCookie(response, REFRESH_TOKEN_COOKIE_NAME);
+        log.info("Refresh Token cookie deleted");
 
         return ResponseEntity.ok("회원탈퇴가 완료되었습니다.");
     }
 
-
+    /**
+     * 판매자 상품 조회
+     * GET /users/{user}/products
+     */
     @Operation(
             summary = "판매자 상품 조회",
             description = "해당 유저가 판매중인 상품 목록을 가져옵니다."
     )
-    // 판매자 상품 목록 조회
-    @GetMapping("/{user}/products")
+    @GetMapping("/{userId}/products")
     @ResponseBody
     public ResponseEntity<Page<ProductListResponse>> getProductsWithUserId(
-            @PathVariable User user,
+            @PathVariable Long userId,
             @PageableDefault(size = 20) Pageable pageable
     ){
-        Page<ProductListResponse> response = productService.getProductsByUserId(user, pageable);
+        Page<ProductListResponse> response = productService.findByUser_userIdAndIsDeletedFalse(userId, pageable);
         log.info("getProductsWithUserId response: {}", response);
         return ResponseEntity.ok(response);
     }
