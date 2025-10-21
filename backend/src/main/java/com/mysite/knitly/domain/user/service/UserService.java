@@ -44,4 +44,14 @@ public class UserService {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
     }
+
+    /**
+     * 회원탈퇴
+     */
+    @Transactional
+    public void deleteUser(Long userId) {
+        User user = findById(userId);
+        userRepository.delete(user);
+        log.info("회원탈퇴 완료 - userId: {}, email: {}", userId, user.getEmail());
+    }
 }
