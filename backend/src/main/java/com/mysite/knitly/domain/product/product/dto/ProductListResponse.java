@@ -7,39 +7,34 @@ import lombok.Getter;
 
 import java.time.LocalDateTime;
 
-@Getter
-@Builder
-public class ProductListResponse {
-
-    private Long productId;
-    private String title;
-    private ProductCategory productCategory;
-    private Double price;
-    private Integer purchaseCount;
-    private Integer likeCount;
-    private Integer stockQuantity;
-    private Double avgReviewRating;
-    private LocalDateTime createdAt;
-
-    // 추가 정보
-    private Boolean isFree;         // 무료 여부
-    private Boolean isLimited;      // 한정판매 여부
-    private Boolean isSoldOut;      // 품절 여부 (stockQuantity = 0)
-
+public record ProductListResponse(
+        Long productId,
+        String title,
+        ProductCategory productCategory,
+        Double price,
+        Integer purchaseCount,
+        Integer likeCount,
+        Integer stockQuantity,
+        Double avgReviewRating,
+        LocalDateTime createdAt,
+        Boolean isFree,
+        Boolean isLimited,
+        Boolean isSoldOut
+) {
     public static ProductListResponse from(Product product) {
-        return ProductListResponse.builder()
-                .productId(product.getProductId())
-                .title(product.getTitle())
-                .productCategory(product.getProductCategory())
-                .price(product.getPrice())
-                .purchaseCount(product.getPurchaseCount())
-                .likeCount(product.getLikeCount())
-                .stockQuantity(product.getStockQuantity())
-                .avgReviewRating(product.getAvgReviewRating())
-                .createdAt(product.getCreatedAt())
-                .isFree(product.getPrice() == 0.0)
-                .isLimited(product.getStockQuantity() != null)
-                .isSoldOut(product.getStockQuantity() != null && product.getStockQuantity() == 0)
-                .build();
+        return new ProductListResponse(
+                product.getProductId(),
+                product.getTitle(),
+                product.getProductCategory(),
+                product.getPrice(),
+                product.getPurchaseCount(),
+                product.getLikeCount(),
+                product.getStockQuantity(),
+                product.getAvgReviewRating(),
+                product.getCreatedAt(),
+                product.getPrice() == 0.0,
+                product.getStockQuantity() != null,
+                product.getStockQuantity() != null && product.getStockQuantity() == 0
+        );
     }
 }
