@@ -2,23 +2,29 @@ package com.mysite.knitly.domain.community.post.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
-import com.mysite.knitly.domain.community.post.repository.UserRepository;
-import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.entity.Provider;
-import org.junit.jupiter.api.*;
+import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.domain.user.repository.UserRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Collections;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
@@ -30,17 +36,27 @@ class PostControllerValidationTest {
     @Autowired
     UserRepository userRepository;
 
-    private UUID authorId;
+    private Long authorId;
+    private User author;
 
     @BeforeEach
     void setUp() {
         // 고유 socialId 로 저장
-        User author = User.builder()
+        author = User.builder()
                 .socialId("pval-auth-" + UUID.randomUUID())
+                .email("author@test.com")
                 .name("Author")
                 .provider(Provider.GOOGLE)
                 .build();
         authorId = userRepository.save(author).getUserId();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(author, null, Collections.emptyList())
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -50,8 +66,7 @@ class PostControllerValidationTest {
                 "category", PostCategory.FREE.name(),
                 "title", "   ",
                 "content", "내용",
-                "imageUrls", List.of("https://example.com/a.jpg"),
-                "authorId", authorId.toString()
+                "imageUrls", List.of("https://example.com/a.jpg")
         );
         mvc.perform(post("/community/posts")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -63,8 +78,7 @@ class PostControllerValidationTest {
                 "category", PostCategory.FREE.name(),
                 "title", "제목",
                 "content", "   ",
-                "imageUrls", List.of("https://example.com/a.jpg"),
-                "authorId", authorId.toString()
+                "imageUrls", List.of("https://example.com/a.jpg")
         );
         mvc.perform(post("/community/posts")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -79,8 +93,7 @@ class PostControllerValidationTest {
                 "category", PostCategory.FREE.name(),
                 "title", longTitle,
                 "content", "본문",
-                "imageUrls", List.of("https://example.com/a.jpg"),
-                "authorId", authorId.toString()
+                "imageUrls", List.of("https://example.com/a.jpg")
         );
         mvc.perform(post("/community/posts")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -94,8 +107,7 @@ class PostControllerValidationTest {
                 "category", PostCategory.FREE.name(),
                 "title", "정상 제목",
                 "content", "정상 본문",
-                "imageUrls", List.of("https://example.com/a.jpg"),
-                "authorId", authorId.toString()
+                "imageUrls", List.of("https://example.com/a.jpg")
         );
         mvc.perform(post("/community/posts")
                         .contentType(MediaType.APPLICATION_JSON)

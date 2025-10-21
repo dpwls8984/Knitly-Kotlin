@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.mysite.knitly.domain.user.entity.User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
 @RequestMapping("/community")
@@ -25,9 +27,10 @@ public class CommentController {
             @RequestParam(defaultValue = "asc") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) Long currentUserId
+            @AuthenticationPrincipal User user
     ) {
-        return ResponseEntity.ok(commentService.getComments(postId, sort, page, size, currentUserId));
+        Long userIdFromToken = (user == null) ? null : user.getUserId();
+        return ResponseEntity.ok(commentService.getComments(postId, sort, page, size, userIdFromToken));
     }
 
     // 댓글 개수
@@ -40,12 +43,13 @@ public class CommentController {
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<CommentResponse> create(
             @PathVariable Long postId,
+            @AuthenticationPrincipal User user,
             @Valid @RequestBody CommentCreateRequest request
     ) {
         if (!postId.equals(request.postId())) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(commentService.create(request));
+        return ResponseEntity.ok(commentService.create(request, user.getUserId()));
     }
 
     // 댓글 수정
@@ -53,19 +57,19 @@ public class CommentController {
     public ResponseEntity<Void> update(
             @PathVariable Long commentId,
             @Valid @RequestBody CommentUpdateRequest request,
-            @RequestParam Long currentUserId
+            @AuthenticationPrincipal User user
     ) {
-        commentService.update(commentId, request, currentUserId);
+        commentService.update(commentId, request, user.getUserId());
         return ResponseEntity.noContent().build();
     }
 
     // 댓글 삭제
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<Void> delete(
-            @PathVariable Long commentId,
-            @RequestParam Long currentUserId
+            @AuthenticationPrincipal User user,
+            @PathVariable Long commentId
     ) {
-        commentService.delete(commentId, currentUserId);
+        commentService.delete(commentId, user.getUserId());
         return ResponseEntity.noContent().build();
     }
 }

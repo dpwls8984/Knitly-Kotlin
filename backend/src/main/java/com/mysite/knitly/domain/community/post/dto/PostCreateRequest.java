@@ -20,6 +20,5 @@ public record PostCreateRequest(
     @Size(max = 5, message = "이미지는 최대 5개까지 업로드할 수 있습니다.")
     List<String> imageUrls,
 
-    @NotNull(message = "작성자 ID는 필수입니다.")
     Long authorId
 ) {}

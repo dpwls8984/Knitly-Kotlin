@@ -10,9 +10,6 @@ public record CommentCreateRequest(
         @NotNull(message = "게시글 ID는 필수입니다.")
         Long postId,
 
-        @NotNull(message = "작성자 ID는 필수입니다.")
-        Long authorId,
-
         Long parentId,
 
         @NotBlank(message = "댓글 내용은 필수입니다.")

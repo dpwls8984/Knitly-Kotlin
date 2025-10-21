@@ -56,10 +56,11 @@ public class CommentService {
 
     // 댓글 작성
     @Transactional
-    public CommentResponse create(CommentCreateRequest req) {
+    public CommentResponse create(CommentCreateRequest req, Long currentUserId) {
         Post post = postRepository.findById(req.postId())
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
-        User author = userRepository.findById(req.authorId())
+        // JWT 인증 사용자 사용
+        User author = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.BAD_REQUEST));
 
         // parentId가 있으면 동일 게시글 소속인지 검증
@@ -82,19 +83,19 @@ public class CommentService {
         );
 
         Map<Long, Integer> authorNoMap = buildAuthorNoMap(req.postId());
-        return toFlatResponse(saved, author.getUserId(), authorNoMap);
+        return toFlatResponse(saved, currentUserId, authorNoMap);
     }
 
     // 댓글 수정
     @Transactional
-    public void update(Long commentId, CommentUpdateRequest req, Long currentUserId) {
+    public void update(Long commentId, CommentUpdateRequest req, Long userIdFromToken) {
         Comment c = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (c.isDeleted()) {
             throw new ServiceException(ErrorCode.COMMENT_ALREADY_DELETED);
         }
-        if (c.getAuthor() == null || !c.getAuthor().getUserId().equals(currentUserId)) {
+        if (c.getAuthor() == null || !c.getAuthor().getUserId().equals(userIdFromToken)) {
             throw new ServiceException(ErrorCode.COMMENT_UPDATE_FORBIDDEN);
         }
         c.update(req.content());
@@ -102,14 +103,14 @@ public class CommentService {
 
     // 댓글 삭제
     @Transactional
-    public void delete(Long commentId, Long currentUserId) {
+    public void delete(Long commentId, Long userIdFromToken) {
         Comment c = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (c.isDeleted()) {
             throw new ServiceException(ErrorCode.COMMENT_ALREADY_DELETED);
         }
-        if (c.getAuthor() == null || !c.getAuthor().getUserId().equals(currentUserId)) {
+        if (c.getAuthor() == null || !c.getAuthor().getUserId().equals(userIdFromToken)) {
             throw new ServiceException(ErrorCode.COMMENT_DELETE_FORBIDDEN);
         }
         c.softDelete();

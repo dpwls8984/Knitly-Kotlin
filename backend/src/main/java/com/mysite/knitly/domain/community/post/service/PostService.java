@@ -78,7 +78,7 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponse create(PostCreateRequest req) {
+    public PostResponse create(PostCreateRequest req, Long userIdFromToken) {
         List<String> urls = normalizeUrls(req.imageUrls());
         if (urls.size() > 5) {
             throw new ServiceException(ErrorCode.POST_IMAGE_EXTENSION_INVALID);
@@ -89,8 +89,10 @@ public class PostService {
             }
         }
 
-        User author = userRepository.findById(req.authorId())
-                .orElseThrow(() -> new ServiceException(ErrorCode.BAD_REQUEST));
+        // JUT 인증 기반으로 토큰 사용자 ID 사용하는 것으로 수정
+        // 요청 authorId는 무시하고-> 프론트 추가할 때 수정 예정
+        User author = userRepository.findById(userIdFromToken)
+                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 
         Post post = Post.builder()
                 .category(req.category())
@@ -106,12 +108,12 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponse update(Long id, PostUpdateRequest req, Long currentUserId) {
+    public PostResponse update(Long id, PostUpdateRequest req, Long userIdFromToken) {
 
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
 
-        if (p.getAuthor() == null || !p.getAuthor().getUserId().equals(currentUserId)) {
+        if (p.getAuthor() == null || !p.getAuthor().getUserId().equals(userIdFromToken)) {
             throw new ServiceException(ErrorCode.POST_UPDATE_FORBIDDEN);
         }
 
@@ -134,15 +136,15 @@ public class PostService {
             p.replaceImages(urls);
         }
 
-        return getPost(p.getId(), currentUserId);
+        return getPost(p.getId(), userIdFromToken);
     }
 
     @Transactional
-    public void delete(Long id, Long currentUserId) {
+    public void delete(Long id, Long userIdFromToken) {
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
 
-        if (p.getAuthor() == null || !p.getAuthor().getUserId().equals(currentUserId)) {
+        if (p.getAuthor() == null || !p.getAuthor().getUserId().equals(userIdFromToken)) {
             throw new ServiceException(ErrorCode.POST_DELETE_FORBIDDEN);
         }
 

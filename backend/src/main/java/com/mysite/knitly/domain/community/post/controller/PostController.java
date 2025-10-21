@@ -1,7 +1,9 @@
 package com.mysite.knitly.domain.community.post.controller;
 
-import com.mysite.knitly.domain.community.post.dto.*;
+import com.mysite.knitly.domain.community.post.dto.PostCreateRequest;
 import com.mysite.knitly.domain.community.post.dto.PostListItemResponse;
+import com.mysite.knitly.domain.community.post.dto.PostResponse;
+import com.mysite.knitly.domain.community.post.dto.PostUpdateRequest;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.service.PostService;
 import jakarta.validation.Valid;
@@ -9,8 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.UUID;
+import com.mysite.knitly.domain.user.entity.User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
 @RequestMapping("/community/posts")
@@ -31,40 +33,36 @@ public class PostController {
 
     @GetMapping("/{postId}")
     public ResponseEntity<PostResponse> getPost(
-            @PathVariable("postId") Long postId,
-            @RequestParam(required = false) Long currentUserId
+            @AuthenticationPrincipal User user,
+            @PathVariable("postId") Long postId
     ) {
-        return ResponseEntity.ok(postService.getPost(postId, currentUserId));
+        Long userIdFromToken = (user == null) ? null : user.getUserId();
+        return ResponseEntity.ok(postService.getPost(postId, userIdFromToken));
     }
 
     @PostMapping
     public ResponseEntity<PostResponse> create(
+            @AuthenticationPrincipal User user,
             @Valid @RequestBody PostCreateRequest request
     ) {
-        if (request.imageUrls() != null && request.imageUrls().size() > 5) {
-            throw new IllegalArgumentException("이미지는 최대 5개까지 업로드할 수 있습니다.");
-        }
-        return ResponseEntity.ok(postService.create(request));
+        return ResponseEntity.ok(postService.create(request, user.getUserId()));
     }
 
     @PutMapping("/{postId}")
     public ResponseEntity<PostResponse> update(
+            @AuthenticationPrincipal User user,
             @PathVariable("postId") Long postId,
-            @Valid @RequestBody PostUpdateRequest request,
-            @RequestParam Long currentUserId
+            @Valid @RequestBody PostUpdateRequest request
     ) {
-        if (request.imageUrls() != null && request.imageUrls().size() > 5) {
-            throw new IllegalArgumentException("이미지는 최대 5개까지 업로드할 수 있습니다.");
-        }
-        return ResponseEntity.ok(postService.update(postId, request, currentUserId));
+        return ResponseEntity.ok(postService.update(postId, request, user.getUserId()));
     }
 
     @DeleteMapping("/{postId}")
     public ResponseEntity<Void> delete(
-            @PathVariable("postId") Long postId,
-            @RequestParam Long currentUserId
+            @AuthenticationPrincipal User user,
+            @PathVariable("postId") Long postId
     ) {
-        postService.delete(postId, currentUserId);
+        postService.delete(postId, user.getUserId());
         return ResponseEntity.noContent().build();
     }
 }

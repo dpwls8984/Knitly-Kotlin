@@ -7,6 +7,7 @@ import com.mysite.knitly.utility.oauth.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -39,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/login/**", "/oauth2/**", "/api/auth/refresh", "/api/auth/test").permitAll()
                         .requestMatchers("/api/auth/logout").authenticated()  // 로그아웃은 인증 필요
                         .requestMatchers("/api/user/**").authenticated()      // 사용자 API는 인증 필요
+                        .requestMatchers(HttpMethod.GET, "/community/**").permitAll() //커뮤니티 조회 가능 추가
                         .anyRequest().authenticated()
                 )
 

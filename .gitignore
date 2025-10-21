@@ -45,6 +45,6 @@ out/
 /backend/.env.properties
 # env files (all environments)
 .env
-**/.env
+backend/.env.properties
 *.env
 .env.*

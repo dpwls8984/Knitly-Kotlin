@@ -1,12 +1,11 @@
-/*
 package com.mysite.knitly.domain.community.post.service;
 
 import com.mysite.knitly.domain.community.post.dto.*;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.repository.PostRepository;
-import com.mysite.knitly.domain.community.post.repository.UserRepository;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.entity.UserProvider;
+import com.mysite.knitly.domain.user.entity.Provider;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import org.junit.jupiter.api.*;
@@ -33,16 +32,17 @@ class PostServiceTest {
     @Autowired
     private PostRepository postRepository;
 
-    private UUID authorId;
-    private UUID otherUserId;
+    private Long authorId;
+    private Long otherUserId;
 
     @BeforeEach
     void setUp() {
         // author
         User author = User.builder()
                 .socialId("social-author")
+                .email("author@test.com")
                 .name("Author")
-                .provider(UserProvider.GOOGLE)
+                .provider(Provider.GOOGLE)
                 .build();
         author = userRepository.save(author);
         authorId = author.getUserId();
@@ -50,8 +50,9 @@ class PostServiceTest {
         // other user
         User other = User.builder()
                 .socialId("social-other")
+                .email("other@test.com")
                 .name("Other")
-                .provider(UserProvider.KAKAO)
+                .provider(Provider.KAKAO)
                 .build();
         other = userRepository.save(other);
         otherUserId = other.getUserId();
@@ -64,7 +65,7 @@ class PostServiceTest {
                 List.of("https://example.com/a.jpg"),
                 authorId
         );
-        PostResponse res = postService.create(req);
+        PostResponse res = postService.create(req, authorId);
 
         assertThat(res.id()).isNotNull();
         assertThat(res.title()).isEqualTo("첫 글");
@@ -81,7 +82,7 @@ class PostServiceTest {
                 authorId
         );
 
-        assertThatThrownBy(() -> postService.create(req))
+        assertThatThrownBy(() -> postService.create(req, authorId))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining(ErrorCode.POST_IMAGE_EXTENSION_INVALID.getMessage());
     }
@@ -101,7 +102,7 @@ class PostServiceTest {
                 List.of("https://example.com/tip.jpg"),
                 authorId
         );
-        PostResponse created = postService.create(req);
+        PostResponse created = postService.create(req, authorId);
 
         PostUpdateRequest update = new PostUpdateRequest(
                 PostCategory.TIP, "수정제목", "수정내용",
@@ -122,7 +123,7 @@ class PostServiceTest {
                 authorId
         );
 
-        PostResponse created = postService.create(req);
+        PostResponse created = postService.create(req, authorId);
 
         // when + then
         assertThatThrownBy(() -> postService.delete(created.id(), otherUserId))
@@ -138,25 +139,20 @@ class PostServiceTest {
                     PostCategory.FREE, "free-" + i, "c",
                     List.of("https://example.com/i.jpg"),
                     authorId
-            ));
+            ), authorId);
         }
         postService.create(new PostCreateRequest(
                 PostCategory.TIP, "tip", "c",
                 List.of("https://example.com/i.jpg"),
                 authorId
-        ));
+        ), authorId);
 
         // when
-        var page0 = postService.getPostList(PostCategory.FREE, */
-/*query*//*
- null, 0, 10);
-        var all   = postService.getPostList(null, */
-/*query*//*
- null, 0, 10);
-
+        var page0 = postService.getPostList(PostCategory.FREE, null, 0, 10);
+        var all = postService.getPostList(null, null, 0, 10);
         // then
         assertThat(page0.getTotalElements()).isEqualTo(2);
         assertThat(all.getTotalElements()).isEqualTo(3);
+
     }
 }
-*/
