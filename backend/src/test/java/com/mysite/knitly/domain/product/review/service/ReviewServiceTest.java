@@ -19,6 +19,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,6 +32,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -57,7 +59,7 @@ class ReviewServiceTest {
 
         // @TempDir을 사용하도록 uploadDir 설정 변경
         reviewService.uploadDir = tempDir.toString();
-        reviewService.urlPrefix = "/static/review/";
+        reviewService.urlPrefix = "/resources/static/review/";
     }
 
     @Test
@@ -83,7 +85,7 @@ class ReviewServiceTest {
                     .build();
         });
 
-        ReviewListResponse response = reviewService.createReview(productId, userId, request);
+        ReviewListResponse response = reviewService.createReview(productId, user, request);
 
         assertThat(response).isNotNull();
         assertThat(response.reviewId()).isEqualTo(1L);
@@ -97,14 +99,13 @@ class ReviewServiceTest {
     void deleteReview_ValidUser_ShouldSetDeleted() {
         Long userId = 3L;
         Long reviewId = 1L;
-        ReviewDeleteRequest request = new ReviewDeleteRequest(userId);
 
         User user = User.builder().userId(userId).build();
         Review review = Review.builder().reviewId(reviewId).user(user).isDeleted(false).build();
 
         when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review));
 
-        reviewService.deleteReview(reviewId, request);
+        reviewService.deleteReview(reviewId, user);
 
         assertThat(review.getIsDeleted()).isTrue();
     }
@@ -113,17 +114,17 @@ class ReviewServiceTest {
     @DisplayName("리뷰 삭제: 권한 없는 유저가 요청시 실패")
     void deleteReview_NotOwner_ShouldThrowException() {
         Long requesterId = 3L;
-        Long ownerId = 3L;
+        Long ownerId = 9L;
         Long reviewId = 1L;
-        ReviewDeleteRequest request = new ReviewDeleteRequest(requesterId);
 
         User owner = User.builder().userId(ownerId).build();
         Review review = Review.builder().reviewId(reviewId).user(owner).build();
+        User requester = User.builder().userId(requesterId).build();
 
         when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review));
 
         ServiceException ex = assertThrows(ServiceException.class,
-                () -> reviewService.deleteReview(reviewId, request));
+                () -> reviewService.deleteReview(reviewId, requester));
 
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.REVIEW_NOT_AUTHORIZED);
     }
@@ -144,10 +145,10 @@ class ReviewServiceTest {
                 .isDeleted(false)
                 .build();
 
-        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId))
+        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(eq(productId), any(Pageable.class)))
                 .thenReturn(List.of(review1));
 
-        List<ReviewListResponse> responses = reviewService.getReviewsByProduct(productId);
+        List<ReviewListResponse> responses = reviewService.getReviewsByProduct(productId, 0, 10);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).reviewId()).isEqualTo(1L);
@@ -170,12 +171,14 @@ class ReviewServiceTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReviewListResponse response = reviewService.createReview(productId, userId, request);
+        ReviewListResponse response = reviewService.createReview(productId, user, request);
 
         assertThat(response).isNotNull();
         assertThat(response.content()).isEqualTo("이미지 리뷰");
         assertThat(response.reviewImageUrls()).hasSize(1);
-        assertThat(response.reviewImageUrls().get(0)).startsWith("/static/review/").endsWith("_image.jpg");
+        assertThat(response.reviewImageUrls().get(0))
+                .startsWith("/resources/static/review/")
+                .contains("image.jpg");
     }
 
     @Test
@@ -197,10 +200,10 @@ class ReviewServiceTest {
         ReviewImage image2 = ReviewImage.builder().reviewImageUrl("/static/review/img2.png").build();
         review.addReviewImages(List.of(image1, image2));
 
-        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId))
+        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(eq(productId), any(Pageable.class)))
                 .thenReturn(List.of(review));
         // when
-        List<ReviewListResponse> responses = reviewService.getReviewsByProduct(productId);
+        List<ReviewListResponse> responses = reviewService.getReviewsByProduct(productId, 0, 10);
 
         // then
         assertThat(responses).hasSize(1);
@@ -227,7 +230,7 @@ class ReviewServiceTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
         ServiceException ex = assertThrows(ServiceException.class,
-                () -> reviewService.createReview(productId, userId, request));
+                () -> reviewService.createReview(productId, user, request));
 
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
     }
