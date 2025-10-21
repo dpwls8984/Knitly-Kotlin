@@ -5,9 +5,9 @@ import com.mysite.knitly.domain.product.like.entity.ProductLike;
 import com.mysite.knitly.domain.product.like.entity.ProductLikeId;
 import com.mysite.knitly.domain.product.like.repository.ProductLikeRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
-import com.mysite.knitly.domain.product.product.repository.ProductRepositoryTmp2;
+import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepositoryTmp2;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ServiceException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -28,9 +27,9 @@ class LikeEventConsumerTest {
     @Mock
     private ProductLikeRepository productLikeRepository;
     @Mock
-    private UserRepositoryTmp2 userRepository;
+    private UserRepository userRepository;
     @Mock
-    private ProductRepositoryTmp2 productRepository;
+    private ProductRepository productRepository;
 
     @InjectMocks
     private LikeEventConsumer likeEventConsumer;
@@ -38,7 +37,7 @@ class LikeEventConsumerTest {
     @Test
     @DisplayName("찜하기: 정상")
     void handleLikeEvent_Success() {
-        LikeEventRequest request = new LikeEventRequest(UUID.randomUUID(), 1L);
+        LikeEventRequest request = new LikeEventRequest(3L, 1L);
         User user = User.builder().userId(request.userId()).build();
         Product product = Product.builder().productId(request.productId()).build();
 
@@ -54,7 +53,7 @@ class LikeEventConsumerTest {
     @Test
     @DisplayName("찜하기: 이미 찜한 상품일 경우 예외 발생")
     void handleLikeEvent_AlreadyExists_ThrowsException() {
-        LikeEventRequest request = new LikeEventRequest(UUID.randomUUID(), 1L);
+        LikeEventRequest request = new LikeEventRequest(3L, 1L);
         User user = User.builder().userId(request.userId()).build();
         Product product = Product.builder().productId(request.productId()).build();
 
@@ -69,7 +68,7 @@ class LikeEventConsumerTest {
     @Test
     @DisplayName("찜 삭제: 정상")
     void handleDislikeEvent_Success() {
-        LikeEventRequest request = new LikeEventRequest(UUID.randomUUID(), 1L);
+        LikeEventRequest request = new LikeEventRequest(3L, 1L);
         ProductLikeId id = new ProductLikeId(request.userId(), request.productId());
         ProductLike like = ProductLike.builder().build();
 
@@ -85,7 +84,7 @@ class LikeEventConsumerTest {
     @Test
     @DisplayName("찜 삭제: 삭제할 찜이 없을 경우 예외 발생")
     void handleDislikeEvent_NotFound_ThrowsException() {
-        LikeEventRequest request = new LikeEventRequest(UUID.randomUUID(), 1L);
+        LikeEventRequest request = new LikeEventRequest(3L, 1L);
         ProductLikeId id = new ProductLikeId(request.userId(), request.productId());
 
         when(userRepository.existsById(request.userId())).thenReturn(true);

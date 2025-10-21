@@ -5,9 +5,9 @@ import com.mysite.knitly.domain.product.like.entity.ProductLike;
 import com.mysite.knitly.domain.product.like.entity.ProductLikeId;
 import com.mysite.knitly.domain.product.like.repository.ProductLikeRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
-import com.mysite.knitly.domain.product.product.repository.ProductRepositoryTmp2;
+import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepositoryTmp2;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +21,8 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 public class LikeEventConsumer {
 
     private final ProductLikeRepository productLikeRepository;
-    private final UserRepositoryTmp2 userRepository;
-    private final ProductRepositoryTmp2 productRepository;
+    private final UserRepository userRepository;
+    private final ProductRepository productRepository;
 
     private static final String LIKE_QUEUE_NAME = "like.add.queue";
     private static final String DISLIKE_QUEUE_NAME = "like.delete.queue";
