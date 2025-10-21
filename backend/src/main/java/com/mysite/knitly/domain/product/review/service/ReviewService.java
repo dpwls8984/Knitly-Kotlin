@@ -12,7 +12,11 @@ import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
+import com.mysite.knitly.global.util.FileNameUtils;
+import com.mysite.knitly.global.util.ImageValidator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,10 +45,7 @@ public class ReviewService {
 
     // 1️. 리뷰 등록
     @Transactional
-    public ReviewListResponse createReview(Long productId, Long userId, ReviewCreateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
-
+    public ReviewListResponse createReview(Long productId, User user, ReviewCreateRequest request) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
 
@@ -67,12 +68,12 @@ public class ReviewService {
                 if (file.isEmpty()) continue;
 
                 String originalFilename = file.getOriginalFilename();
-                if (originalFilename == null || !originalFilename.matches("(?i).*\\.(jpg|jpeg|png)$")) {
+                if (!ImageValidator.isAllowedImageUrl(originalFilename)) {
                     throw new ServiceException(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
                 }
 
                 try {
-                    String filename = UUID.randomUUID() + "_" + originalFilename;
+                    String filename = UUID.randomUUID() + "_" + FileNameUtils.sanitize(originalFilename);
                     Path path = Paths.get(uploadDir, filename);
                     Files.write(path, file.getBytes());
 
@@ -100,11 +101,11 @@ public class ReviewService {
 
     // 2. 리뷰 소프트 삭제 (본인 리뷰만)
     @Transactional
-    public void deleteReview(Long reviewId, ReviewDeleteRequest request) {
+    public void deleteReview(Long reviewId, User user) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.REVIEW_NOT_FOUND));
 
-        if (!review.getUser().getUserId().equals(request.userId())) {
+        if (!review.getUser().getUserId().equals(user.getUserId())) {
             throw new ServiceException(ErrorCode.REVIEW_NOT_AUTHORIZED);
         }
 
@@ -113,9 +114,10 @@ public class ReviewService {
 
     // 3️. 특정 상품 리뷰 목록 조회
     @Transactional(readOnly = true)
-    public List<ReviewListResponse> getReviewsByProduct(Long productId) {
+    public List<ReviewListResponse> getReviewsByProduct(Long productId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
         //delete 되지 않은 상품을 조회
-        List<Review> reviews = reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId);
+        List<Review> reviews = reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId, pageable);
 
         //해당 리뷰의 이미지 조회
         return reviews.stream()

@@ -7,6 +7,7 @@ import com.mysite.knitly.utility.oauth.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -36,8 +37,18 @@ public class SecurityConfig {
 
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login/**", "/oauth2/**", "/api/auth/**").permitAll()
-                        .requestMatchers("/api/user/**").authenticated()  // JWT 인증 필요
+                        .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll() // 상품 목록 API 공개
+                        .requestMatchers(HttpMethod.GET, "/home/**").permitAll() // 홈 화면 API 공개
+                        // 인증 불필요
+                        .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/refresh", "/auth/test").permitAll()
+
+                        // JWT 인증 필요
+                        .requestMatchers("/users/**").authenticated()
+
+                        // Swagger 사용
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+
+                        // 나머지 모두 인증 필요
                         .anyRequest().authenticated()
                 )
 
