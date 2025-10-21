@@ -34,7 +34,8 @@ public class RefreshTokenService {
                 TimeUnit.SECONDS
         );
 
-        log.info("Refresh Token saved to Redis - userId: {}", userId);
+        log.info("==> Refresh Token saved to Redis - userId: {}", userId);
+        log.info("==> Refresh Token saved to Redis - refreshToken: {}", refreshToken);
     }
 
     /**
