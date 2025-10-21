@@ -35,8 +35,6 @@ public class ProductLikeController {
         Long currentUserId = user.getUserId();
         productLikeService.deleteLike(currentUserId, productId);
 
-        productLikeService.deleteLike(currentUserId, productId);
-
         return ResponseEntity.ok().build();
     }
 }
