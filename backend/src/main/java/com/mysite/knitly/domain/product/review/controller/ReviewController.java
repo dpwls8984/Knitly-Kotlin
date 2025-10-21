@@ -5,6 +5,7 @@ import com.mysite.knitly.domain.product.review.dto.ReviewDeleteRequest;
 import com.mysite.knitly.domain.product.review.dto.ReviewListResponse;
 import com.mysite.knitly.domain.product.review.service.ReviewService;
 import com.mysite.knitly.domain.user.entity.User;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,13 +26,9 @@ public class ReviewController {
     public ResponseEntity<ReviewListResponse> createReview(
             @AuthenticationPrincipal User user,
             @PathVariable Long productId,
-            @RequestParam("content") String content,
-            @RequestParam("rating") Integer rating,
-            @RequestParam(value = "images", required = false) List<MultipartFile> images
+            @Valid @ModelAttribute ReviewCreateRequest request
     ) {
         Long currentUserId = user.getUserId();
-
-        ReviewCreateRequest request = new ReviewCreateRequest(rating, content, images);
         ReviewListResponse response = reviewService.createReview(productId, currentUserId, request);
         return ResponseEntity.ok(response);
     }
