@@ -89,10 +89,11 @@ public enum ErrorCode {
     // Image 7000
     IMAGE_FORMAT_NOT_SUPPORTED("7501", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다."),
     REVIEW_IMAGE_SAVE_FAILED("7502", HttpStatus.INTERNAL_SERVER_ERROR, "리뷰 이미지 저장에 실패했습니다."),
-    PRODUCT_IMAGE_SAVE_FAILED("7503", HttpStatus.INTERNAL_SERVER_ERROR, "상품 이미지 저장에 실패했습니다.");
+    PRODUCT_IMAGE_SAVE_FAILED("7503", HttpStatus.INTERNAL_SERVER_ERROR, "상품 이미지 저장에 실패했습니다."),
+
 
     // File 7000
-
+    FILE_STORAGE_FAILED("7601", HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장에 실패했습니다."),
     // event 8000
 
     // System 9000

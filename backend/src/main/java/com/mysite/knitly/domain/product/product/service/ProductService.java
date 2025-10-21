@@ -14,6 +14,7 @@ import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import com.mysite.knitly.global.util.FileNameUtils;
+import com.mysite.knitly.global.util.FileStorageService;
 import com.mysite.knitly.global.util.ImageValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -41,11 +42,8 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final DesignRepository designRepository;
     private final RedisProductService redisProductService;
+    private final FileStorageService fileStorageService;
 
-    String uploadDir = "resources/static/product/";
-    String urlPrefix = "/resources/static/product/";
-
-    //@Transactional
     public ProductRegisterResponse registerProduct(User seller, Long designId, ProductRegisterRequest request) {
 
         Design design = designRepository.findById(designId)
@@ -98,18 +96,25 @@ public class ProductService {
                 request.stockQuantity()
         );
 
-        // 2. 이미지 업데이트 로직 추가 (기존 이미지 삭제 후 새로 저장)
-        // TODO: 기존 파일 시스템의 이미지 파일 삭제 로직 추가 필요
-        List<ProductImage> productImages = saveProductImages(request.productImageUrls());
-        product.addProductImages(productImages);
-
-        // 변경 감지(Dirty Checking)에 의해 product가 자동으로 업데이트됨
-
-        List<String> imageUrls = product.getProductImages().stream()
+        // 1. 삭제할 기존 이미지 파일들의 URL을 미리 확보
+        List<String> oldImageUrls = product.getProductImages().stream()
                 .map(ProductImage::getProductImageUrl)
                 .collect(Collectors.toList());
 
-        return ProductModifyResponse.from(product, imageUrls);
+        // 2. 새로운 이미지 파일들을 저장하고 ProductImage 엔티티 리스트를 생성
+        List<ProductImage> newProductImages = saveProductImages(request.productImageUrls());
+
+        // 3. Product 엔티티의 이미지 리스트를 교체 (orphanRemoval=true에 의해 기존 DB 레코드는 자동 삭제됨), 엔티티에 반영
+        product.addProductImages(newProductImages);
+
+        // 4. 기존 이미지 파일들을 파일 시스템에서 삭제
+        oldImageUrls.forEach(fileStorageService::deleteFile);
+
+        List<String> currentImageUrls = product.getProductImages().stream()
+                .map(ProductImage::getProductImageUrl)
+                .collect(Collectors.toList());
+
+        return ProductModifyResponse.from(product, currentImageUrls);
     }
 
     public void deleteProduct(User currentUser, Long productId) {
@@ -144,36 +149,17 @@ public class ProductService {
             return new ArrayList<>();
         }
 
-        new File(uploadDir).mkdirs(); // 업로드 디렉토리 생성
         List<ProductImage> productImages = new ArrayList<>();
-
-        for (int i = 0; i < imageFiles.size(); i++) {
-            MultipartFile file = imageFiles.get(i);
+        for (MultipartFile file : imageFiles) {
             if (file.isEmpty()) continue;
 
-            // 확장자 검증 (팀원의 유틸리티 클래스 활용)
-            String originalFilename = file.getOriginalFilename();
-            if (!ImageValidator.isAllowedImageUrl(originalFilename)) {
-                throw new ServiceException(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
-            }
+            // FileStorageService에게 "product" 도메인의 파일 저장을 위임하고 URL만 받음
+            String url = fileStorageService.storeFile(file, "product");
 
-            try {
-                // 고유한 파일명 생성 및 저장
-                String filename = UUID.randomUUID() + "_" + FileNameUtils.sanitize(originalFilename);
-                Path path = Paths.get(uploadDir, filename);
-                Files.write(path, file.getBytes());
-
-                String url = urlPrefix + filename;
-
-                ProductImage productImage = ProductImage.builder()
-                        .productImageUrl(url)
-                        // .sortOrder(i) // ProductImage에 sortOrder 필드가 있다면 추가
-                        .build();
-                productImages.add(productImage);
-
-            } catch (IOException e) {
-                throw new ServiceException(ErrorCode.PRODUCT_IMAGE_SAVE_FAILED);
-            }
+            ProductImage productImage = ProductImage.builder()
+                    .productImageUrl(url)
+                    .build();
+            productImages.add(productImage);
         }
         return productImages;
     }
@@ -182,7 +168,6 @@ public class ProductService {
         return productRepository.findByIdWithUser(productId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
     }
-
 
     // 상품 목록 조회
     public Page<ProductListResponse> getProducts(
