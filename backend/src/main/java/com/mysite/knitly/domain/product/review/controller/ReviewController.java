@@ -28,8 +28,7 @@ public class ReviewController {
             @PathVariable Long productId,
             @Valid @ModelAttribute ReviewCreateRequest request
     ) {
-        Long currentUserId = user.getUserId();
-        ReviewListResponse response = reviewService.createReview(productId, currentUserId, request);
+        ReviewListResponse response = reviewService.createReview(productId, user, request);
         return ResponseEntity.ok(response);
     }
 
@@ -39,10 +38,7 @@ public class ReviewController {
             @AuthenticationPrincipal User user,
             @PathVariable Long reviewId
     ) {
-        Long currentUserId = user.getUserId();
-
-        ReviewDeleteRequest request = new ReviewDeleteRequest(currentUserId);
-        reviewService.deleteReview(reviewId, currentUserId);
+        reviewService.deleteReview(reviewId, user);
         return ResponseEntity.noContent().build();
     }
 

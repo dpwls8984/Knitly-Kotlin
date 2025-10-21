@@ -85,7 +85,7 @@ class ReviewServiceTest {
                     .build();
         });
 
-        ReviewListResponse response = reviewService.createReview(productId, userId, request);
+        ReviewListResponse response = reviewService.createReview(productId, user, request);
 
         assertThat(response).isNotNull();
         assertThat(response.reviewId()).isEqualTo(1L);
@@ -105,7 +105,7 @@ class ReviewServiceTest {
 
         when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review));
 
-        reviewService.deleteReview(reviewId, userId);
+        reviewService.deleteReview(reviewId, user);
 
         assertThat(review.getIsDeleted()).isTrue();
     }
@@ -119,11 +119,12 @@ class ReviewServiceTest {
 
         User owner = User.builder().userId(ownerId).build();
         Review review = Review.builder().reviewId(reviewId).user(owner).build();
+        User requester = User.builder().userId(requesterId).build();
 
         when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review));
 
         ServiceException ex = assertThrows(ServiceException.class,
-                () -> reviewService.deleteReview(reviewId, requesterId));
+                () -> reviewService.deleteReview(reviewId, requester));
 
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.REVIEW_NOT_AUTHORIZED);
     }
@@ -170,7 +171,7 @@ class ReviewServiceTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReviewListResponse response = reviewService.createReview(productId, userId, request);
+        ReviewListResponse response = reviewService.createReview(productId, user, request);
 
         assertThat(response).isNotNull();
         assertThat(response.content()).isEqualTo("이미지 리뷰");
@@ -229,7 +230,7 @@ class ReviewServiceTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
         ServiceException ex = assertThrows(ServiceException.class,
-                () -> reviewService.createReview(productId, userId, request));
+                () -> reviewService.createReview(productId, user, request));
 
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
     }

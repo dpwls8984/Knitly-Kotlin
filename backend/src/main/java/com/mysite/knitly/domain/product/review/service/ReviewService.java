@@ -45,10 +45,7 @@ public class ReviewService {
 
     // 1️. 리뷰 등록
     @Transactional
-    public ReviewListResponse createReview(Long productId, Long userId, ReviewCreateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
-
+    public ReviewListResponse createReview(Long productId, User user, ReviewCreateRequest request) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
 
@@ -104,11 +101,11 @@ public class ReviewService {
 
     // 2. 리뷰 소프트 삭제 (본인 리뷰만)
     @Transactional
-    public void deleteReview(Long reviewId, Long currentUserId) {
+    public void deleteReview(Long reviewId, User user) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.REVIEW_NOT_FOUND));
 
-        if (!review.getUser().getUserId().equals(currentUserId)) {
+        if (!review.getUser().getUserId().equals(user.getUserId())) {
             throw new ServiceException(ErrorCode.REVIEW_NOT_AUTHORIZED);
         }
 
