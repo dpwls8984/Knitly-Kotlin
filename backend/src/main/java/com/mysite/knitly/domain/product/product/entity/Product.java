@@ -1,6 +1,7 @@
 package com.mysite.knitly.domain.product.product.entity;
 
 import com.mysite.knitly.domain.design.entity.Design;
+import com.mysite.knitly.domain.product.review.entity.ReviewImage;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
@@ -13,6 +14,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -71,6 +74,10 @@ public class Product {
     //Cascade 안하는 이유 : Design 삭제시 Product도 삭제되면 안됨
     private Design design;
 
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ProductImage> productImages = new ArrayList<>();
+
     @Column
     private Double avgReviewRating; // DECIMAL(3,2)
 
@@ -110,6 +117,14 @@ public class Product {
 
         // 3. 재고 차감
         this.stockQuantity = restStock;
+    }
+
+    public void addProductImages(List<ProductImage> images) {
+        this.productImages.clear();
+        if (images != null) {
+            this.productImages.addAll(images);
+            images.forEach(image -> image.setProduct(this)); // 양방향 연관관계 설정
+        }
     }
 }
 

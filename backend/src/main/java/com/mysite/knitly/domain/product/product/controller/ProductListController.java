@@ -1,10 +1,13 @@
 package com.mysite.knitly.domain.product.product.controller;
 
+import com.mysite.knitly.domain.product.product.dto.ProductDetailResponse;
 import com.mysite.knitly.domain.product.product.dto.ProductListResponse;
 import com.mysite.knitly.domain.product.product.entity.ProductCategory;
 import com.mysite.knitly.domain.product.product.entity.ProductFilterType;
 import com.mysite.knitly.domain.product.product.entity.ProductSortType;
 import com.mysite.knitly.domain.product.product.service.ProductService;
+
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
