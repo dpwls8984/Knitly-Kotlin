@@ -119,7 +119,10 @@ public class Product {
         this.stockQuantity = restStock;
     }
 
+<<<<<<< HEAD
     // 상품 이미지 설정 메서드
+=======
+>>>>>>> a2cae0d527925861c2142c2f6e5b3f40057d1500
     public void addProductImages(List<ProductImage> images) {
         this.productImages.clear();
         if (images != null) {
