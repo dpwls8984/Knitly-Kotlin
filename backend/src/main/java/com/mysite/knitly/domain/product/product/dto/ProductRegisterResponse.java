@@ -3,6 +3,8 @@ package com.mysite.knitly.domain.product.product.dto;
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.entity.ProductCategory;
 
+import java.util.List;
+
 public record ProductRegisterResponse (
         Long productId,
         String title,
@@ -14,9 +16,10 @@ public record ProductRegisterResponse (
         //Integer purchaseCount,
         Integer stockQuantity,
         //Integer likeCount,
-        Long designId
+        Long designId,
+        List<String> productImageUrls
 ) {
-    public static ProductRegisterResponse from(Product product) {
+    public static ProductRegisterResponse from(Product product, List<String> imageUrls) {
         return new ProductRegisterResponse(
                 product.getProductId(),
                 product.getTitle(),
@@ -28,7 +31,8 @@ public record ProductRegisterResponse (
                 //product.getPurchaseCount(),
                 product.getStockQuantity(),
                 //product.getLikeCount(),
-                product.getDesign().getDesignId()
+                product.getDesign().getDesignId(),
+                imageUrls
         );
     }
 }

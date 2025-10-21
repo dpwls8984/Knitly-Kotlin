@@ -26,7 +26,7 @@ public class ProductController {
     public ResponseEntity<ProductRegisterResponse> registerProduct(
             @AuthenticationPrincipal User user,
             @PathVariable Long designId,
-            @RequestBody @Valid ProductRegisterRequest request
+            @ModelAttribute @Valid ProductRegisterRequest request
     ) {
         ProductRegisterResponse response = productService.registerProduct(user, designId, request);
         return ResponseEntity.ok(response);
@@ -36,7 +36,7 @@ public class ProductController {
     public ResponseEntity<ProductModifyResponse> modifyProduct(
             @AuthenticationPrincipal User user,
             @PathVariable Long productId,
-            @RequestBody @Valid ProductModifyRequest request
+            @ModelAttribute @Valid ProductModifyRequest request
     ) {
         ProductModifyResponse response = productService.modifyProduct(user, productId, request);
         return ResponseEntity.ok(response);
