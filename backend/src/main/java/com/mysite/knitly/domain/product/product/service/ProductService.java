@@ -172,7 +172,7 @@ public class ProductService {
                 productImages.add(productImage);
 
             } catch (IOException e) {
-                throw new ServiceException(ErrorCode.REVIEW_IMAGE_SAVE_FAILED); // TODO: Product용 에러 코드로 변경 추천
+                throw new ServiceException(ErrorCode.PRODUCT_IMAGE_SAVE_FAILED);
             }
         }
         return productImages;
