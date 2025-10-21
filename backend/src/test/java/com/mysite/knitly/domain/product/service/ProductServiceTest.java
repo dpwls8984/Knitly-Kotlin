@@ -3,6 +3,7 @@ package com.mysite.knitly.domain.product.service;
 import com.mysite.knitly.domain.design.entity.Design;
 import com.mysite.knitly.domain.design.entity.DesignState;
 import com.mysite.knitly.domain.design.repository.DesignRepository;
+import com.mysite.knitly.domain.product.product.dto.ProductDetailResponse;
 import com.mysite.knitly.domain.product.product.dto.ProductListResponse;
 import com.mysite.knitly.domain.product.product.dto.ProductModifyRequest;
 import com.mysite.knitly.domain.product.product.dto.ProductRegisterRequest;
@@ -358,5 +359,79 @@ class ProductServiceTest {
         assertThrows(ServiceException.class, () -> {
             productService.relistProduct(seller, 1L);
         });
+    }
+
+    @Test
+    @DisplayName("상품 상세 조회 성공")
+    void getProductDetail_Success() {
+        // given
+        Long productId = 1L;
+        // 테스트에 사용할 상세 정보가 포함된 Product 객체 생성
+        Product detailedProduct = Product.builder()
+                .productId(productId)
+                .title("테스트 상품")
+                .description("상세 설명입니다.")
+                .price(20000.0)
+                .isDeleted(false)
+                .user(seller) // setUp()에서 생성된 공통 User 객체 사용
+                .design(design) // setUp()에서 생성된 공통 Design 객체 사용
+                .productImages(List.of(
+                        ProductImage.builder().productImageUrl("/static/img1.jpg").build(),
+                        ProductImage.builder().productImageUrl("/static/img2.jpg").build()
+                ))
+                .build();
+
+        // Repository가 findProductDetailById 호출 시 위에서 만든 객체를 반환하도록 설정
+        given(productRepository.findProductDetailById(productId)).willReturn(Optional.of(detailedProduct));
+
+        // when
+        ProductDetailResponse response = productService.getProductDetail(productId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.title()).isEqualTo("테스트 상품");
+        assertThat(response.description()).isEqualTo("상세 설명입니다.");
+        assertThat(response.productImageUrls()).hasSize(2);
+        assertThat(response.productImageUrls()).contains("/static/img1.jpg", "/static/img2.jpg");
+    }
+
+    @Test
+    @DisplayName("상품 상세 조회 실패 - 존재하지 않는 상품 ID")
+    void getProductDetail_Fail_NotFound() {
+        // given
+        Long nonExistentProductId = 999L;
+        // Repository가 어떤 Long 값을 받더라도 Optional.empty()를 반환하도록 설정
+        given(productRepository.findProductDetailById(nonExistentProductId)).willReturn(Optional.empty());
+
+        // when & then
+        ServiceException exception = assertThrows(ServiceException.class, () -> {
+            productService.getProductDetail(nonExistentProductId);
+        });
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("상품 상세 조회 실패 - 이미 삭제(판매 중지)된 상품")
+    void getProductDetail_Fail_IsDeleted() {
+        // given
+        Long productId = 1L;
+        Product deletedProduct = Product.builder()
+                .productId(productId)
+                .isDeleted(true) // ⚠️ 삭제된 상태의 상품
+                .user(seller)
+                .design(design)
+                .build();
+
+        // Repository는 일단 DB에서 데이터를 찾았다고 가정 (서비스 로직의 방어 코드를 테스트하기 위함)
+        given(productRepository.findProductDetailById(productId)).willReturn(Optional.of(deletedProduct));
+
+        // when & then
+        // Service의 if (product.getIsDeleted()) 분기에서 예외가 발생하는지 검증
+        ServiceException exception = assertThrows(ServiceException.class, () -> {
+            productService.getProductDetail(productId);
+        });
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
     }
 }

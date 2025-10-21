@@ -6,20 +6,13 @@ import com.mysite.knitly.domain.product.product.entity.ProductCategory;
 import com.mysite.knitly.domain.product.product.entity.ProductFilterType;
 import com.mysite.knitly.domain.product.product.entity.ProductSortType;
 import com.mysite.knitly.domain.product.product.service.ProductService;
-<<<<<<< HEAD
-
-=======
->>>>>>> a2cae0d527925861c2142c2f6e5b3f40057d1500
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -43,7 +36,7 @@ public class ProductListController {
 
     @GetMapping("/{productId}")
     public ResponseEntity<ProductDetailResponse> getProductDetail(
-            @RequestParam Long productId
+            @PathVariable Long productId
     ) {
         ProductDetailResponse response = productService.getProductDetail(productId);
         return ResponseEntity.ok(response);
