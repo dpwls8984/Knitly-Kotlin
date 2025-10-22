@@ -87,7 +87,7 @@ class HomeSectionServiceTest {
         List<ProductListResponse> result = homeSectionService.getPopularTop5();
 
         assertThat(result).hasSize(3);
-        assertThat(result).extracting(ProductListResponse::getProductId)
+        assertThat(result).extracting(ProductListResponse::productId)
                 .containsExactly(2L, 3L, 1L); // edis ZSET 순서 보존 검증
         verify(redisProductService).getTopNPopularProducts(5);
         verify(productRepository).findByProductIdInAndIsDeletedFalse(top5Ids);
@@ -103,7 +103,7 @@ class HomeSectionServiceTest {
         List<ProductListResponse> result = homeSectionService.getPopularTop5();
 
         assertThat(result).hasSize(3);
-        assertThat(result).extracting(ProductListResponse::getProductId)
+        assertThat(result).extracting(ProductListResponse::productId)
                 .containsExactly(2L, 3L, 1L);
         verify(productRepository).findByIsDeletedFalse(PageRequest.of(0, 5, Sort.by("purchaseCount").descending()));
     }
