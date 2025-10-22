@@ -32,6 +32,10 @@ spring:
     resources:
       static-locations:
         - classpath:/static/
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
   # OAuth 2.0 설정 추가
   security:
@@ -65,6 +69,19 @@ spring:
     port: 5672
     username: guest
     password: guest
+
+    listener:
+      simple:
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+          multiplier: 2.0
+          max-interval: 10000
+      template:
+        mandatory: true
 
 # --- 파일 업로드 ---
 file:
