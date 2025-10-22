@@ -82,6 +82,17 @@ spring:
           max-interval: 10000
       template:
         mandatory: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: test@knitly.com
+    password: ***REMOVED*** #메일서버 연결
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 # --- 파일 업로드 ---
 file:

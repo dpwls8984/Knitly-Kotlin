@@ -17,7 +17,6 @@ import java.util.UUID;
 @Service
 public class FileStorageService {
 
-    // TODO: application.yml 같은 설정 파일로 경로를 관리하는 것이 더 좋습니다.
     private final String uploadDir = "resources/static/";
     private final String urlPrefix = "/resources/static/";
 
@@ -45,7 +44,7 @@ public class FileStorageService {
 
         } catch (IOException e) {
             log.error("파일 저장에 실패했습니다. filename={}", originalFilename, e);
-            throw new ServiceException(ErrorCode.FILE_STORAGE_FAILED); // TODO: FILE_STORAGE_FAILED 에러 코드 추가
+            throw new ServiceException(ErrorCode.FILE_STORAGE_FAILED);
         }
     }
 
@@ -70,6 +69,26 @@ public class FileStorageService {
         } catch (IOException e) {
             log.error("파일 삭제에 실패했습니다. fileUrl={}", fileUrl, e);
             // 파일 삭제 실패가 전체 트랜잭션을 롤백시킬 필요는 없으므로, 여기서는 예외를 다시 던지지 않고 로그만 남깁니다.
+        }
+    }
+
+    /**
+     * 파일 URL을 기반으로 실제 파일 내용을 byte 배열로 읽어옵니다.
+     * @param fileUrl 읽어올 파일의 URL
+     * @return 파일의 byte[]
+     * @throws IOException 파일 읽기 실패 시
+     */
+    public byte[] loadFileAsBytes(String fileUrl) throws IOException {
+        if (fileUrl == null || fileUrl.isEmpty()) {
+            throw new IOException("유효하지 않은 파일 URL입니다.");
+        }
+        try {
+            String filePath = fileUrl.replaceFirst(urlPrefix, uploadDir);
+            Path path = Paths.get(filePath);
+            return Files.readAllBytes(path);
+        } catch (IOException e) {
+            log.error("파일을 읽는 데 실패했습니다. fileUrl={}", fileUrl, e);
+            throw e; // 예외를 상위로 던져서 Consumer가 처리하도록 함
         }
     }
 }
