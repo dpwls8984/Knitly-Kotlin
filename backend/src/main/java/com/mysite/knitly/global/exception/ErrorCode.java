@@ -87,7 +87,7 @@ public enum ErrorCode {
 
     DESIGN_NOT_ON_SALE("2013", HttpStatus.BAD_REQUEST, "판매중이 아닌 도안입니다."),
     DESIGN_ALREADY_ON_SALE("2014", HttpStatus.BAD_REQUEST, "이미 판매중인 도안입니다."),
-
+    DESIGN_NOT_STOPPED("2015", HttpStatus.BAD_REQUEST, "이미 판매중지된 도안입니다."),
 
     // Event 6000
 
