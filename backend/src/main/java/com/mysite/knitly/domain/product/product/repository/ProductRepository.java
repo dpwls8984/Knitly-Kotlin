@@ -40,4 +40,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "LEFT JOIN FETCH p.productImages " + // 이미지가 없을 수도 있으므로 LEFT JOIN
             "WHERE p.productId = :productId AND p.isDeleted = false")
     Optional<Product> findProductDetailById(Long productId);
+
+    // userId로 판매 상품 조회
+    Page<Product> findByUser_userIdAndIsDeletedFalse(Long userId, Pageable pageable);
 }
