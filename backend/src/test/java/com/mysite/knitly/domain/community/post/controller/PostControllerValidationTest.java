@@ -2,7 +2,6 @@
 //
 //import com.fasterxml.jackson.databind.ObjectMapper;
 //import com.mysite.knitly.domain.community.post.entity.PostCategory;
-//import com.mysite.knitly.domain.community.user.repository.UserRepository;
 //import com.mysite.knitly.domain.user.entity.User;
 //import com.mysite.knitly.domain.user.entity.Provider;
 //import com.mysite.knitly.domain.user.repository.UserRepository;
