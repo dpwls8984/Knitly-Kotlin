@@ -8,7 +8,6 @@ import com.mysite.knitly.domain.community.post.entity.Post;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.repository.PostRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import com.mysite.knitly.global.util.Anonymizer;
@@ -97,9 +96,14 @@ public class PostService {
         if (currentUser == null) {
             throw new ServiceException(ErrorCode.POST_UNAUTHORIZED);
         }
+        // 제목 길이(100자 초과)
+        if (req.title() != null && req.title().length() > 100) {
+            throw new ServiceException(ErrorCode.POST_TITLE_LENGTH_INVALID);
+        }
+
         List<String> urls = normalizeUrls(req.imageUrls());
         if (urls.size() > 5) {
-            throw new ServiceException(ErrorCode.POST_IMAGE_EXTENSION_INVALID);
+            throw new ServiceException(ErrorCode.POST_IMAGE_COUNT_EXCEEDED);
         }
         for (String u : urls) {
             if (!ImageValidator.isAllowedImageUrl(u)) {
@@ -128,6 +132,10 @@ public class PostService {
         if (currentUser == null) {
             throw new ServiceException(ErrorCode.POST_UNAUTHORIZED);
         }
+        // 제목 길이(100자 초과)
+        if (req.title() != null && req.title().length() > 100) {
+            throw new ServiceException(ErrorCode.POST_TITLE_LENGTH_INVALID);
+        }
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
 
@@ -144,7 +152,7 @@ public class PostService {
         if (req.imageUrls() != null) {
             List<String> urls = normalizeUrls(req.imageUrls());
             if (urls.size() > 5) {
-                throw new ServiceException(ErrorCode.POST_IMAGE_EXTENSION_INVALID);
+                throw new ServiceException(ErrorCode.POST_IMAGE_COUNT_EXCEEDED);
             }
             for (String u : urls) {
                 if (!ImageValidator.isAllowedImageUrl(u)) {

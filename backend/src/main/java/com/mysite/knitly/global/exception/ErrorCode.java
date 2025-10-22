@@ -31,6 +31,9 @@ public enum ErrorCode {
     POST_ALREADY_DELETED("4005", HttpStatus.BAD_REQUEST, "이미 삭제된 게시글입니다."),
     POST_CONTENT_TOO_SHORT("4006", HttpStatus.BAD_REQUEST, "게시글 내용은 최소 길이 요건을 충족해야 합니다."),
     POST_IMAGE_EXTENSION_INVALID("4007", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다."),
+    POST_TITLE_LENGTH_INVALID("4008", HttpStatus.BAD_REQUEST, "게시글 제목은 1자 이상 100자 이하로 작성해야 합니다."),
+    POST_IMAGE_COUNT_EXCEEDED("4009", HttpStatus.BAD_REQUEST, "이미지는 최대 5개까지만 업로드할 수 있습니다."),
+    VALIDATION_ERROR("4010", HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
 
     // Comment 4050
     COMMENT_NOT_FOUND("4051", HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),

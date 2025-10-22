@@ -175,7 +175,7 @@ class HomeSectionServiceTest {
         assertThat(response.popularProducts()).hasSize(3);
         assertThat(response.latestReviews()).hasSize(3);
         assertThat(response.latestPosts()).hasSize(3);
-        assertThat(response.popularProducts()).extracting(ProductListResponse::getProductId)
+        assertThat(response.popularProducts()).extracting(ProductListResponse::productId)
                 .containsExactly(2L, 3L, 1L);
 
         assertThat(response.latestReviews().get(0).rating()).isEqualTo(5);

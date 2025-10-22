@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Collection;
-import java.util.UUID;
+
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
