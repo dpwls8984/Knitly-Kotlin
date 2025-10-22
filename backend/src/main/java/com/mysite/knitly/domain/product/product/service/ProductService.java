@@ -287,7 +287,6 @@ public class ProductService {
             Long userId,
             Pageable pageable
     ) {
-        // TODO : 특정 유저 id로 등록한 상품 조회
         return productRepository.findByUser_userIdAndIsDeletedFalse(userId, pageable).map(ProductListResponse::from);
     }
 
