@@ -84,7 +84,9 @@ public enum ErrorCode {
     DESIGN_FILE_INVALID_TYPE("2010", HttpStatus.BAD_REQUEST, "PDF 파일만 업로드 가능합니다."),
     DESIGN_FILE_SIZE_EXCEEDED("2011", HttpStatus.BAD_REQUEST, "파일 크기는 10MB를 초과할 수 없습니다."),
     DESIGN_FILE_NAME_INVALID("2012", HttpStatus.BAD_REQUEST, "파일명이 유효하지 않습니다."),
-  // Event 6000
+    DESIGN_ALREADY_ON_SALE("2013", HttpStatus.BAD_REQUEST, "이미 판매 중인 도안입니다."),
+
+    // Event 6000
 
     // Image 7000
     IMAGE_FORMAT_NOT_SUPPORTED("7501", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다."),
@@ -96,12 +98,12 @@ public enum ErrorCode {
 
     // File 7000
     FILE_STORAGE_FAILED("7601", HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장에 실패했습니다."),
+
     // event 8000
 
     // System 9000
 
     LOCK_ACQUISITION_FAILED("8001", HttpStatus.INTERNAL_SERVER_ERROR, "락 획득에 실패했습니다. 잠시 후 다시 시도해주세요.");
-
 
     private final String code;
     private final HttpStatus status;
