@@ -100,6 +100,7 @@ public enum ErrorCode {
 
     // System 9000
 
+    LOCK_ACQUISITION_FAILED("8001", HttpStatus.INTERNAL_SERVER_ERROR, "락 획득에 실패했습니다. 잠시 후 다시 시도해주세요.");
 
 
     private final String code;
