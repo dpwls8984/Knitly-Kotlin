@@ -261,7 +261,8 @@ public class ProductService {
     private Page<Product> getFilteredProducts(
             ProductCategory category,
             ProductFilterType filterType,
-            Pageable pageable) {
+            Pageable pageable
+    ) {
 
         // 1. 카테고리 조회 (ALL)
         if (category != null) {
@@ -280,6 +281,14 @@ public class ProductService {
 
         // 4. 전체 조회
         return productRepository.findByIsDeletedFalse(pageable);
+    }
+
+    public Page<ProductListResponse> findByUser_userIdAndIsDeletedFalse(
+            Long userId,
+            Pageable pageable
+    ) {
+        // TODO : 특정 유저 id로 등록한 상품 조회
+        return productRepository.findByUser_userIdAndIsDeletedFalse(userId, pageable).map(ProductListResponse::from);
     }
 
     // 정렬 조건 생성

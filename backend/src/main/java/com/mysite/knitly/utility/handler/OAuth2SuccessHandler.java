@@ -2,6 +2,7 @@ package com.mysite.knitly.utility.handler;
 
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.service.UserService;
+import com.mysite.knitly.utility.cookie.CookieUtil;
 import com.mysite.knitly.utility.jwt.JwtProvider;
 import com.mysite.knitly.utility.jwt.TokenResponse;
 import com.mysite.knitly.utility.oauth.OAuth2UserInfo;
@@ -11,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -29,6 +31,18 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final UserService userService;
     private final JwtProvider jwtProvider;
     private final RefreshTokenService refreshTokenService;
+    private final CookieUtil cookieUtil;
+
+    // TODO : yml 파일, env 파일 수정할것
+    // 프론트엔드 URL 설정 (환경변수로 관리 권장)
+    @Value("${frontend.url}")  // 기본값: localhost:3000
+    private String frontendUrl;
+
+    @Value("${custom.jwt.refreshTokenExpireSeconds}")
+    private int refreshTokenExpireSeconds;
+
+    // Refresh Token 쿠키 이름 상수
+    private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -47,7 +61,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         log.info("Name: {}", userInfo.getName());
         log.info("Provider ID: {}", userInfo.getProviderId());
 
-        // 3. 사용자 저장 또는 조회 (userService 사용!)
+        // 3. 사용자 저장 또는 조회
         User user = userService.processGoogleUser(
                 userInfo.getProviderId(),
                 userInfo.getEmail(),
@@ -60,22 +74,44 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         TokenResponse tokens = jwtProvider.createTokens(user.getUserId());
 
         log.info("=== JWT Tokens Created ===");
-        log.info("Access Token: {}...", tokens.getAccessToken().substring(0, 20));
-        log.info("Refresh Token: {}...", tokens.getRefreshToken().substring(0, 20));
+        log.info("Access Token: {}", tokens.getAccessToken());
+        log.info("Refresh Token: {}", tokens.getRefreshToken());
         log.info("Expires In: {} seconds", tokens.getExpiresIn());
 
         // 5. Refresh Token을 Redis에 저장
         refreshTokenService.saveRefreshToken(user.getUserId(), tokens.getRefreshToken());
         log.info("Refresh Token saved to Redis");
 
-        // 6. 임시 리다이렉트 (테스트용) - 토큰 정보 포함
+        // 6. Refresh Token을 HTTP-only 쿠키에 저장
+        cookieUtil.addCookie(
+                response,
+                REFRESH_TOKEN_COOKIE_NAME,
+                tokens.getRefreshToken(),
+                refreshTokenExpireSeconds
+        );
+        log.info("Refresh Token saved to HTTP-only cookie");
+
+//        // 7. 임시 리다이렉트 (테스트용) - Access Token만 URL로 전달
+//        String targetUrl = String.format(
+//                "http://localhost:8080/login/success?userId=%s&email=%s&name=%s&accessToken=%s",
+//                user.getUserId(),
+//                URLEncoder.encode(user.getEmail(), StandardCharsets.UTF_8),
+//                URLEncoder.encode(user.getName(), StandardCharsets.UTF_8),
+//                tokens.getAccessToken()
+//        );
+
+        // 7. 프론트엔드로 리다이렉트 (Access Token 포함)
+        // 변경: localhost:8080 → frontend.url (localhost:3000)
         String targetUrl = String.format(
-                "http://localhost:8080/login/success?userId=%s&email=%s&name=%s&accessToken=%s",
+                "%s?userId=%s&email=%s&name=%s&accessToken=%s",
+                frontendUrl,
                 user.getUserId(),
                 URLEncoder.encode(user.getEmail(), StandardCharsets.UTF_8),
                 URLEncoder.encode(user.getName(), StandardCharsets.UTF_8),
                 tokens.getAccessToken()
         );
+
+        log.info("Redirecting to: {}", targetUrl);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }
