@@ -4,6 +4,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
@@ -17,6 +18,9 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 @Component
 public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler {
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request,
@@ -43,9 +47,16 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
         // 스택 트레이스 출력 (개발 환경용)
         log.error("Stack Trace: ", exception);
 
+        // TODO : 프론트페이지로 리다이랙트할것(수정해야함)
         // 에러 페이지로 리다이렉트
         String encodedMessage = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
-        String targetUrl = "http://localhost:8080/login/error?message=" + encodedMessage;
+        //String targetUrl = "http://localhost:8080/login/error?message=" + encodedMessage;
+
+        // 프론트엔드로 리다이렉트 (에러 파라미터 포함)
+        //String targetUrl = String.format("%s/?error=%s", frontendUrl, encodedMessage);
+
+        // 프론트 메인으로 리디랙션
+        String targetUrl = frontendUrl + "/?loginError=true";
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }

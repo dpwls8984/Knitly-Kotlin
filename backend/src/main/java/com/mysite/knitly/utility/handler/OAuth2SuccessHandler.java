@@ -33,6 +33,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final RefreshTokenService refreshTokenService;
     private final CookieUtil cookieUtil;
 
+    // TODO : yml 파일, env 파일 수정할것
+    // 프론트엔드 URL 설정 (환경변수로 관리 권장)
+    @Value("${frontend.url}")  // 기본값: localhost:3000
+    private String frontendUrl;
+
     @Value("${custom.jwt.refreshTokenExpireSeconds}")
     private int refreshTokenExpireSeconds;
 
@@ -86,9 +91,20 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         );
         log.info("Refresh Token saved to HTTP-only cookie");
 
-        // 7. 임시 리다이렉트 (테스트용) - Access Token만 URL로 전달
+//        // 7. 임시 리다이렉트 (테스트용) - Access Token만 URL로 전달
+//        String targetUrl = String.format(
+//                "http://localhost:8080/login/success?userId=%s&email=%s&name=%s&accessToken=%s",
+//                user.getUserId(),
+//                URLEncoder.encode(user.getEmail(), StandardCharsets.UTF_8),
+//                URLEncoder.encode(user.getName(), StandardCharsets.UTF_8),
+//                tokens.getAccessToken()
+//        );
+
+        // 7. 프론트엔드로 리다이렉트 (Access Token 포함)
+        // 변경: localhost:8080 → frontend.url (localhost:3000)
         String targetUrl = String.format(
-                "http://localhost:8080/login/success?userId=%s&email=%s&name=%s&accessToken=%s",
+                "%s?userId=%s&email=%s&name=%s&accessToken=%s",
+                frontendUrl,
                 user.getUserId(),
                 URLEncoder.encode(user.getEmail(), StandardCharsets.UTF_8),
                 URLEncoder.encode(user.getName(), StandardCharsets.UTF_8),

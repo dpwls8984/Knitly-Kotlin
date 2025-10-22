@@ -35,6 +35,13 @@ public class CookieUtil {
         // 프로덕션에서는 true로 변경 필요
         cookie.setSecure(false);
 
+        // TODO : 지금은 알아만 둘 것 (지금 중요한 내용은 아님)
+        // 안전한 요청에만 쿠키 전송 (개발 환경 권장)
+        // None: 모든 크로스 도메인 요청에 쿠키 전송 (Secure=true 필수)
+        // 참고: Cookie 객체는 SameSite를 직접 지원하지 않으므로
+        // ResponseCookie를 사용하거나 Set-Cookie 헤더를 직접 작성해야 함
+        // 예시)
+
         log.debug("Cookie created - name: {}, maxAge: {} seconds", name, maxAge);
         return cookie;
     }
