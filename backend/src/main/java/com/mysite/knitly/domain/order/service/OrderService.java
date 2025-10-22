@@ -35,7 +35,7 @@ public class OrderService {
     private final RabbitTemplate rabbitTemplate;
 
     public OrderCreateResponse createOrder(User user, OrderCreateRequest request) {
-        // 1️⃣ 정렬된 순서로 락 획득 (교착 방지)
+        // 1. 정렬된 순서로 락 획득 (교착 방지)
         List<Long> sortedIds = request.productIds().stream()
                 .sorted()
                 .collect(Collectors.toList());
@@ -47,7 +47,7 @@ public class OrderService {
         boolean locked = false;
 
         try {
-            // 2️⃣ 모든 락을 미리 획득
+            // 2. 모든 락을 미리 획득
             for (RLock lock : locks) {
                 if (!lock.tryLock(5, 10, TimeUnit.SECONDS)) {
                     throw new ServiceException(ErrorCode.LOCK_ACQUISITION_FAILED);
@@ -55,7 +55,7 @@ public class OrderService {
             }
             locked = true;
 
-            // 3️⃣ 트랜잭션 내부에서 안전하게 주문 생성
+            // 3. 트랜잭션 내부에서 안전하게 주문 생성
             OrderCreateResponse response = createOrderTransactional(user, sortedIds);
 
             return response;
@@ -64,7 +64,7 @@ public class OrderService {
             Thread.currentThread().interrupt();
             throw new RuntimeException("락 대기 중 인터럽트 발생", e);
         } finally {
-            // 4️⃣ 락은 반드시 역순으로 해제 (획득 순서의 반대)
+            // 4. 락은 반드시 역순으로 해제 (획득 순서의 반대)
             if (locked) {
                 Collections.reverse(locks);
                 for (RLock lock : locks) {
@@ -78,7 +78,7 @@ public class OrderService {
 
     @Transactional
     protected OrderCreateResponse createOrderTransactional(User user, List<Long> productIds) {
-        // 1️⃣ 상품 조회 및 재고 차감
+        // 1. 상품 조회 및 재고 차감
         List<Product> products = productIds.stream()
                 .map(id -> {
                     Product product = productRepository.findById(id)
@@ -91,7 +91,7 @@ public class OrderService {
                 })
                 .collect(Collectors.toList());
 
-        // 2️⃣ 주문 생성
+        // 2. 주문 생성
         double totalPrice = products.stream().mapToDouble(Product::getPrice).sum();
 
         Order order = Order.builder()
@@ -109,7 +109,7 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // 3️⃣ 트랜잭션 커밋 이후 메시지 발행 예약
+        // 3. 트랜잭션 커밋 이후 메시지 발행 예약
         TransactionSynchronizationManager.registerSynchronization(
                 new TransactionSynchronizationAdapter() {
                     @Override
