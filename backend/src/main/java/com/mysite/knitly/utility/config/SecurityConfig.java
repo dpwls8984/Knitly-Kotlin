@@ -42,7 +42,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // AuthenticationManager 주입 (필요 시)
+    // AuthenticationManager 주입
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
@@ -51,13 +51,11 @@ public class SecurityConfig {
     // CORS 설정 (보안 설정 한 곳에만 둔다)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        // 필요에 따라 AllowedOrigins로 고정하거나, 개발 중이면 패턴 사용
+        // 개발 중 전체 허용(배포 시 도메인 고정 권장)
         CorsConfiguration configuration = new CorsConfiguration();
-        // 개발 중 전체 허용:
         configuration.setAllowedOriginPatterns(List.of("*"));
         // 또는 고정 도메인 방식:
         // configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000","http://localhost:3001","https://www.myapp.com"));
-
         configuration.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization","Set-Cookie"));
@@ -77,7 +75,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // 인가 규칙 (두 브랜치 규칙 + 커뮤니티 병합)
+                // 인가 규칙 (dev + feature/community 병합)
                 .authorizeHttpRequests(auth -> auth
                         // 공개 GET API
                         .requestMatchers(HttpMethod.GET,
@@ -87,33 +85,33 @@ public class SecurityConfig {
                                 "/community/**"
                         ).permitAll()
 
-                        // 인증 불필요
+                        // 인증 불필요 (양쪽 경로 모두 허용)
                         .requestMatchers(
                                 "/", "/login/**", "/oauth2/**",
-                                "/auth/refresh", "/auth/test",        // dev 쪽
-                                "/api/auth/refresh", "/api/auth/test" // feature 쪽
+                                "/auth/refresh", "/auth/test",        // dev
+                                "/api/auth/refresh", "/api/auth/test" // feature/community
                         ).permitAll()
 
                         // Swagger
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
 
-                        // 인증 필요
+                        // 인증 필요 (양쪽 규칙 수용)
                         .requestMatchers("/api/auth/logout").authenticated()
                         .requestMatchers("/api/user/**").authenticated()
                         .requestMatchers("/users/**").authenticated()
 
-                        // 나머지
+                        // 그 외 전부 인증
                         .anyRequest().authenticated()
                 )
 
-                // OAuth2 로그인
+                // OAuth2 로그인 설정
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(ui -> ui.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler(oAuth2FailureHandler)
                 )
 
-                // JWT 필터
+                // JWT 필터 추가
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
