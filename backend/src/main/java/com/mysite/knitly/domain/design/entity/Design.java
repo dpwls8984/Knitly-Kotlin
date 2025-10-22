@@ -1,6 +1,8 @@
 package com.mysite.knitly.domain.design.entity;
 
 import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.global.exception.ErrorCode;
+import com.mysite.knitly.global.exception.ServiceException;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -54,6 +56,34 @@ public class Design {
     // 도안 작성자 확인 - userId 비교
     public boolean isOwnedBy(Long userId) {
         return this.user.getUserId().equals(userId);
+    }
+
+    // 최초 판매 시작 메서드
+    // 오직 BEFORE_SALE 상태에서만 호출 가능
+    // 판매 전 -> 판매 중으로 변경
+    public void startSale() {
+        if (this.designState != DesignState.BEFORE_SALE) {
+            throw new ServiceException(ErrorCode.DESIGN_ALREADY_ON_SALE);
+        }
+        this.designState = DesignState.ON_SALE;
+    }
+
+    // 판매 중 -> 판매 중지 메서드
+    // 오직 ON_SALE 상태에서만 호출 가능
+    public void stopSale() {
+        if( this.designState != DesignState.ON_SALE) {
+            throw new ServiceException(ErrorCode.DESIGN_NOT_ON_SALE);
+        }
+        this.designState = DesignState.STOPPED;
+    }
+
+    // 판매 중지 -> 판매 재개 메서드
+    // 오직 STOPPED 상태에서만 호출 가능
+    public void relist() {
+        if (this.designState != DesignState.STOPPED) {
+            throw new ServiceException(ErrorCode.DESIGN_NOT_STOPPED);
+        }
+        this.designState = DesignState.ON_SALE;
     }
 }
 
