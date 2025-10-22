@@ -8,9 +8,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -18,9 +23,11 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -29,92 +36,86 @@ public class SecurityConfig {
     private final OAuth2FailureHandler oAuth2FailureHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    /**
-     * CORS 설정
-     * 프론트엔드(localhost:3000)와 백엔드(localhost:8080) 간 통신 허용
-     */
+    // 비밀번호 인코더
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // AuthenticationManager 주입 (필요 시)
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+        return configuration.getAuthenticationManager();
+    }
+
+    // CORS 설정 (보안 설정 한 곳에만 둔다)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        // 필요에 따라 AllowedOrigins로 고정하거나, 개발 중이면 패턴 사용
         CorsConfiguration configuration = new CorsConfiguration();
+        // 개발 중 전체 허용:
+        configuration.setAllowedOriginPatterns(List.of("*"));
+        // 또는 고정 도메인 방식:
+        // configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000","http://localhost:3001","https://www.myapp.com"));
 
-        // 🔥 허용할 출처 (프론트엔드 URL)
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",     // 개발 환경
-                "http://localhost:3001",     // 개발 환경 (추가 포트)
-                "https://www.myapp.com"      // 프로덕션 환경 (추후 변경)
-        ));
-
-        // 허용할 HTTP 메서드
-        configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
-        ));
-
-        // 허용할 헤더
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-
-        // 🔥 쿠키 포함 허용 (매우 중요!)
+        configuration.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization","Set-Cookie"));
         configuration.setAllowCredentials(true);
-
-        // 노출할 헤더 (프론트엔드에서 접근 가능)
-        configuration.setExposedHeaders(Arrays.asList(
-                "Authorization",
-                "Set-Cookie"
-        ));
-
-        // Preflight 요청 캐시 시간 (1시간)
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-
         return source;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // CORS 설정 적용
+                // CORS/CSRF/세션
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // CSRF 비활성화 (JWT 사용)
                 .csrf(csrf -> csrf.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // 세션 사용 안함 (Stateless)
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-
-                // URL 별 권한 설정
+                // 인가 규칙 (두 브랜치 규칙 + 커뮤니티 병합)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/products", "/products/**", "/users/*/products").permitAll() // 상품 목록 API 공개
-                        .requestMatchers(HttpMethod.GET, "/home/**").permitAll() // 홈 화면 API 공개
+                        // 공개 GET API
+                        .requestMatchers(HttpMethod.GET,
+                                "/products", "/products/**",
+                                "/users/*/products",
+                                "/home/**",
+                                "/community/**"
+                        ).permitAll()
+
                         // 인증 불필요
-                        .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/refresh", "/auth/test").permitAll()
+                        .requestMatchers(
+                                "/", "/login/**", "/oauth2/**",
+                                "/auth/refresh", "/auth/test",        // dev 쪽
+                                "/api/auth/refresh", "/api/auth/test" // feature 쪽
+                        ).permitAll()
 
-                        // JWT 인증 필요
-                        .requestMatchers("/users/**").authenticated()
-
-                        // Swagger 사용
+                        // Swagger
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
 
-                        // 나머지 모두 인증 필요
+                        // 인증 필요
+                        .requestMatchers("/api/auth/logout").authenticated()
+                        .requestMatchers("/api/user/**").authenticated()
+                        .requestMatchers("/users/**").authenticated()
+
+                        // 나머지
                         .anyRequest().authenticated()
                 )
 
-                // OAuth2 로그인 설정
+                // OAuth2 로그인
                 .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(userInfo ->
-                                userInfo.userService(customOAuth2UserService)
-                        )
+                        .userInfoEndpoint(ui -> ui.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler(oAuth2FailureHandler)
                 )
 
-                // JWT 인증 필터 추가
+                // JWT 필터
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
-
 }
