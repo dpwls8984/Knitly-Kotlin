@@ -337,4 +337,23 @@ public class ProductService {
 
         return new PageImpl<>(pageContent, pageable, products.size());
     }
+
+    // 상품 상세 조회 로직 추가
+    @Transactional(readOnly = true) // 데이터를 읽기만 하므로 readOnly=true로 성능 최적화
+    public ProductDetailResponse getProductDetail(Long productId) {
+        // N+1 방지를 위해 User, Design 등 연관 정보를 함께 가져오는 것이 좋음
+        Product product = productRepository.findProductDetailById(productId) // 예시 메서드
+                .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        // 판매 중지된 상품은 조회 불가
+        if (product.getIsDeleted()) {
+            throw new ServiceException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+
+        List<String> imageUrls = product.getProductImages().stream()
+                .map(ProductImage::getProductImageUrl)
+                .collect(Collectors.toList());
+
+        return ProductDetailResponse.from(product, imageUrls);
+    }
 }
