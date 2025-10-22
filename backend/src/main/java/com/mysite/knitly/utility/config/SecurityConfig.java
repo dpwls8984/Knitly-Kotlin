@@ -86,7 +86,7 @@ public class SecurityConfig {
 
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll() // 상품 목록 API 공개
+                        .requestMatchers(HttpMethod.GET, "/products", "/products/**", "/users/*/products").permitAll() // 상품 목록 API 공개
                         .requestMatchers(HttpMethod.GET, "/home/**").permitAll() // 홈 화면 API 공개
                         // 인증 불필요
                         .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/refresh", "/auth/test").permitAll()
