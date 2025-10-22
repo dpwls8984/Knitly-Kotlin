@@ -70,8 +70,6 @@ public enum ErrorCode {
 
     REVIEW_NOT_FOUND("5001", HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_NOT_AUTHORIZED("5002", HttpStatus.FORBIDDEN, "리뷰 삭제 권한이 없습니다."),
-    REVIEW_CANNOT_BE_EMPTY("5003", HttpStatus.BAD_REQUEST, "리뷰 내용은 필수입니다."),
-    REVIEW_RATING_INVALID("5004", HttpStatus.BAD_REQUEST, "리뷰 평점은 1~5 사이여야 합니다."),
 
     // Design 6000
     DESIGN_NOT_FOUND("2001", HttpStatus.NOT_FOUND, "도안을 찾을 수 없습니다."),
@@ -91,11 +89,13 @@ public enum ErrorCode {
     // Image 7000
     IMAGE_FORMAT_NOT_SUPPORTED("7501", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다."),
     REVIEW_IMAGE_SAVE_FAILED("7502", HttpStatus.INTERNAL_SERVER_ERROR, "리뷰 이미지 저장에 실패했습니다."),
-    REVIEW_IMAGES_TOO_MANY("7503", HttpStatus.BAD_REQUEST, "리뷰 이미지는 최대 10개까지 등록할 수 있습니다.");
+    PRODUCT_IMAGE_SAVE_FAILED("7503", HttpStatus.INTERNAL_SERVER_ERROR, "상품 이미지 저장에 실패했습니다."),
 
 
     // File 7000
 
+    // File 7000
+    FILE_STORAGE_FAILED("7601", HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장에 실패했습니다."),
     // event 8000
 
     // System 9000

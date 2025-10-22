@@ -6,12 +6,15 @@ spring:
   output:
     ansi:
       enabled: always
+
+  # --- Datasource / JPA ---
   datasource:
     hikari:
       auto-commit: false
+
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
@@ -19,6 +22,8 @@ spring:
         use_sql_comments: true
         dialect: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
+
+  # --- Web / MVC ---
   mvc:
     hiddenmethod:
       filter:
@@ -58,13 +63,23 @@ spring:
       port: 6379
       # password: ${REDIS_PASSWORD}  # 비밀번호 설정 시 사용
 
+  # --- RabbitMQ 설정 추가 ---
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+# --- 파일 업로드 ---
 file:
   upload-dir: uploads/designs
   public-prefix: /files
 
+# --- Springdoc ---
 springdoc:
   default-produces-media-type: application/json
 
+# --- Logging ---
 logging:
   level:
     org.hibernate.orm.jdbc.bind: TRACE
@@ -76,9 +91,15 @@ logging:
     org.springframework.security.oauth2: TRACE
     org.springframework.web: DEBUG
 
+# --- Custom JWT 설정 ---
 custom:
   jwt:
     # Refresh Token 만료 시간 추가
-    accessTokenExpireSeconds: 900 #{15 * 60} 15분
+    accessTokenExpireSeconds: 1800 #{30 * 60} 30분
     refreshTokenExpireSeconds: 604800 #{7 * 24 * 60 * 60} 7일
     secretKey: ${JWT_SECRET_KEY}  # 환경 변수로 관리
+
+# --- 프론트엔드 URL 설정 ---
+frontend:
+  url: ${FRONT_URL} # 개발 환경
+  # url: https://www.myapp.com  # 프로덕션 환경

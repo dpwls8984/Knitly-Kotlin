@@ -25,13 +25,13 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final UserRepository userRepository;
+    //private final UserRepository userRepository;
     private final ProductRepository productRepository;
 
-    public OrderCreateResponse createOrder(Long userId, OrderCreateRequest request) {
+    public OrderCreateResponse createOrder(User user, OrderCreateRequest request) {
         // 1. 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 
         // 2. 주문 상품 조회 및 재고 검증
         List<Product> products = request.productIds().stream()
