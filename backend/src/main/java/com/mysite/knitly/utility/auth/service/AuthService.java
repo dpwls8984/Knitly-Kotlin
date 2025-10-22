@@ -26,6 +26,7 @@ public class AuthService {
     public TokenRefreshResponse refreshAccessToken(String refreshToken) {
         // 1. Refresh Token 유효성 검증
         if (!jwtProvider.validateToken(refreshToken)) {
+            log.info("유효하지 않은 Refresh Token입니다.");
             throw new IllegalArgumentException("유효하지 않은 Refresh Token입니다.");
         }
 
