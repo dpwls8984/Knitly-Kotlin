@@ -1,8 +1,8 @@
 package com.mysite.knitly.domain.community.post.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import jakarta.validation.constraints.*;
-import java.util.UUID;
 import java.util.List;
 
 public record PostCreateRequest(
@@ -18,7 +18,6 @@ public record PostCreateRequest(
     String content,
 
     @Size(max = 5, message = "이미지는 최대 5개까지 업로드할 수 있습니다.")
-    List<String> imageUrls,
+    List<String> imageUrls
 
-    Long authorId
 ) {}

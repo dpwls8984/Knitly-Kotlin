@@ -3,13 +3,14 @@ package com.mysite.knitly.domain.community.comment.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.util.UUID;
+import jakarta.validation.constraints.Positive;
 
 public record CommentCreateRequest(
 
         @NotNull(message = "게시글 ID는 필수입니다.")
         Long postId,
 
+        @Positive(message = "parentId는 1 이상의 값이어야 합니다.")
         Long parentId,
 
         @NotBlank(message = "댓글 내용은 필수입니다.")

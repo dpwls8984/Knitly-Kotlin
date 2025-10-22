@@ -1,6 +1,7 @@
 package com.mysite.knitly.domain.community.comment.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.mysite.knitly.domain.community.post.repository.PostRepository;
 import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.domain.user.entity.User;
@@ -22,11 +23,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.hamcrest.Matchers.startsWith;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false) // 보안 필터는 필요하면 나중에, SecurityContext는 수동 주입
@@ -100,7 +102,7 @@ class CommentControllerValidationTest {
     }
 
     @Test
-    void create_comment_ok_returns_200() throws Exception {
+    void create_comment_ok_returns_201() throws Exception {
         var body = om.writeValueAsString(Map.of(
                 "postId", postId, "content", "정상 댓글"
         ));
@@ -108,12 +110,13 @@ class CommentControllerValidationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body)
                         .with(withAuth(author)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", startsWith("/community/comments/")))
                 .andExpect(jsonPath("$.content").value("정상 댓글"));
     }
 
     @Test
-    void create_reply_ok_returns_200() throws Exception {
+    void create_reply_ok_returns_201() throws Exception {
         // 루트 댓글 생성
         var root = new HashMap<String, Object>();
         root.put("postId", postId);
@@ -122,7 +125,8 @@ class CommentControllerValidationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(root))
                         .with(withAuth(author)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", startsWith("/community/comments/")))
                 .andReturn();
 
         long rootId = om.readTree(rootRes.getResponse().getContentAsString()).get("id").asLong();
@@ -136,7 +140,8 @@ class CommentControllerValidationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(reply))
                         .with(withAuth(author)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", startsWith("/community/comments/")))
                 .andExpect(jsonPath("$.content").value("대댓글"));
     }
 }

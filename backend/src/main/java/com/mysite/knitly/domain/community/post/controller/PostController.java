@@ -36,8 +36,7 @@ public class PostController {
             @AuthenticationPrincipal User user,
             @PathVariable("postId") Long postId
     ) {
-        Long userIdFromToken = (user == null) ? null : user.getUserId();
-        return ResponseEntity.ok(postService.getPost(postId, userIdFromToken));
+        return ResponseEntity.ok(postService.getPost(postId, user));
     }
 
     @PostMapping
@@ -45,7 +44,7 @@ public class PostController {
             @AuthenticationPrincipal User user,
             @Valid @RequestBody PostCreateRequest request
     ) {
-        return ResponseEntity.ok(postService.create(request, user.getUserId()));
+        return ResponseEntity.ok(postService.create(request, user));
     }
 
     @PutMapping("/{postId}")
@@ -54,7 +53,7 @@ public class PostController {
             @PathVariable("postId") Long postId,
             @Valid @RequestBody PostUpdateRequest request
     ) {
-        return ResponseEntity.ok(postService.update(postId, request, user.getUserId()));
+        return ResponseEntity.ok(postService.update(postId, request, user));
     }
 
     @DeleteMapping("/{postId}")
@@ -62,7 +61,7 @@ public class PostController {
             @AuthenticationPrincipal User user,
             @PathVariable("postId") Long postId
     ) {
-        postService.delete(postId, user.getUserId());
+        postService.delete(postId, user);
         return ResponseEntity.noContent().build();
     }
 }
