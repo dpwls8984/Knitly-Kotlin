@@ -1,16 +1,20 @@
 package com.mysite.knitly.domain.product.product.controller;
 
+import com.mysite.knitly.domain.product.product.dto.ProductDetailResponse;
 import com.mysite.knitly.domain.product.product.dto.ProductListResponse;
 import com.mysite.knitly.domain.product.product.entity.ProductCategory;
 import com.mysite.knitly.domain.product.product.entity.ProductFilterType;
 import com.mysite.knitly.domain.product.product.entity.ProductSortType;
 import com.mysite.knitly.domain.product.product.service.ProductService;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -27,6 +31,14 @@ public class ProductListController {
             @PageableDefault(size = 20) Pageable pageable
     ) {
         Page<ProductListResponse> response = productService.getProducts(category, filter, sort, pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{productId}")
+    public ResponseEntity<ProductDetailResponse> getProductDetail(
+            @PathVariable Long productId
+    ) {
+        ProductDetailResponse response = productService.getProductDetail(productId);
         return ResponseEntity.ok(response);
     }
 }
