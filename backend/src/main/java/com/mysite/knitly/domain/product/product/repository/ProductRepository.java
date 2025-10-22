@@ -32,4 +32,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // productId로 여러 개 조회 (인기순용 - Redis에서 받은 ID로 조회)
     List<Product> findByProductIdInAndIsDeletedFalse(List<Long> productIds);
+
+    // userId로 여러 개 조회
+    Page<Product> findByUser_userIdAndIsDeletedFalse(Long userId, Pageable pageable);
 }
