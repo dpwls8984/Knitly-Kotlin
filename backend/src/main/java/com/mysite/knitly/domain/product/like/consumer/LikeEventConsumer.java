@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 
-// 초기 구상했던 N분 단위 DB 동기화 대신, 더 나은 사용자 경험과 부하 분산을 위해 큐를 이용한 실시간 처리 방식으로 구현함
 @Component
 @RequiredArgsConstructor
 public class LikeEventConsumer {
@@ -39,7 +38,7 @@ public class LikeEventConsumer {
         ProductLikeId productLikeId = new ProductLikeId(user.getUserId(), product.getProductId());
 
         if (productLikeRepository.existsById(productLikeId)) {
-            throw new ServiceException(ErrorCode.LIKE_ALREADY_EXISTS);
+            return;
         }
 
         ProductLike productLike = ProductLike.builder()
@@ -53,18 +52,11 @@ public class LikeEventConsumer {
     @Transactional
     @RabbitListener(queues = DISLIKE_QUEUE_NAME)
     public void handleDislikeEvent(LikeEventRequest eventDto) {
-        if (!userRepository.existsById(eventDto.userId())) {
-            throw new ServiceException(ErrorCode.USER_NOT_FOUND);
-        }
-        if (!productRepository.existsById(eventDto.productId())) {
-            throw new ServiceException(ErrorCode.PRODUCT_NOT_FOUND);
-        }
-
         ProductLikeId productLikeId = new ProductLikeId(eventDto.userId(), eventDto.productId());
 
-        ProductLike productLikeToDelete = productLikeRepository.findById(productLikeId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.LIKE_NOT_FOUND));
-
-        productLikeRepository.delete(productLikeToDelete);
+        if (!productLikeRepository.existsById(productLikeId)) {
+            return;
+        }
+        productLikeRepository.deleteById(productLikeId);
     }
 }
