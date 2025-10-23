@@ -29,20 +29,22 @@ public class ProductWithThumbnailDto {
      * ProductListResponse로 변환
      */
     public ProductListResponse toResponse() {
-        return ProductListResponse.builder()
-                .productId(productId)
-                .title(title)
-                .productCategory(productCategory)
-                .price(price)
-                .purchaseCount(purchaseCount)
-                .likeCount(likeCount)
-                .stockQuantity(stockQuantity)
-                .avgReviewRating(avgReviewRating)
-                .createdAt(createdAt)
-                .thumbnailUrl(thumbnailUrl)
-                .isFree(price == 0.0)
-                .isLimited(stockQuantity != null)
-                .isSoldOut(stockQuantity != null && stockQuantity == 0)
-                .build();
+        return new ProductListResponse(
+                this.productId,
+                this.title,
+                this.productCategory,
+                this.price,
+                this.purchaseCount,
+                this.likeCount,
+                this.stockQuantity,
+                this.avgReviewRating,
+                this.createdAt,
+                this.thumbnailUrl, // thumbnailUrl
+
+                // 추가로 계산된 Boolean 필드들
+                this.price == 0.0, // isFree
+                this.stockQuantity != null, // isLimited
+                this.stockQuantity != null && this.stockQuantity == 0 // isSoldOut
+        );
     }
 }
