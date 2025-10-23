@@ -345,7 +345,9 @@ function ProductCard({ product, isMyStore }: ProductCardProps) {
 
                 <div className="flex gap-4 text-sm text-gray-600 mb-4">
                     <span>❤️ {product.likeCount}</span>
-                    <span>🛒 {product.purchaseCount}</span>
+                    {isMyStore && (
+                    <span> 구매 횟수: {product.purchaseCount}</span>
+                        )}
                 </div>
 
                 {/* 🔥 본인 스토어일 때만 수정 버튼 표시 */}
