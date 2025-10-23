@@ -49,6 +49,22 @@ public class Order {
         this.totalPrice = totalPrice;
     }
 
+    //== 생성 메서드 ==//
+    public static Order create(User user, List<OrderItem> orderItems) {
+        Order order = new Order();
+        order.user = user; // 사용자 정보 설정
+
+        // 모든 주문 상품을 추가하고 총액 계산
+        double totalPrice = 0.0;
+        for (OrderItem orderItem : orderItems) {
+            order.addOrderItem(orderItem);
+            totalPrice += orderItem.getOrderPrice();
+        }
+        order.totalPrice = totalPrice;
+
+        return order;
+    }
+
     //== 연관관계 편의 메서드 ==//
     public void addOrderItem(OrderItem orderItem) {
         orderItems.add(orderItem);

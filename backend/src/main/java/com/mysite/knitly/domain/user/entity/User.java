@@ -29,7 +29,7 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false, length = 50)
     private String name; // 구글에서 받아온 이름
 
-    // 🔥 UserStore와 1:1 양방향 관계
+    // UserStore와 1:1 양방향 관계
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private UserStore userStore;
 
