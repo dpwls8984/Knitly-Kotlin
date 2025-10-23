@@ -12,7 +12,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
+
 
 @Slf4j
 @Component
@@ -24,7 +26,9 @@ public class LocalFileStorage {
     @Value("${file.public-prefix:/files}")
     private String publicPrefix;
 
-    public String savePdfFile(byte[] fileData) {
+    // 바이트 배열로 들어온 pdf를 저장
+    // {uuid8}_{sanitizedName}.pdf 형태로 저장
+    public String savePdfFile(byte[] fileData, String fileName) {
         try {
             LocalDate today = LocalDate.now();
 
@@ -38,8 +42,12 @@ public class LocalFileStorage {
             Files.createDirectories(dir);
 
             // 고유 파일명 생성
-            String saved = UUID.randomUUID() + ".pdf";
-            Path filePath = dir.resolve(saved);
+            String baseName = stripPdfExtension(Objects.toString(fileName, "design"));
+            String uuid8 = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String savedName = uuid8 + "_" + baseName + ".pdf";
+
+            // 저장
+            Path filePath = dir.resolve(savedName);
             Files.write(filePath, fileData, StandardOpenOption.CREATE_NEW);
 
             // 접근 가능한 URL 생성
@@ -47,10 +55,11 @@ public class LocalFileStorage {
                     String.valueOf(today.getYear()),
                     String.format("%02d", today.getMonthValue()),
                     String.format("%02d", today.getDayOfMonth()),
-                    saved
+                    savedName
             );
 
-            String url = String.join("/", publicPrefix, relativePath);
+            String url = (publicPrefix.endsWith("/") ? publicPrefix.substring(0, publicPrefix.length()-1) : publicPrefix)
+                    + "/" + relativePath;
 
             log.info("PDF 저장 완료: {}", filePath);
 
@@ -59,32 +68,31 @@ public class LocalFileStorage {
             log.error("PDF 파일 저장 실패", e);
             throw new ServiceException(ErrorCode.DESIGN_FILE_SAVE_FAILED);
         }
-
-
     }
 
     // PDF URL에서 절대 경로 변환
     public Path toAbsolutePathFromUrl(String pdfUrl) {
-        // pdfUrl에서 publicPrefix("/files") 제거 → 상대 경로
-        String rel = pdfUrl.startsWith(publicPrefix) ? pdfUrl.substring(publicPrefix.length()) : pdfUrl;
+        String prefix = publicPrefix.endsWith("/") ? publicPrefix : publicPrefix + "/";
+        String rel = pdfUrl.startsWith(prefix) ? pdfUrl.substring(prefix.length()) :
+                (pdfUrl.startsWith(publicPrefix) ? pdfUrl.substring(publicPrefix.length()) : pdfUrl);
         if (rel.startsWith("/")) rel = rel.substring(1);
-
         return Paths.get(uploadDir).toAbsolutePath().normalize().resolve(rel).normalize();
     }
 
     public void deleteFile(String fileUrl) throws IOException {
-        try {
-            String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
-            Path filePath = Paths.get(uploadDir).resolve(fileName);
-
-            if (Files.exists(filePath)) {
-                Files.delete(filePath);
-                log.info("파일 삭제 완료: {}", filePath);
-            } else {
-                log.warn("삭제할 파일이 존재하지 않음: {}", filePath);
-            }
-        } catch (IOException e) {
-            log.error("파일 삭제 실패: url={}", fileUrl, e);
+        Path filePath = toAbsolutePathFromUrl(fileUrl);
+        if (Files.exists(filePath)) {
+            Files.delete(filePath);
+            log.info("파일 삭제 완료: {}", filePath);
+        } else {
+            log.warn("삭제할 파일이 존재하지 않음: {}", filePath);
         }
+    }
+
+    private String stripPdfExtension(String name) {
+        if (name.toLowerCase().endsWith(".pdf")) {
+            return name.substring(0, name.length() - 4);
+        }
+        return name;
     }
 }
