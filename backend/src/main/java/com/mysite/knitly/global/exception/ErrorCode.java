@@ -24,46 +24,40 @@ public enum ErrorCode {
     OUT_OF_STOCK("3001", HttpStatus.BAD_REQUEST, "품절된 상품입니다."),
 
     // Post 4000
+    POST_NOT_FOUND("4001", HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
+    POST_UNAUTHORIZED("4002", HttpStatus.UNAUTHORIZED, "로그인이 필요한 요청입니다."),
+    POST_UPDATE_FORBIDDEN("4003", HttpStatus.FORBIDDEN, "게시글 수정 권한이 없습니다."),
+    POST_DELETE_FORBIDDEN("4004", HttpStatus.FORBIDDEN, "게시글 삭제 권한이 없습니다."),
+    POST_ALREADY_DELETED("4005", HttpStatus.BAD_REQUEST, "이미 삭제된 게시글입니다."),
+    POST_CONTENT_TOO_SHORT("4006", HttpStatus.BAD_REQUEST, "게시글 내용은 최소 길이 요건을 충족해야 합니다."),
+    POST_IMAGE_EXTENSION_INVALID("4007", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다."),
+    POST_TITLE_LENGTH_INVALID("4008", HttpStatus.BAD_REQUEST, "게시글 제목은 1자 이상 100자 이하로 작성해야 합니다."),
+    POST_IMAGE_COUNT_EXCEEDED("4009", HttpStatus.BAD_REQUEST, "이미지는 최대 5개까지만 업로드할 수 있습니다."),
+    VALIDATION_ERROR("4010", HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
 
-    // Comment 4000
+    // Comment 4050
+    COMMENT_NOT_FOUND("4051", HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
+    COMMENT_UNAUTHORIZED("4052", HttpStatus.UNAUTHORIZED, "로그인이 필요한 요청입니다."),
+    COMMENT_UPDATE_FORBIDDEN("4053", HttpStatus.FORBIDDEN, "댓글 수정 권한이 없습니다."),
+    COMMENT_DELETE_FORBIDDEN("4054", HttpStatus.FORBIDDEN, "댓글 삭제 권한이 없습니다."),
+    COMMENT_ALREADY_DELETED("4055", HttpStatus.BAD_REQUEST, "이미 삭제된 댓글입니다."),
+    COMMENT_CONTENT_TOO_SHORT("4056", HttpStatus.BAD_REQUEST, "댓글은 1자 이상 300자 이하로 입력해 주세요."),
 
-    POST_NOT_FOUND("4000", HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
-
-    // 로그인 없이 작성/ 수정 /삭제 시도
-    POST_UNAUTHORIZED("4001", HttpStatus.UNAUTHORIZED, "로그인이 필요한 요청입니다."),
-
-    // 작성자가 아닌 사용자의 수정 시도
-    POST_UPDATE_FORBIDDEN("4002", HttpStatus.FORBIDDEN, "게시글 수정 권한이 없습니다."),
-
-    // 작성자가 아닌 사용자의 삭제 시도
-    POST_DELETE_FORBIDDEN("4003", HttpStatus.FORBIDDEN, "게시글 삭제 권한이 없습니다."),
-
-    // 이미 소프트삭제된 게시글에 대한 수정/삭제 시도
-    POST_ALREADY_DELETED("4004", HttpStatus.BAD_REQUEST, "이미 삭제된 게시글입니다."),
-
-    // 내용 길이/형식 검증 (ex: 최소 10자, 정하기)
-    POST_CONTENT_TOO_SHORT("4005", HttpStatus.BAD_REQUEST, "게시글 내용은 최소 길이 요건을 충족해야 합니다."),
-
-    // 이미지 확장자 검증 실패 (png/jpg/jpeg 외)
-    POST_IMAGE_EXTENSION_INVALID("4006", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다."),
-
-
-    // 게시글 없음
-    COMMENT_NOT_FOUND("4007", HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
-
-    // 로그인 안 한 경우
-    COMMENT_UNAUTHORIZED("4008", HttpStatus.UNAUTHORIZED, "로그인이 필요한 요청입니다."),
-
-    // 작성자가 아님
-    COMMENT_UPDATE_FORBIDDEN("4009", HttpStatus.FORBIDDEN, "댓글 수정 권한이 없습니다."),
-
-    // 작성자가 아님
-    COMMENT_DELETE_FORBIDDEN("4010", HttpStatus.FORBIDDEN, "댓글 삭제 권한이 없습니다."),
-
-    COMMENT_ALREADY_DELETED("4011", HttpStatus.BAD_REQUEST, "이미 삭제된 댓글입니다."),
-
-    // 댓글 길이 제한
-    COMMENT_CONTENT_TOO_SHORT("4012", HttpStatus.BAD_REQUEST, "댓글은 1자 이상 300자 이하로 입력해 주세요."),
+    // MyPage 4100
+    MP_UNAUTHORIZED("4101", HttpStatus.UNAUTHORIZED, "로그인이 필요한 요청입니다."),
+    MP_FORBIDDEN("4102", HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
+    MP_PROFILE_NOT_FOUND("4103", HttpStatus.NOT_FOUND, "프로필 정보를 찾을 수 없습니다."),
+    MP_ORDER_NOT_FOUND("4104", HttpStatus.NOT_FOUND, "주문 내역을 찾을 수 없습니다."),
+    MP_ORDER_LIST_EMPTY("4105", HttpStatus.NO_CONTENT, "주문 내역이 비어 있습니다."),
+    MP_MY_POSTS_EMPTY("4106", HttpStatus.NO_CONTENT, "작성한 게시글이 없습니다."),
+    MP_MY_POSTS_QUERY_TOO_SHORT("4107", HttpStatus.BAD_REQUEST, "검색어가 너무 짧습니다."),
+    MP_MY_COMMENTS_EMPTY("4108", HttpStatus.NO_CONTENT, "작성한 댓글이 없습니다."),
+    MP_MY_COMMENTS_QUERY_TOO_SHORT("4109", HttpStatus.BAD_REQUEST, "검색어가 너무 짧습니다."),
+    MP_FAVORITES_EMPTY("4110", HttpStatus.NO_CONTENT, "찜한 상품이 없습니다."),
+    MP_REVIEWS_EMPTY("4111", HttpStatus.NO_CONTENT, "작성한 리뷰가 없습니다."),
+    MP_INVALID_PAGE_PARAM("4112", HttpStatus.BAD_REQUEST, "page 파라미터가 올바르지 않습니다."),
+    MP_INVALID_SIZE_PARAM("4113", HttpStatus.BAD_REQUEST, "size 파라미터가 올바르지 않습니다."),
+    MP_INVALID_SORT_PARAM("4114", HttpStatus.BAD_REQUEST, "정렬 파라미터가 올바르지 않습니다."),
 
 
     // Review 5000
@@ -84,7 +78,9 @@ public enum ErrorCode {
     DESIGN_FILE_INVALID_TYPE("2010", HttpStatus.BAD_REQUEST, "PDF 파일만 업로드 가능합니다."),
     DESIGN_FILE_SIZE_EXCEEDED("2011", HttpStatus.BAD_REQUEST, "파일 크기는 10MB를 초과할 수 없습니다."),
     DESIGN_FILE_NAME_INVALID("2012", HttpStatus.BAD_REQUEST, "파일명이 유효하지 않습니다."),
-    DESIGN_ALREADY_ON_SALE("2013", HttpStatus.BAD_REQUEST, "이미 판매 중인 도안입니다."),
+    DESIGN_NOT_ON_SALE("2013", HttpStatus.BAD_REQUEST, "판매중이 아닌 도안입니다."),
+    DESIGN_ALREADY_ON_SALE("2014", HttpStatus.BAD_REQUEST, "이미 판매중인 도안입니다."),
+    DESIGN_NOT_STOPPED("2015", HttpStatus.BAD_REQUEST, "이미 판매중지된 도안입니다."),
 
     // Event 6000
 

@@ -86,6 +86,10 @@ public class SecurityConfig {
 
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
+
+                        // 커뮤니티 게시글 목록/상세 조회는 로그인 없이 허용
+                        .requestMatchers(HttpMethod.GET, "/community/posts/**").permitAll()
+
                         .requestMatchers(HttpMethod.GET, "/products", "/products/**", "/users/*/products").permitAll() // 상품 목록 API 공개
                         .requestMatchers(HttpMethod.GET, "/home/**").permitAll() // 홈 화면 API 공개
                         // 인증 불필요

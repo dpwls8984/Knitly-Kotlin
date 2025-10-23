@@ -1,5 +1,9 @@
 package com.mysite.knitly.domain.home.service;
 
+import com.mysite.knitly.domain.home.dto.HomeSummaryResponse;
+import com.mysite.knitly.domain.home.dto.LatestPostItem;
+import com.mysite.knitly.domain.home.dto.LatestReviewItem;
+import com.mysite.knitly.domain.home.repository.HomeQueryRepository;
 import com.mysite.knitly.domain.product.product.dto.ProductListResponse;
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
@@ -22,6 +26,7 @@ public class HomeSectionService {
 
     private final RedisProductService redisProductService;
     private final ProductRepository productRepository;
+    private final HomeQueryRepository homeQueryRepository;
 
     // 인기 Top5 조회 - 홈 화면용
     public List<ProductListResponse> getPopularTop5() {
@@ -48,5 +53,21 @@ public class HomeSectionService {
                 .filter(Objects::nonNull)
                 .map(ProductListResponse::from)
                 .collect(Collectors.toList());
+    }
+    // 최신 리뷰 N개
+    public List<LatestReviewItem> getLatestReviews(int limit) {
+        return homeQueryRepository.findLatestReviews(limit);
+    }
+
+    // 최신 커뮤니티 글 N개
+    public List<LatestPostItem> getLatestPosts(int limit) {
+        return homeQueryRepository.findLatestPosts(limit);
+    }
+    // 홈 (인기 5 + 최신 리뷰 3 + 최신 글 3)
+    public HomeSummaryResponse getHomeSummary() {
+        var popular = getPopularTop5();
+        var reviews = getLatestReviews(3);
+        var posts   = getLatestPosts(3);
+        return new HomeSummaryResponse(popular, reviews, posts);
     }
 }

@@ -2,7 +2,6 @@ package com.mysite.knitly.domain.community.post.dto;
 
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 public record PostListRowResponse(
         Long id,
