@@ -3,40 +3,18 @@ package com.mysite.knitly.domain.product.product.service;
 import com.mysite.knitly.domain.design.entity.Design;
 import com.mysite.knitly.domain.design.repository.DesignRepository;
 import com.mysite.knitly.domain.product.product.dto.*;
-import com.mysite.knitly.domain.product.product.entity.Product;
-import com.mysite.knitly.domain.product.product.entity.ProductCategory;
-import com.mysite.knitly.domain.product.product.entity.ProductFilterType;
-import com.mysite.knitly.domain.product.product.entity.ProductSortType;
 import com.mysite.knitly.domain.product.product.entity.*;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
-import com.mysite.knitly.global.util.FileNameUtils;
 import com.mysite.knitly.global.util.FileStorageService;
-import com.mysite.knitly.global.util.ImageValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -283,11 +261,22 @@ public class ProductService {
         return productRepository.findByIsDeletedFalse(pageable);
     }
 
-    public Page<ProductListResponse> findByUser_userIdAndIsDeletedFalse(
-            Long userId,
-            Pageable pageable
-    ) {
-        return productRepository.findByUser_userIdAndIsDeletedFalse(userId, pageable).map(ProductListResponse::from);
+    /**
+     * 특정 유저의 판매 상품 목록 조회 (대표 이미지 포함)
+     *
+     * @param userId 판매자 ID
+     * @param pageable 페이지네이션 정보
+     * @return 상품 목록 (대표 이미지 포함)
+     */
+    public Page<ProductListResponse> findProductsByUserId(Long userId, Pageable pageable) {
+
+        // Repository에서 DTO로 조회
+        Page<ProductWithThumbnailDto> dtoPage = productRepository.findByUserIdWithThumbnail(userId, pageable);
+
+        // DTO -> Response 변환
+        Page<ProductListResponse> responsePage = dtoPage.map(ProductWithThumbnailDto::toResponse);
+
+        return responsePage;
     }
 
     // 정렬 조건 생성

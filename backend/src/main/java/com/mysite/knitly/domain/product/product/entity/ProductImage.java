@@ -1,6 +1,5 @@
 package com.mysite.knitly.domain.product.product.entity;
 
-import com.mysite.knitly.domain.product.review.entity.Review;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,6 +21,8 @@ public class ProductImage {
     private Long productImageId;
 
     private String productImageUrl;
+
+    private Long sortOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)

@@ -54,4 +54,5 @@ public class UserService {
         userRepository.delete(user);
         log.info("회원탈퇴 완료 - userId: {}, email: {}", userId, user.getEmail());
     }
+
 }

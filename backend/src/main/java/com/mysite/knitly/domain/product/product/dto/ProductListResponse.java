@@ -21,6 +21,9 @@ public class ProductListResponse {
     private Double avgReviewRating;
     private LocalDateTime createdAt;
 
+    // 🔥 대표 이미지 URL (sortOrder = 1)
+    private String thumbnailUrl;
+
     // 추가 정보
     private Boolean isFree;         // 무료 여부
     private Boolean isLimited;      // 한정판매 여부
@@ -37,6 +40,7 @@ public class ProductListResponse {
                 .stockQuantity(product.getStockQuantity())
                 .avgReviewRating(product.getAvgReviewRating())
                 .createdAt(product.getCreatedAt())
+                .thumbnailUrl(null) // 별도 조회 필요
                 .isFree(product.getPrice() == 0.0)
                 .isLimited(product.getStockQuantity() != null)
                 .isSoldOut(product.getStockQuantity() != null && product.getStockQuantity() == 0)
