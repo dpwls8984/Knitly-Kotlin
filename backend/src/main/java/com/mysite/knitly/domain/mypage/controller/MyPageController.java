@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
-@RequestMapping("/api/mypage")
+@RequestMapping("/mypage")
 @RequiredArgsConstructor
 public class MyPageController {
 
