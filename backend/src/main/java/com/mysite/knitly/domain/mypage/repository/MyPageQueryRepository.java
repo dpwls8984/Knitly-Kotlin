@@ -172,38 +172,72 @@ public class MyPageQueryRepository {
         return new PageImpl<>(list, pageable, total);
     }
 
-    // 리뷰 조회
+    // 리뷰 조회 (리뷰 이미지 + 상품 첫번째 이미지 포함)
     public Page<ReviewListItem> findMyReviews(Long userId, Pageable pageable) {
-        Long total = em.createQuery("""
-                        SELECT COUNT(r.reviewId)
-                        FROM Review r
-                        WHERE r.user.userId = :uid AND r.isDeleted = false
-                        """, Long.class)
+        long total = em.createQuery("""
+        SELECT COUNT(r.reviewId)
+        FROM Review r
+        WHERE r.user.userId = :uid AND r.isDeleted = false
+    """, Long.class)
                 .setParameter("uid", userId)
                 .getSingleResult();
 
         if (total == 0L) return new PageImpl<>(List.of(), pageable, 0L);
 
-        var list = em.createQuery("""
-            SELECT new com.mysite.knitly.domain.mypage.dto.ReviewListItem(
-                r.reviewId,
-                p.productId,
-                p.title,
-                p.thumbnailUrl,
-                r.rating,
-                r.content,
-                FUNCTION('DATE', r.createdAt)
-            )
-            FROM Review r
-            JOIN r.product p
-            WHERE r.user.userId = :uid
-            AND r.isDeleted = false
-            ORDER BY r.createdAt DESC
-            """, ReviewListItem.class)
+        // ① 리뷰 + 상품 + 상품의 첫번째 이미지 조회
+        List<Object[]> rows = em.createQuery("""
+        SELECT r.reviewId,
+               p.productId,
+               p.title,
+               (SELECT MIN(pi.productImageUrl)
+                FROM ProductImage pi
+                WHERE pi.product = p),
+               r.rating,
+               r.content,
+               FUNCTION('DATE', r.createdAt)
+               (SELECT FUNCTION('DATE', MAX(o.createdAt))
+               FROM Order o JOIN o.orderItems oi
+               WHERE o.user.userId = :uid AND oi.product = p)  -- 구매일(최근 주문일)
+        FROM Review r
+        JOIN r.product p
+        WHERE r.user.userId = :uid
+          AND r.isDeleted = false
+        ORDER BY r.createdAt DESC
+    """, Object[].class)
                 .setParameter("uid", userId)
                 .setFirstResult((int) pageable.getOffset())
                 .setMaxResults(pageable.getPageSize())
                 .getResultList();
+
+        // 리뷰 ID 모아서 리뷰이미지 전체 조회
+        List<Long> ids = rows.stream().map(r -> (Long) r[0]).toList();
+        Map<Long, List<String>> imageMap = new LinkedHashMap<>();
+        em.createQuery("""
+        SELECT ri.review.reviewId, ri.reviewImageUrl
+        FROM ReviewImage ri
+        WHERE ri.review.reviewId IN :ids
+        ORDER BY ri.sortOrder ASC, ri.reviewImageId ASC
+    """, Object[].class)
+                .setParameter("ids", ids)
+                .getResultList()
+                .forEach(r -> imageMap
+                        .computeIfAbsent((Long) r[0], k -> new ArrayList<>())
+                        .add((String) r[1]));
+
+        // ③ DTO 매핑
+        List<ReviewListItem> list = rows.stream().map(r ->
+                new ReviewListItem(
+                        (Long) r[0],                 // reviewId
+                        (Long) r[1],                 // productId
+                        (String) r[2],               // productTitle
+                        (String) r[3],               // 상품 첫번째 이미지
+                        (Integer) r[4],              // rating
+                        (String) r[5],               // content
+                        imageMap.getOrDefault(r[0], List.of()), // 리뷰이미지 전체
+                        (java.time.LocalDate) r[6],  // createdDate
+                        (java.time.LocalDate) r[7]   // purchasedDate
+                )
+        ).toList();
 
         return new PageImpl<>(list, pageable, total);
     }
