@@ -94,6 +94,7 @@ public enum ErrorCode {
 
     // File 7000
     FILE_STORAGE_FAILED("7601", HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장에 실패했습니다."),
+
     // event 8000
 
     // System 9000
