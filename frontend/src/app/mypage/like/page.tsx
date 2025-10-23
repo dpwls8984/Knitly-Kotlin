@@ -10,7 +10,7 @@ interface FavoriteProductItem {
   price: number;
   averageRating: number;
   likedAt: string;
-  isLiked: boolean;  // 찜 상태 추가
+  isLiked: boolean;
 }
 
 export default function LikesPage() {
@@ -24,7 +24,7 @@ export default function LikesPage() {
       try {
         const res = await fetch('/mocks/data/likes.json');
         const data: FavoriteProductItem[] = await res.json();
-        setProducts(data.map(p => ({ ...p, isLiked: true }))); // 임시 초기화
+        setProducts(data.map(p => ({ ...p, isLiked: true })));
       } catch (error) {
         console.error('찜 목록 로딩 실패:', error);
       } finally {
@@ -43,10 +43,7 @@ export default function LikesPage() {
     setProducts(prev =>
       prev.map(p =>
         p.productId === productId
-          ? {
-              ...p,
-              isLiked: !p.isLiked
-            }
+          ? { ...p, isLiked: !p.isLiked }
           : p
       )
     );
@@ -93,16 +90,19 @@ export default function LikesPage() {
                     <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-1">
                       {product.productTitle}
                     </h3>
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-bold text-[#925C4C]">
                       {product.price.toLocaleString()}원
-                    </div>
-                    <div className="text-yellow-500 text-sm mt-1">
-                      {'★'.repeat(Math.round(product.averageRating))}{'☆'.repeat(5 - Math.round(product.averageRating))}
                     </div>
                   </div>
 
-                  {/* 찜 버튼 + 개수 */}
+                  {/* 찜 버튼 + 별 1개 */}
                   <div className="flex flex-col items-center gap-1 ml-4">
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className="text-yellow-500 text-sm">★</span>
+                      <span className="text-black text-xs ml-1">{product.averageRating.toFixed(1)}</span>
+                    </div>
+
+                    {/* 찜 버튼 */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
