@@ -12,8 +12,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
 
-import java.util.UUID;
-
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,6 +55,9 @@ class ProductLikeServiceTest {
         Long productId = 1L;
         String redisKey = "likes:product:" + productId;
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
+
+        when(redisTemplate.opsForSet()).thenReturn(setOperations);
+        when(setOperations.isMember(redisKey, userId.toString())).thenReturn(true);
 
         productLikeService.deleteLike(userId, productId);
 

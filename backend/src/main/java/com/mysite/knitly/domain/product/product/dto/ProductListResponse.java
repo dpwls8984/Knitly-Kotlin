@@ -2,12 +2,9 @@ package com.mysite.knitly.domain.product.product.dto;
 
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.entity.ProductCategory;
-// import lombok.Builder; // 제거
-// import lombok.Getter; // 제거
 
 import java.time.LocalDateTime;
 
-// 필드만 괄호 안에 나열합니다.
 public record ProductListResponse(
         Long productId,
         String title,
@@ -18,7 +15,7 @@ public record ProductListResponse(
         Integer stockQuantity,
         Double avgReviewRating,
         LocalDateTime createdAt,
-        String thumbnailUrl, // 🔥 대표 이미지 URL (sortOrder = 1)
+        String thumbnailUrl, // 대표 이미지 URL (sortOrder = 1)
         Boolean isFree,     // 무료 여부
         Boolean isLimited,  // 한정판매 여부
         Boolean isSoldOut   // 품절 여부 (stockQuantity = 0)

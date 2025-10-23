@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.implementation
-
 plugins {
     java
     id("org.springframework.boot") version "3.5.6"
@@ -28,6 +26,7 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation ("org.redisson:redisson-spring-boot-starter:3.27.2") // Redisson 라이브러리
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -44,11 +43,13 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.apache.pdfbox:pdfbox:2.0.29") // PDF 변환 라이브러리
     implementation("commons-codec:commons-codec:1.16.0")
+    implementation("org.springframework.boot:spring-boot-starter-mail")   // Spring Email
 
     // JWT 라이브러리 (필수)
     implementation("io.jsonwebtoken:jjwt-api:0.12.5")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.5")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.5")
+
     implementation("org.apache.pdfbox:pdfbox:2.0.29") // PDF 변환 라이브러리
     implementation("commons-codec:commons-codec:1.16.0")
 

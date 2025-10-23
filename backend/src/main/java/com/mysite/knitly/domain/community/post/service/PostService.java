@@ -1,22 +1,28 @@
 package com.mysite.knitly.domain.community.post.service;
 
-import com.mysite.knitly.domain.user.repository.UserRepository;
-import com.mysite.knitly.global.util.Anonymizer;
-import com.mysite.knitly.global.util.ImageValidator;
-import com.mysite.knitly.domain.community.post.dto.*;
+import com.mysite.knitly.domain.community.post.dto.PostCreateRequest;
+import com.mysite.knitly.domain.community.post.dto.PostListItemResponse;
+import com.mysite.knitly.domain.community.post.dto.PostResponse;
+import com.mysite.knitly.domain.community.post.dto.PostUpdateRequest;
 import com.mysite.knitly.domain.community.post.entity.Post;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.repository.PostRepository;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
+import com.mysite.knitly.global.util.Anonymizer;
+import com.mysite.knitly.global.util.ImageValidator;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 // 상세 기능:  mine(현재 사용자 = 작성자)
 // 등록,수정 기능, 이미지 확장자 검증(png/jpg/jpeg) + 엔티티 저장/수정
@@ -26,16 +32,26 @@ import java.util.Objects;
 public class PostService {
 
     private final PostRepository postRepository;
-    private final UserRepository userRepository;
 
     public Page<PostListItemResponse> getPostList(PostCategory category, String query, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Post> posts = postRepository.findListRows(category, query, pageable);
 
+        // 댓글 수 일괄 조회로 N+1 제거
+        List<Long> ids = posts.getContent().stream().map(Post::getId).toList();
+        Map<Long, Long> countMap = postRepository.countCommentsByPostIds(ids).stream()
+                .collect(Collectors.toMap(r -> (Long) r[0], r -> (Long) r[1], Long::sum));
+
         return posts.map(p -> {
             String exRaw = p.getContent() == null ? "" : p.getContent();
-            String ex = exRaw.length() > 10 ? exRaw.substring(0, 10) + "..." : exRaw;
-            Long commentCount = postRepository.countCommentsByPostId(p.getId());
+
+            // 공백/특수 공백 제거 후 요약 생성
+            String cleaned = exRaw.replaceAll("[\\s\\u00A0\\u3000]+", "");
+            String ex = cleaned.isEmpty()
+                    ? ""
+                    : (cleaned.length() > 10 ? cleaned.substring(0, 10) + "..." : cleaned);
+            long commentCount = countMap.getOrDefault(p.getId(), 0L);
+
             String thumbnail = (p.getImageUrls() == null || p.getImageUrls().isEmpty())
                     ? null : p.getImageUrls().get(0);
 
@@ -52,15 +68,13 @@ public class PostService {
         });
     }
 
-    public PostResponse getPost(Long id, Long currentUserIdOrNull) {
+    public PostResponse getPost(Long id, User currentUserOrNull) {
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
 
         long commentCount = postRepository.countCommentsByPostId(id);
 
-        boolean mine = currentUserIdOrNull != null
-                && p.getAuthor() != null
-                && p.getAuthor().getUserId().equals(currentUserIdOrNull);
+        boolean mine = p.isAuthor(currentUserOrNull);
 
         return new PostResponse(
                 p.getId(),
@@ -78,10 +92,18 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponse create(PostCreateRequest req) {
+    public PostResponse create(PostCreateRequest req, User currentUser) {
+        if (currentUser == null) {
+            throw new ServiceException(ErrorCode.POST_UNAUTHORIZED);
+        }
+        // 제목 길이(100자 초과)
+        if (req.title() != null && req.title().length() > 100) {
+            throw new ServiceException(ErrorCode.POST_TITLE_LENGTH_INVALID);
+        }
+
         List<String> urls = normalizeUrls(req.imageUrls());
         if (urls.size() > 5) {
-            throw new ServiceException(ErrorCode.POST_IMAGE_EXTENSION_INVALID);
+            throw new ServiceException(ErrorCode.POST_IMAGE_COUNT_EXCEEDED);
         }
         for (String u : urls) {
             if (!ImageValidator.isAllowedImageUrl(u)) {
@@ -89,8 +111,8 @@ public class PostService {
             }
         }
 
-        User author = userRepository.findById(req.authorId())
-                .orElseThrow(() -> new ServiceException(ErrorCode.BAD_REQUEST));
+        // 요청 authorId는 무시, 인증된 사용자 객체를 그대로 사용
+        User author = currentUser;
 
         Post post = Post.builder()
                 .category(req.category())
@@ -102,16 +124,22 @@ public class PostService {
         post.replaceImages(urls);
 
         Post saved = postRepository.save(post);
-        return getPost(saved.getId(), author.getUserId());
+        return getPost(saved.getId(), currentUser);
     }
 
     @Transactional
-    public PostResponse update(Long id, PostUpdateRequest req, Long currentUserId) {
-
+    public PostResponse update(Long id, PostUpdateRequest req, User currentUser) {
+        if (currentUser == null) {
+            throw new ServiceException(ErrorCode.POST_UNAUTHORIZED);
+        }
+        // 제목 길이(100자 초과)
+        if (req.title() != null && req.title().length() > 100) {
+            throw new ServiceException(ErrorCode.POST_TITLE_LENGTH_INVALID);
+        }
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
 
-        if (p.getAuthor() == null || !p.getAuthor().getUserId().equals(currentUserId)) {
+        if (!p.isAuthor(currentUser)) {
             throw new ServiceException(ErrorCode.POST_UPDATE_FORBIDDEN);
         }
 
@@ -124,7 +152,7 @@ public class PostService {
         if (req.imageUrls() != null) {
             List<String> urls = normalizeUrls(req.imageUrls());
             if (urls.size() > 5) {
-                throw new ServiceException(ErrorCode.POST_IMAGE_EXTENSION_INVALID);
+                throw new ServiceException(ErrorCode.POST_IMAGE_COUNT_EXCEEDED);
             }
             for (String u : urls) {
                 if (!ImageValidator.isAllowedImageUrl(u)) {
@@ -134,15 +162,18 @@ public class PostService {
             p.replaceImages(urls);
         }
 
-        return getPost(p.getId(), currentUserId);
+        return getPost(p.getId(), currentUser);
     }
 
     @Transactional
-    public void delete(Long id, Long currentUserId) {
+    public void delete(Long id, User currentUser) {
+        if (currentUser == null) {
+            throw new ServiceException(ErrorCode.POST_UNAUTHORIZED);
+        }
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
 
-        if (p.getAuthor() == null || !p.getAuthor().getUserId().equals(currentUserId)) {
+        if (!p.isAuthor(currentUser)) {
             throw new ServiceException(ErrorCode.POST_DELETE_FORBIDDEN);
         }
 

@@ -1,108 +1,160 @@
-//package com.mysite.knitly.domain.community.post.controller;
-//
-//import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.mysite.knitly.domain.community.post.entity.PostCategory;
-//import com.mysite.knitly.domain.community.user.repository.UserRepository;
-//import com.mysite.knitly.domain.user.entity.User;
-//import com.mysite.knitly.domain.user.entity.Provider;
-//import com.mysite.knitly.domain.user.repository.UserRepository;
-//import org.junit.jupiter.api.*;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-//import org.springframework.boot.test.context.SpringBootTest;
-//import org.springframework.http.MediaType;
-//import org.springframework.test.context.ActiveProfiles;
-//import org.springframework.test.web.servlet.MockMvc;
-//
-//import java.util.List;
-//import java.util.Map;
-//import java.util.UUID;
-//
-//import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-//import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-//
-//@SpringBootTest
-//@AutoConfigureMockMvc(addFilters = false)
-//@ActiveProfiles("test")
-//class PostControllerValidationTest {
-//
-//    @Autowired MockMvc mvc;
-//    @Autowired ObjectMapper om;
-//    @Autowired
-//    UserRepository userRepository;
-//
-//    private UUID authorId;
-//
-//    @BeforeEach
-//    void setUp() {
-//        // 고유 socialId 로 저장
-//        User author = User.builder()
-//                .socialId("pval-auth-" + UUID.randomUUID())
-//                .name("Author")
-//                .provider(Provider.GOOGLE)
-//                .build();
-//        authorId = userRepository.save(author).getUserId();
-//    }
-//
-//    @Test
-//    void create_post_blank_title_or_content_returns_400() throws Exception {
-//        // 빈 제목 -> 400
-//        var reqBlankTitle = Map.of(
-//                "category", PostCategory.FREE.name(),
-//                "title", "   ",
-//                "content", "내용",
-//                "imageUrls", List.of("https://example.com/a.jpg"),
-//                "authorId", authorId.toString()
-//        );
-//        mvc.perform(post("/community/posts")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(om.writeValueAsString(reqBlankTitle)))
-//                .andExpect(status().isBadRequest());
-//
-//        // 빈 내용 -> 400
-//        var reqBlankContent = Map.of(
-//                "category", PostCategory.FREE.name(),
-//                "title", "제목",
-//                "content", "   ",
-//                "imageUrls", List.of("https://example.com/a.jpg"),
-//                "authorId", authorId.toString()
-//        );
-//        mvc.perform(post("/community/posts")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(om.writeValueAsString(reqBlankContent)))
-//                .andExpect(status().isBadRequest());
-//    }
-//
-//    @Test
-//    void create_post_title_too_long_returns_400() throws Exception {
-//        var longTitle = "가".repeat(101); // @Size(max=100)
-//        var req = Map.of(
-//                "category", PostCategory.FREE.name(),
-//                "title", longTitle,
-//                "content", "본문",
-//                "imageUrls", List.of("https://example.com/a.jpg"),
-//                "authorId", authorId.toString()
-//        );
-//        mvc.perform(post("/community/posts")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(om.writeValueAsString(req)))
-//                .andExpect(status().isBadRequest());
-//    }
-//
-//    @Test
-//    void create_post_ok_returns_200() throws Exception {
-//        var req = Map.of(
-//                "category", PostCategory.FREE.name(),
-//                "title", "정상 제목",
-//                "content", "정상 본문",
-//                "imageUrls", List.of("https://example.com/a.jpg"),
-//                "authorId", authorId.toString()
-//        );
-//        mvc.perform(post("/community/posts")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(om.writeValueAsString(req)))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.title").value("정상 제목"))
-//                .andExpect(jsonPath("$.imageUrls[0]").value("https://example.com/a.jpg"));
-//    }
-//}
+package com.mysite.knitly.domain.community.post.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mysite.knitly.domain.community.post.entity.PostCategory;
+import com.mysite.knitly.domain.user.entity.Provider;
+import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.domain.user.repository.UserRepository;
+import org.apiguardian.api.API;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+
+// 게시글 작성 API 입력값 검증 및 권한 테스트
+@SpringBootTest
+@ActiveProfiles("test")
+@AutoConfigureMockMvc(addFilters = false)
+@Transactional
+class PostControllerValidationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    // 전역 테스트 필드
+    private User author;
+    private Long authorId;
+    private User other;
+    private Long otherId;
+
+    @BeforeEach
+    void setUp() {
+        // 작성자
+        author = User.builder()
+                .socialId("s1")
+                .email("author@test.com")
+                .name("Author")
+                .provider(Provider.GOOGLE)
+                .build();
+        authorId = userRepository.save(author).getUserId();
+
+        // 다른 사용자
+        other = User.builder()
+                .socialId("s2")
+                .email("other@test.com")
+                .name("Other")
+                .provider(Provider.KAKAO)
+                .build();
+        otherId = userRepository.save(other).getUserId();
+
+        // 인증 유저를 SecurityContext에 주입 (MockMvc가 @AuthenticationPrincipal로 읽을 수 있게)
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(author, null, List.of())
+        );
+    }
+
+
+    // 제목이 100자 초과 시 validation 실패 테스트
+    @Test
+    void createPost_titleTooLong_returnsBadRequest() throws Exception {
+        String longTitle = "a".repeat(101);
+        Map<String, Object> request = Map.of(
+                "category", PostCategory.FREE.name(),
+                "title", longTitle,
+                "content", "내용",
+                "imageUrls", List.of("https://example.com/a.jpg")
+        );
+
+        mockMvc.perform(post("/community/posts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("POST_TITLE_LENGTH_INVALID"));
+    }
+
+
+    // 이미지 6개 이상이면 validation 실패 테스트
+    @Test
+    void createPost_tooManyImages_returnsBadRequest() throws Exception {
+        List<String> sixImages = List.of(
+                "https://example.com/1.jpg",
+                "https://example.com/2.jpg",
+                "https://example.com/3.jpg",
+                "https://example.com/4.jpg",
+                "https://example.com/5.jpg",
+                "https://example.com/6.jpg"
+        );
+        Map<String, Object> request = Map.of(
+                "category", PostCategory.TIP.name(),
+                "title", "제목",
+                "content", "내용",
+                "imageUrls", sixImages
+        );
+
+        mockMvc.perform(post("/community/posts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("POST_IMAGE_COUNT_EXCEEDED"));
+    }
+
+
+     //필수값 누락 시 validation 실패 테스트
+    @Test
+    void createPost_missingFields_returnsBadRequest() throws Exception {
+        Map<String, Object> request = Map.of(
+                "category", PostCategory.FREE.name(),
+                "title", "",
+                "content", ""
+        );
+
+        mockMvc.perform(post("/community/posts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+
+     // 정상 요청 시 201 Created 반환 테스트
+    @Test
+    void createPost_success_returnsCreated() throws Exception {
+        Map<String, Object> request = Map.of(
+                "category", PostCategory.QUESTION.name(),
+                "title", "첫 글",
+                "content", "내용",
+                "imageUrls", List.of("https://example.com/ok.jpg")
+        );
+
+        mockMvc.perform(post("/community/posts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("첫 글"))
+                .andExpect(jsonPath("$.authorId").value(authorId));
+
+        assertThat(userRepository.findById(authorId)).isPresent();
+    }
+}

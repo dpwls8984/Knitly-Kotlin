@@ -19,14 +19,26 @@ public class ProductLikeService {
 
     public void addLike(Long userId, Long productId) {
         String redisKey = "likes:product:" + productId;
-        redisTemplate.opsForSet().add(redisKey, userId.toString());
+        String userKey = userId.toString();
+
+        if (Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(redisKey, userKey))) {
+            return;
+        }
+
+        redisTemplate.opsForSet().add(redisKey, userKey);
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
         rabbitTemplate.convertAndSend(EXCHANGE_NAME, LIKE_ROUTING_KEY, eventDto);
     }
 
     public void deleteLike(Long userId, Long productId) {
         String redisKey = "likes:product:" + productId;
-        redisTemplate.opsForSet().remove(redisKey, userId.toString());
+        String userKey = userId.toString();
+
+        if (!Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(redisKey, userKey))) {
+            return;
+        }
+
+        redisTemplate.opsForSet().remove(redisKey, userKey);
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
         rabbitTemplate.convertAndSend(EXCHANGE_NAME, DISLIKE_ROUTING_KEY, eventDto);
     }

@@ -132,7 +132,7 @@ class ProductServiceTest {
                 ProductCategory.TOP, ProductFilterType.ALL, ProductSortType.LATEST, pageable);
 
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getProductCategory()).isEqualTo(ProductCategory.TOP);
+        assertThat(result.getContent().get(0).productCategory()).isEqualTo(ProductCategory.TOP);
         verify(productRepository).findByProductCategoryAndIsDeletedFalse(
                 eq(ProductCategory.TOP), any(Pageable.class));
     }
@@ -148,8 +148,8 @@ class ProductServiceTest {
                 null, ProductFilterType.FREE, ProductSortType.LATEST, pageable);
 
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getPrice()).isEqualTo(0.0);
-        assertThat(result.getContent().get(0).getIsFree()).isTrue();
+        assertThat(result.getContent().get(0).price()).isEqualTo(0.0);
+        assertThat(result.getContent().get(0).isFree()).isTrue();
         verify(productRepository).findByPriceAndIsDeletedFalse(eq(0.0), any(Pageable.class));
     }
 
@@ -164,8 +164,8 @@ class ProductServiceTest {
                 null, ProductFilterType.LIMITED, ProductSortType.LATEST, pageable);
 
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getStockQuantity()).isNotNull();
-        assertThat(result.getContent().get(0).getIsLimited()).isTrue();
+        assertThat(result.getContent().get(0).stockQuantity()).isNotNull();
+        assertThat(result.getContent().get(0).isLimited()).isTrue();
         verify(productRepository).findByStockQuantityIsNotNullAndIsDeletedFalse(any(Pageable.class));
     }
 
@@ -181,7 +181,7 @@ class ProductServiceTest {
                 null, ProductFilterType.ALL, ProductSortType.POPULAR, pageable);
 
         assertThat(result.getContent()).hasSize(3);
-        assertThat(result.getContent().get(0).getProductId()).isEqualTo(2L); // 가장 인기있는 상품
+        assertThat(result.getContent().get(0).productId()).isEqualTo(2L); // 가장 인기있는 상품
         verify(redisProductService).getTopNPopularProducts(1000);
     }
 
@@ -212,7 +212,7 @@ class ProductServiceTest {
                 ProductCategory.TOP, ProductFilterType.FREE, ProductSortType.LATEST, pageable);
 
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getIsFree()).isTrue();
+        assertThat(result.getContent().get(0).isFree()).isTrue();
         // TOP로 제한되지 않음을 간접 확인(리포 호출 검증)
         verify(productRepository).findByPriceAndIsDeletedFalse(eq(0.0), any(Pageable.class));
     }
