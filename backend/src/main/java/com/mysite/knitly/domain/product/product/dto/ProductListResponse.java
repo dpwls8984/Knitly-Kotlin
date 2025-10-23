@@ -15,11 +15,14 @@ public record ProductListResponse(
         Integer stockQuantity,
         Double avgReviewRating,
         LocalDateTime createdAt,
-        Boolean isFree,
-        Boolean isLimited,
-        Boolean isSoldOut
+        String thumbnailUrl, // 대표 이미지 URL (sortOrder = 1)
+        Boolean isFree,     // 무료 여부
+        Boolean isLimited,  // 한정판매 여부
+        Boolean isSoldOut   // 품절 여부 (stockQuantity = 0)
 ) {
+    // from 메서드는 그대로 유지하거나, 정적 팩토리 메서드로 변경할 수 있습니다.
     public static ProductListResponse from(Product product) {
+        // record는 생성자를 통해 필드를 초기화합니다.
         return new ProductListResponse(
                 product.getProductId(),
                 product.getTitle(),
@@ -30,6 +33,7 @@ public record ProductListResponse(
                 product.getStockQuantity(),
                 product.getAvgReviewRating(),
                 product.getCreatedAt(),
+                null, // thumbnailUrl (별도 조회 필요)
                 product.getPrice() == 0.0,
                 product.getStockQuantity() != null,
                 product.getStockQuantity() != null && product.getStockQuantity() == 0

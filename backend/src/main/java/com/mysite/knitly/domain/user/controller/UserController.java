@@ -5,6 +5,7 @@ package com.mysite.knitly.domain.user.controller;
 import com.mysite.knitly.domain.product.product.dto.ProductListResponse;
 import com.mysite.knitly.domain.product.product.service.ProductService;
 import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.domain.user.service.UserService;
 import com.mysite.knitly.utility.auth.service.AuthService;
 import com.mysite.knitly.utility.cookie.CookieUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +40,7 @@ public class UserController {
     private final CookieUtil cookieUtil;  // 추가!
 
     private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";  // 추가!
+    private final UserService userService;
 
     /**
      * 현재 로그인한 사용자 정보 조회 (JWT 인증 필요)
@@ -178,8 +180,8 @@ public class UserController {
     }
 
     /**
-     * 판매자 상품 조회
-     * GET /users/{user}/products
+     * 유저가 판매하는 상품 조회 (AT 불필요)
+     * GET user/{userId}/products
      */
     @Operation(
             summary = "판매자 상품 조회",
@@ -191,9 +193,11 @@ public class UserController {
             @PathVariable Long userId,
             @PageableDefault(size = 20) Pageable pageable
     ){
-        Page<ProductListResponse> response = productService.findByUser_userIdAndIsDeletedFalse(userId, pageable);
+        Page<ProductListResponse> response = productService.findProductsByUserId(userId, pageable);
         log.info("getProductsWithUserId response: {}", response);
         return ResponseEntity.ok(response);
     }
+
+
 
 }
