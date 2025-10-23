@@ -23,9 +23,10 @@ interface DesignCardProps {
   onDelete: (id: number) => void;
   onRegisterSale: (id: number) => void;
   onModifyProduct: (id: number) => void;
+  onResumeSale: (id: number) => void;
 }
 
-function DesignCard({ design, onStopSale, onDelete, onRegisterSale, onModifyProduct }: DesignCardProps) {
+function DesignCard({ design, onStopSale, onDelete, onRegisterSale, onModifyProduct, onResumeSale }: DesignCardProps) {
   const getStateText = (state: DesignState) => {
     switch (state) {
       case 'BEFORE_SALE': return '판매전';
@@ -68,13 +69,22 @@ function DesignCard({ design, onStopSale, onDelete, onRegisterSale, onModifyProd
   };
 
   const getBottomRightButton = () => {
-    if (design.designState === 'BEFORE_SALE' || design.designState === 'STOPPED') {
+    if (design.designState === 'BEFORE_SALE') {
       return (
         <button
           onClick={() => onRegisterSale(design.id)}
           className="px-4 py-2 text-sm bg-[#925C4C] text-white rounded hover:bg-[#7a4a3d] transition-colors"
         >
           판매등록
+        </button>
+      );
+    } else if (design.designState === 'STOPPED') {
+      return (
+        <button
+          onClick={() => onResumeSale(design.id)}
+          className="px-4 py-2 text-sm bg-[#925C4C] text-white rounded hover:bg-[#7a4a3d] transition-colors"
+        >
+          다시 판매하기
         </button>
       );
     } else if (design.designState === 'ON_SALE') {
@@ -91,7 +101,7 @@ function DesignCard({ design, onStopSale, onDelete, onRegisterSale, onModifyProd
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 relative">
+    <div className="border border-gray-200 rounded-lg p-4 relative flex flex-col">
       {/* 상단 상태 및 버튼 */}
       <div className="flex justify-between items-start mb-4">
         <span className={`px-2 py-1 text-xs text-white rounded ${getStateColor(design.designState)}`}>
@@ -101,13 +111,13 @@ function DesignCard({ design, onStopSale, onDelete, onRegisterSale, onModifyProd
       </div>
 
       {/* 도안 정보 */}
-      <div className="text-center mb-4">
+      <div className="text-center mb-4 flex-1">
         <div className="text-sm text-gray-600 mb-2">{design.fileName}</div>
         <div className="text-xs text-gray-500">{design.name}</div>
       </div>
 
       {/* 하단 버튼 */}
-      <div className="flex justify-end">
+      <div className="flex justify-end mt-auto">
         {getBottomRightButton()}
       </div>
     </div>
@@ -214,6 +224,15 @@ export default function DesignListPage() {
     alert('상품 등록 페이지로 이동합니다. (구현 예정)');
   };
 
+  // 다시 판매하기 (판매중지 -> 판매중)
+  const handleResumeSale = (id: number) => {
+    setDesigns(prev => prev.map(design => 
+      design.id === id 
+        ? { ...design, designState: 'ON_SALE' as DesignState }
+        : design
+    ));
+  };
+
   // 상품 수정
   const handleModifyProduct = (id: number) => {
     // TODO: 상품 수정 페이지로 이동 (아직 경로가 없음)
@@ -264,6 +283,7 @@ export default function DesignListPage() {
                 onDelete={handleDelete}
                 onRegisterSale={handleRegisterSale}
                 onModifyProduct={handleModifyProduct}
+                onResumeSale={handleResumeSale}
               />
             ))}
           </div>
