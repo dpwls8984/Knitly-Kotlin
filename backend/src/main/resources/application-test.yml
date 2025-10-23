@@ -1,26 +1,3 @@
-spring:
-  datasource:
-    url: jdbc:h2:mem:knitly;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  jpa:
-    hibernate:
-      ddl-auto: create
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.H2Dialect
-  sql:
-    init:
-      mode: never
-
-logging:
-  level:
-    org.hibernate.SQL: debug
-    org.hibernate.orm.jdbc.bind: trace
-
 #spring:
 #  datasource:
 #    url: jdbc:h2:mem:knitly;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
@@ -30,8 +7,7 @@ logging:
 #  jpa:
 #    hibernate:
 #      ddl-auto: create
-#    #show-sql: true
-#    show-sql: false
+#    show-sql: true
 #    properties:
 #      hibernate:
 #        format_sql: true
@@ -42,11 +18,35 @@ logging:
 #
 #logging:
 #  level:
-#    root: INFO
-#    com.mysite.knitly: DEBUG
-#    org.hibernate.SQL: INFO
-#    org.springframework.transaction.interceptor: INFO
-##    org.hibernate.orm.jdbc.bind: trace
-#
-#frontend:
-#  url: http://localhost:3000
+#    org.hibernate.SQL: debug
+#    org.hibernate.orm.jdbc.bind: trace
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:knitly;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create
+    #show-sql: true
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+  sql:
+    init:
+      mode: never
+
+logging:
+  level:
+    root: INFO
+    com.mysite.knitly: DEBUG
+    org.hibernate.SQL: INFO
+    org.springframework.transaction.interceptor: INFO
+#    org.hibernate.orm.jdbc.bind: trace
+
+frontend:
+  url: http://localhost:3000

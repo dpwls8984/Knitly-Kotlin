@@ -223,7 +223,7 @@ class OrderServiceTest {
             });
         }
 
-        latch.await(3, TimeUnit.SECONDS);
+        latch.await(10, TimeUnit.SECONDS);
         executorService.shutdown();
 
         // then

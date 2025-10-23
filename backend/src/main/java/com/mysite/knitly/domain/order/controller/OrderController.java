@@ -24,7 +24,7 @@ public class OrderController {
             @AuthenticationPrincipal User user,
             @RequestBody @Valid OrderCreateRequest request
     ) {
-        // ✅ Facade의 메서드를 호출하도록 변경
+        // Facade의 메서드를 호출하도록 변경
         OrderCreateResponse response = orderFacade.createOrderWithLock(user, request);
         return ResponseEntity.ok(response);
     }
