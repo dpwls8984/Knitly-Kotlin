@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
+    // --- Like 관련 상수 ---
     public static final String LIKE_ADD_QUEUE = "like.add.queue";
     public static final String LIKE_DELETE_QUEUE = "like.delete.queue";
     public static final String LIKE_ADD_DLQ = "like.add.dlq";
@@ -16,24 +17,35 @@ public class RabbitMQConfig {
     public static final String LIKE_ADD_ROUTING_KEY = "like.add.routingkey";
     public static final String LIKE_DELETE_ROUTING_KEY = "like.delete.routingkey";
 
-    // 메인 큐
+    public static final String DEAD_LETTER_EXCHANGE = "dead-letter.exchange";
+    public static final String DEAD_LETTER_ROUTING_KEY_PREFIX = "dead."; // 라우팅 키 접두사
+
+    @Bean
+    public DirectExchange deadLetterExchange() {
+        return new DirectExchange(DEAD_LETTER_EXCHANGE);
+    }
+
+    @Bean
+    public TopicExchange likeExchange() {
+        return new TopicExchange(LIKE_EXCHANGE);
+    }
+
     @Bean
     public Queue likeAddQueue() {
         return QueueBuilder.durable(LIKE_ADD_QUEUE)
-                .withArgument("x-dead-letter-exchange", LIKE_EXCHANGE)
-                .withArgument("x-dead-letter-routing-key", LIKE_ADD_DLQ)
+                .withArgument("x-dead-letter-exchange", DEAD_LETTER_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", DEAD_LETTER_ROUTING_KEY_PREFIX + LIKE_ADD_QUEUE)
                 .build();
     }
 
     @Bean
     public Queue likeDeleteQueue() {
         return QueueBuilder.durable(LIKE_DELETE_QUEUE)
-                .withArgument("x-dead-letter-exchange", LIKE_EXCHANGE)
-                .withArgument("x-dead-letter-routing-key", LIKE_DELETE_DLQ)
+                .withArgument("x-dead-letter-exchange", DEAD_LETTER_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", DEAD_LETTER_ROUTING_KEY_PREFIX + LIKE_DELETE_QUEUE)
                 .build();
     }
 
-    // DLQ
     @Bean
     public Queue likeAddDeadLetterQueue() {
         return QueueBuilder.durable(LIKE_ADD_DLQ).build();
@@ -44,39 +56,54 @@ public class RabbitMQConfig {
         return QueueBuilder.durable(LIKE_DELETE_DLQ).build();
     }
 
-    // Exchange
-    @Bean
-    public TopicExchange likeExchange() {
-        return new TopicExchange(LIKE_EXCHANGE);
-    }
-
     // Binding
     @Bean
-    public Binding likeAddBinding() {
-        return BindingBuilder.bind(likeAddQueue())
-                .to(likeExchange())
-                .with(LIKE_ADD_ROUTING_KEY);
+    public Binding likeAddBinding(Queue likeAddQueue, TopicExchange likeExchange) {
+        return BindingBuilder.bind(likeAddQueue).to(likeExchange).with(LIKE_ADD_ROUTING_KEY);
     }
 
     @Bean
-    public Binding likeDeleteBinding() {
-        return BindingBuilder.bind(likeDeleteQueue())
-                .to(likeExchange())
-                .with(LIKE_DELETE_ROUTING_KEY);
+    public Binding likeDeleteBinding(Queue likeDeleteQueue, TopicExchange likeExchange) {
+        return BindingBuilder.bind(likeDeleteQueue).to(likeExchange).with(LIKE_DELETE_ROUTING_KEY);
     }
 
     // DLQ Binding
     @Bean
-    public Binding likeAddDlqBinding() {
-        return BindingBuilder.bind(likeAddDeadLetterQueue())
-                .to(likeExchange())
-                .with(LIKE_ADD_DLQ);
+    public Binding likeAddDlqBinding(Queue likeAddDeadLetterQueue, DirectExchange deadLetterExchange) {
+        return BindingBuilder.bind(likeAddDeadLetterQueue).to(deadLetterExchange).with(DEAD_LETTER_ROUTING_KEY_PREFIX + LIKE_ADD_QUEUE);
     }
 
     @Bean
-    public Binding likeDeleteDlqBinding() {
-        return BindingBuilder.bind(likeDeleteDeadLetterQueue())
-                .to(likeExchange())
-                .with(LIKE_DELETE_DLQ);
+    public Binding likeDeleteDlqBinding(Queue likeDeleteDeadLetterQueue, DirectExchange deadLetterExchange) {
+        return BindingBuilder.bind(likeDeleteDeadLetterQueue).to(deadLetterExchange).with(DEAD_LETTER_ROUTING_KEY_PREFIX + LIKE_DELETE_QUEUE);
+    }
+
+
+    @Bean
+    public TopicExchange orderExchange() {
+        return new TopicExchange("order.exchange");
+    }
+
+    @Bean
+    public Queue orderEmailQueue() {
+        return QueueBuilder.durable("order.email.queue")
+                .withArgument("x-dead-letter-exchange", DEAD_LETTER_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", DEAD_LETTER_ROUTING_KEY_PREFIX + "order.email.queue")
+                .build();
+    }
+
+    @Bean
+    public Queue orderEmailDeadLetterQueue() {
+        return QueueBuilder.durable("order.email.queue.dlq").build();
+    }
+
+    @Bean
+    public Binding orderEmailBinding(Queue orderEmailQueue, TopicExchange orderExchange) {
+        return BindingBuilder.bind(orderEmailQueue).to(orderExchange).with("order.completed");
+    }
+
+    @Bean
+    public Binding orderEmailDlqBinding(Queue orderEmailDeadLetterQueue, DirectExchange deadLetterExchange) {
+        return BindingBuilder.bind(orderEmailDeadLetterQueue).to(deadLetterExchange).with(DEAD_LETTER_ROUTING_KEY_PREFIX + "order.email.queue");
     }
 }
