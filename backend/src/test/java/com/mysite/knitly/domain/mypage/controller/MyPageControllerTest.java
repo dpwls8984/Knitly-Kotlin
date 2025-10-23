@@ -41,6 +41,7 @@ class MyPageControllerTest {
                 return parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class)
                         && parameter.getParameterType().isAssignableFrom(User.class);
             }
+
             @Override
             public Object resolveArgument(org.springframework.core.MethodParameter parameter,
                                           org.springframework.web.method.support.ModelAndViewContainer mavContainer,
@@ -63,7 +64,7 @@ class MyPageControllerTest {
     @Test
     @DisplayName("GET /api/mypage/profile → 이름/이메일 반환")
     void profile() throws Exception {
-        mvc.perform(get("/api/mypage/profile"))
+        mvc.perform(get("/mypage/profile"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("홍길동"))
                 .andExpect(jsonPath("$.email").value("hong@example.com"));
@@ -79,7 +80,7 @@ class MyPageControllerTest {
         var page = new PageImpl<>(List.of(card1), PageRequest.of(0, 3), 1);
         given(service.getOrderCards(eq(1L), Mockito.<Pageable>any())).willReturn(page);
 
-        mvc.perform(get("/api/mypage/orders").param("page", "0").param("size", "3"))
+        mvc.perform(get("/mypage/orders").param("page", "0").param("size", "3"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(3))
@@ -99,7 +100,7 @@ class MyPageControllerTest {
         var page = new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1);
         given(service.getMyPosts(eq(1L), eq("키워드"), Mockito.<Pageable>any())).willReturn(page);
 
-        mvc.perform(get("/api/mypage/posts")
+        mvc.perform(get("/mypage/posts")
                         .param("query", "키워드")
                         .param("page", "0")
                         .param("size", "10"))
@@ -117,7 +118,7 @@ class MyPageControllerTest {
         var page = new PageImpl<>(List.of(c1), PageRequest.of(0, 10), 1);
         given(service.getMyComments(eq(1L), eq("단어"), Mockito.<Pageable>any())).willReturn(page);
 
-        mvc.perform(get("/api/mypage/comments")
+        mvc.perform(get("/mypage/comments")
                         .param("query", "단어")
                         .param("page", "0")
                         .param("size", "10"))
@@ -134,7 +135,7 @@ class MyPageControllerTest {
         var page = new PageImpl<>(List.of(f1), PageRequest.of(0, 10), 1);
         given(service.getMyFavorites(eq(1L), Mockito.<Pageable>any())).willReturn(page);
 
-        mvc.perform(get("/api/mypage/favorites")
+        mvc.perform(get("/mypage/favorites")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -146,16 +147,29 @@ class MyPageControllerTest {
     @Test
     @DisplayName("GET /api/mypage/reviews → 내가 남긴 리뷰 페이지")
     void myReviews() throws Exception {
-        var r1 = new ReviewListItem(301L, 9001L, "인기 도안", "t.jpg", 5, "아주 좋아요", LocalDate.of(2025, 1, 6));
+        var r1 = new ReviewListItem(
+                301L,
+                9001L,
+                "인기 도안",
+                "t.jpg",
+                5,
+                "아주 좋아요",
+                List.of("r1.jpg", "r2.jpg"),
+                LocalDate.of(2025, 1, 6),
+                LocalDate.of(2025, 1, 2)
+        );
         var page = new PageImpl<>(List.of(r1), PageRequest.of(0, 10), 1);
         given(service.getMyReviews(eq(1L), Mockito.<Pageable>any())).willReturn(page);
 
-        mvc.perform(get("/api/mypage/reviews")
+        mvc.perform(get("/mypage/reviews")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].reviewId").value(301))
                 .andExpect(jsonPath("$.content[0].rating").value(5))
-                .andExpect(jsonPath("$.content[0].content").value("아주 좋아요"));
+                .andExpect(jsonPath("$.content[0].content").value("아주 좋아요"))
+                .andExpect(jsonPath("$.content[0].reviewImageUrls", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].purchasedDate", contains(2025, 1, 2)));
     }
 }
+

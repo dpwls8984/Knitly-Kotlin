@@ -52,7 +52,7 @@ export default function ProductLayout({
           </ul>
         </nav>
       </aside>
-      
+
       <main style={{ flex: 1, padding: "20px" }}>
         {children}
       </main>

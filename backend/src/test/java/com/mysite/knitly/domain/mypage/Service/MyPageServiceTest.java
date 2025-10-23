@@ -93,8 +93,18 @@ class MyPageServiceTest {
     @Test
     @DisplayName("내가 남긴 리뷰 조회")
     void getMyReviews() {
-        var r = new ReviewListItem(301L, 9001L, "인기 도안", "t.jpg", 5, "좋아요", LocalDate.of(2025,1,4));
-        var page = new PageImpl<>(List.of(r), PageRequest.of(0, 10), 1);
+        var r = new ReviewListItem(
+                301L,
+                9001L,
+                "인기 도안",
+                "t.jpg",
+                5,
+                "좋아요",
+                List.of("r1.jpg"),
+                LocalDate.of(2025,1,4),
+                LocalDate.of(2025,1,2)
+        );
+                var page = new PageImpl<>(List.of(r), PageRequest.of(0, 10), 1);
 
         given(repo.findMyReviews(eq(10L), any())).willReturn(page);
 
