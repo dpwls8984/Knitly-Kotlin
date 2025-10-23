@@ -2,10 +2,13 @@ package com.mysite.knitly.domain.mypage.controller;
 
 import com.mysite.knitly.domain.mypage.dto.*;
 import com.mysite.knitly.domain.mypage.service.MyPageService;
+import com.mysite.knitly.domain.payment.dto.PaymentDetailResponse;
+import com.mysite.knitly.domain.payment.service.PaymentService;
 import com.mysite.knitly.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
@@ -15,6 +18,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 public class MyPageController {
 
     private final MyPageService service;
+    private final PaymentService paymentService;
 
     // 프로필 조회 (이름 + 이메일)
     @GetMapping("/profile")
@@ -30,6 +34,16 @@ public class MyPageController {
             @RequestParam(defaultValue = "3") int size
     ) {
         return PageResponse.of(service.getOrderCards(principal.getUserId(), PageRequest.of(page, size)));
+    }
+
+    // 주문 내역별 결제 정보 조회(주문 카드에서 결제내역 보기 버튼 클릭 시 호출)
+    @GetMapping("/orders/{orderId}/payment")
+    public ResponseEntity<?> myOrderPayment(
+            @AuthenticationPrincipal User principal,
+            @PathVariable Long orderId
+    ) {
+        PaymentDetailResponse detail = paymentService.getPaymentDetailByOrder(principal, orderId);
+        return ResponseEntity.ok(detail);
     }
 
     // 내가 쓴 글 조회 (검색기능 + 정렬)

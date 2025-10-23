@@ -1,7 +1,6 @@
 package com.mysite.knitly.domain.product.product.entity;
 
 import com.mysite.knitly.domain.design.entity.Design;
-import com.mysite.knitly.domain.product.review.entity.ReviewImage;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
@@ -16,7 +15,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Getter
@@ -55,7 +53,7 @@ public class Product {
     @ManyToOne(fetch = FetchType.LAZY)
     //Cascade 안하는 이유 : User 삭제시 Product도 삭제되면 안됨
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private User user; // 판매자
 
     @Column(nullable = false)
     private Integer purchaseCount; // 누적수
