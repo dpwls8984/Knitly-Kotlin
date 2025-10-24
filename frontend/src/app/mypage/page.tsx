@@ -47,29 +47,6 @@ export default function MyPage() {
                         <p className="text-gray-600">{user.email}</p>
                     </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-6">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-sm text-gray-600">User ID</p>
-                        <p className="text-lg font-semibold">{user.userId}</p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-sm text-gray-600">로그인 방식</p>
-                        <p className="text-lg font-semibold">{user.provider}</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* 메뉴 */}
-            <div className="grid grid-cols-2 gap-4">
-                <button className="bg-white shadow-md rounded-lg p-6 hover:shadow-lg transition-shadow">
-                    <h3 className="font-semibold text-lg mb-2">구매 내역</h3>
-                    <p className="text-sm text-gray-600">구매한 도안을 확인하세요</p>
-                </button>
-                <button className="bg-white shadow-md rounded-lg p-6 hover:shadow-lg transition-shadow">
-                    <h3 className="font-semibold text-lg mb-2">내 도안</h3>
-                    <p className="text-sm text-gray-600">제작한 도안을 관리하세요</p>
-                </button>
             </div>
 
                     {/* ▼▼▼ 임시 테스트용 링크 (나중에 삭제) ▼▼▼ */}
@@ -88,6 +65,7 @@ export default function MyPage() {
                 </li>
                 </ul>
             </div>
+
         </div>
     );
 }

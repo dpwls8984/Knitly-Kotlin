@@ -34,7 +34,7 @@ public class AuthController {
 
     /**
      * Access Token 갱신 API
-     * POST /api/auth/refresh
+     * POST /auth/refresh
      *
      * 쿠키에서 Refresh Token을 읽어 새로운 Access Token과 Refresh Token을 발급
      */

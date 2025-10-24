@@ -137,7 +137,7 @@ export default function SellerStorePage() {
         return null; // 또는 로딩 표시
     }
 
-    if (loading && page === 0) {
+    if (loading && products.length === 0) {
         return (
             <div className="flex justify-center items-center min-h-[60vh]">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#925C4C]"></div>
@@ -210,6 +210,12 @@ export default function SellerStorePage() {
                 </div>
             </div>
 
+            <div className="relative">
+                {loading && (
+                    <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10 rounded-lg">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#925C4C]"></div>
+                    </div>
+                )}
             {/* 상품 목록 */}
             {products.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-lg shadow-md">
@@ -282,6 +288,7 @@ export default function SellerStorePage() {
                     </button>
                 </div>
             )}
+        </div>
         </div>
     );
 }
