@@ -30,4 +30,13 @@ export interface ReviewCreateResponse {
     size: number;
     number: number;
   }
+ // 특정 상품의 리뷰 목록을 위한 타입
+  export interface ProductReviewItem {
+    reviewId: number;
+    rating: number;
+    content: string;
+    createdAt: string; // LocalDateTime은 JSON에서 string으로 변환됨
+    userName: string;
+    reviewImageUrls: string[];
+  }
   

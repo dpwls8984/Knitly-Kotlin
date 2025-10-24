@@ -66,7 +66,7 @@ public class MyPageController {
         return PageResponse.of(service.getMyFavorites(principal.getUserId(), pageable));
     }
 
-    // 리뷰
+    // 내가 작성한 리뷰 조회
     @GetMapping("/reviews")
     public PageResponse<ReviewListItem> myReviews(
             @AuthenticationPrincipal User principal,

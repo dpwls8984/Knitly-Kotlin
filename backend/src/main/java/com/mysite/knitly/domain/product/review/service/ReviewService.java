@@ -40,8 +40,8 @@ public class ReviewService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
 
-    String uploadDir = "resources/static/review/";
-    String urlPrefix = "/resources/static/review/";
+    String uploadDir = System.getProperty("user.dir") + "/uploads/review/";
+    String urlPrefix = "/review/";
 
 
     public ReviewCreateResponse getReviewFormInfo(Long productId) {

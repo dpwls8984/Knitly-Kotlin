@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { getMyReviews, deleteReview, ReviewListItem } from "@/lib/api/review.api";
 
 export default function MyReviewsPage() {
+
+  
   const router = useRouter();
 
   const [reviews, setReviews] = useState<ReviewListItem[]>([]);
@@ -156,44 +158,51 @@ export default function MyReviewsPage() {
               <div className="mt-3">
                 <div className="text-xs text-gray-400 mb-1 ml-0">리뷰사진</div>
                 <div className="flex items-start gap-4">
-                  <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                    {images.length > 0 ? (
-                      <>
-                        {/* 현재 이미지 */}
-                        <img
-                          src={images[idx]}
-                          alt={`review-${review.reviewId}-${idx}`}
-                          className="w-full h-full object-cover"
-                        />
+                  {(() => {
+                    const BACKEND_URL = "http://localhost:8080";
+                    const hasImages = images.length > 0;
+                    const fullImageUrl = hasImages ? `${BACKEND_URL}${images[idx]}` : null;
 
-                        {/* 좌우 버튼 */}
-                        {images.length > 1 && (
+                    return (
+                      <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                        {hasImages ? (
                           <>
-                            <button
-                              onClick={() => prevImage(review.reviewId, images.length - 1)}
-                              className="absolute left-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white px-1 py-0.5 rounded-r hover:bg-black"
-                            >
-                              ‹
-                            </button>
-                            <button
-                              onClick={() => nextImage(review.reviewId, images.length - 1)}
-                              className="absolute right-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white px-1 py-0.5 rounded-l hover:bg-black"
-                            >
-                              ›
-                            </button>
+                            <img
+                              src={fullImageUrl ?? ""}
+                              alt={`review-${review.reviewId}-${idx}`}
+                              className="w-full h-full object-cover"
+                            />
+
+                            {images.length > 1 && (
+                              <>
+                                <button
+                                  onClick={() => prevImage(review.reviewId, images.length - 1)}
+                                  className="absolute left-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white px-1 py-0.5 rounded-r hover:bg-black"
+                                >
+                                  ‹
+                                </button>
+                                <button
+                                  onClick={() => nextImage(review.reviewId, images.length - 1)}
+                                  className="absolute right-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white px-1 py-0.5 rounded-l hover:bg-black"
+                                >
+                                  ›
+                                </button>
+                              </>
+                            )}
                           </>
+                        ) : (
+                          <span className="text-sm text-gray-500">사진 없음</span>
                         )}
-                      </>
-                    ) : (
-                      <span className="text-sm text-gray-500">사진 없음</span>
-                    )}
-                  </div>
-                  <div className="flex-1 text-sm leading-6 whitespace-pre-line">
-                    {review.content}
-                  </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="flex-1 text-sm leading-6 whitespace-pre-line">{review.content}</div>
                 </div>
               </div>
-              )}
+            )}
+
+
+
           </div>
         );
       })}
