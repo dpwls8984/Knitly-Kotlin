@@ -70,6 +70,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         log.info("User processed - userId: {}", user.getUserId());
 
+        // 스토어 중복 생성 방지
+        userService.ensureUserStore(user);
+
         // 4. JWT 토큰 발급
         TokenResponse tokens = jwtProvider.createTokens(user.getUserId());
 

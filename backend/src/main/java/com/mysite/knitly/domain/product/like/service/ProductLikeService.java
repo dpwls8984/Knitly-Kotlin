@@ -26,10 +26,6 @@ public class ProductLikeService {
         String redisKey = "likes:product:" + productId;
         String userKey = userId.toString();
 
-        if (Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(redisKey, userKey))) {
-            return;
-        }
-
         redisTemplate.opsForSet().add(redisKey, userKey);
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
         rabbitTemplate.convertAndSend(EXCHANGE_NAME, LIKE_ROUTING_KEY, eventDto);
@@ -44,8 +40,6 @@ public class ProductLikeService {
         redisTemplate.opsForSet().remove(redisKey, userKey);
 
         // DB 삭제는 항상 수행
-        productLikeRepository.deleteByUserIdAndProductId(userId, productId);
-
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
         rabbitTemplate.convertAndSend(EXCHANGE_NAME, DISLIKE_ROUTING_KEY, eventDto);
 

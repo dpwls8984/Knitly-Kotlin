@@ -2,13 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-// 뜨개질 기호 타입 정의
-type KnittingSymbol = 'empty' | 'filled' | 'x' | 'v' | 't' | 'plus' | 'a' | null;
+import { createDesign } from '@/lib/api/design.api';
+import type { KnittingSymbol } from '@/lib/api/design.api';
 
 // 격자 셀 컴포넌트
 interface GridCellProps {
-  symbol: KnittingSymbol;
+  symbol: KnittingSymbol | null;
   onClick: () => void;
   isSelected: boolean;
 }
@@ -96,12 +95,14 @@ function SymbolButton({ symbol, label, isSelected, onClick }: SymbolButtonProps)
 
 export default function CreateDesignPage() {
   const router = useRouter();
-  const [grid, setGrid] = useState<KnittingSymbol[][]>(
+  const [grid, setGrid] = useState<(KnittingSymbol | null)[][]>(
     Array(10).fill(null).map(() => Array(10).fill(null))
   );
   const [selectedSymbol, setSelectedSymbol] = useState<KnittingSymbol>('empty');
   const [designName, setDesignName] = useState('');
   const [showNotification, setShowNotification] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 격자 셀 클릭 핸들러
   const handleCellClick = (row: number, col: number) => {
@@ -110,21 +111,57 @@ export default function CreateDesignPage() {
     setGrid(newGrid);
   };
 
-  // PDF 저장 핸들러
-  const handleSaveAsPDF = () => {
+  // gridData를 백엔드 형식으로 변환 (null -> 빈 문자열)
+  const convertGridDataForBackend = (): string[][] => {
+    return grid.map(row => 
+      row.map(cell => cell === null ? '' : cell)
+    );
+  };
+
+  // PDF 저장 핸들러 - axios API 호출
+  const handleSaveAsPDF = async () => {
     if (!designName.trim()) {
       alert('도안명을 입력해주세요.');
       return;
     }
 
-    // 저장 성공 알림 표시
-    setShowNotification(true);
-    
-    // 2초 후 알림 숨기고 페이지 이동
-    setTimeout(() => {
-      setShowNotification(false);
-      router.push('/mypage/design');
-    }, 2000);
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    try {
+      const gridDataForBackend = convertGridDataForBackend();
+
+      const result = await createDesign({
+        designName: designName.trim(),
+        gridData: gridDataForBackend,
+        fileName: designName.trim(),
+      });
+
+      console.log('도안 저장 성공:', result);
+
+      // 저장 성공 알림 표시
+      setShowNotification(true);
+      
+      // 2초 후 알림 숨기고 페이지 이동
+      setTimeout(() => {
+        setShowNotification(false);
+        router.push('/mypage/design');
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('도안 저장 실패:', error);
+      
+      // axios 에러 처리
+      const errorMsg = error.response?.data?.message || 
+                       error.message || 
+                       '도안 저장 중 오류가 발생했습니다.';
+      setErrorMessage(errorMsg);
+      
+      // 3초 후 에러 메시지 제거
+      setTimeout(() => setErrorMessage(null), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // 뜨개질 기호 목록
@@ -140,7 +177,7 @@ export default function CreateDesignPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* 알림창 */}
+      {/* 성공 알림창 */}
       {showNotification && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
           <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
@@ -149,8 +186,17 @@ export default function CreateDesignPage() {
         </div>
       )}
 
+      {/* 에러 메시지 */}
+      {errorMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg">
+            {errorMessage}
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 py-4">
-        {/* 메인 콘텐츠 - 사이드바 제거 */}
+        {/* 메인 콘텐츠 */}
         <div className="flex gap-6">
           {/* 도안 제작 영역 */}
           <div className="flex-1">
@@ -211,16 +257,21 @@ export default function CreateDesignPage() {
                   value={designName}
                   onChange={(e) => setDesignName(e.target.value)}
                   placeholder="도안명을 입력하세요"
+                  maxLength={30}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#925C4C]"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {designName.length}/30
+                </p>
               </div>
 
               {/* PDF 저장 버튼 */}
               <button
                 onClick={handleSaveAsPDF}
-                className="w-full bg-[#925C4C] text-white py-3 px-4 rounded-md hover:bg-[#7a4a3d] transition-colors font-medium"
+                disabled={isSaving}
+                className="w-full bg-[#925C4C] text-white py-3 px-4 rounded-md hover:bg-[#7a4a3d] transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                PDF로 저장하기
+                {isSaving ? '저장 중...' : 'PDF로 저장하기'}
               </button>
             </div>
           </div>
