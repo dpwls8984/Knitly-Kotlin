@@ -8,6 +8,7 @@ import com.mysite.knitly.domain.product.review.service.ReviewService;
 import com.mysite.knitly.domain.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -52,12 +53,12 @@ public class ReviewController {
 
     // 3. 특정 상품 리뷰 목록 조회
     @GetMapping("/products/{productId}/reviews")
-    public ResponseEntity<List<ReviewListResponse>> getReviewsByProduct(
+    public ResponseEntity<Page<ReviewListResponse>> getReviewsByProduct(
             @PathVariable Long productId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        List<ReviewListResponse> reviews = reviewService.getReviewsByProduct(productId, page, size);
+        Page<ReviewListResponse> reviews = reviewService.getReviewsByProduct(productId, page, size);
         return ResponseEntity.ok(reviews);
     }
 }
