@@ -10,6 +10,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, onLikeToggle }: ProductCardProps) {
   const router = useRouter();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
   const handleCardClick = () => {
     router.push(`/product/${product.productId}`);
@@ -37,7 +38,7 @@ export default function ProductCard({ product, onLikeToggle }: ProductCardProps)
       <div className="aspect-square bg-gray-100 flex items-center justify-center">
         {product.thumbnailUrl ? (
           <img 
-            src={product.thumbnailUrl} 
+            src={`${API_URL}${product.thumbnailUrl}`}
             alt={product.title}
             className="w-full h-full object-cover"
           />
@@ -60,7 +61,8 @@ export default function ProductCard({ product, onLikeToggle }: ProductCardProps)
             {/* TODO: 작가명 정보가 백엔드에서 제공되지 않음 - 추후 수정 필요 */}
             작가명
           </button>
-          <div className="text-sm font-medium text-gray-900">
+          {/* 🔥 가격 스타일 수정: 갈색(브랜드컬러) + 볼드 처리 */}
+          <div className="text-base font-bold text-[#925C4C]">
             {product.isFree ? '무료' : `${product.price.toLocaleString()}원`}
           </div>
         </div>

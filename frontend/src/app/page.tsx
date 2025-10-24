@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getPopularTop5 } from '@/lib/api/home';
+import { ProductListResponse } from '@/types/product.types';
+import ProductCard from '@/components/product/ProductCard';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { User } from '@/types/auth.types';
@@ -10,6 +13,32 @@ export default function HomePage() {
     const searchParams = useSearchParams();
     const { user, login } = useAuthStore();
     const [isProcessingLogin, setIsProcessingLogin] = useState(false);
+    const [popularProducts, setPopularProducts] = useState<ProductListResponse[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        fetchPopularProducts();
+      }, []);
+
+    const fetchPopularProducts = async () => {
+        try {
+          setIsLoading(true);
+          setError(null);
+          const data = await getPopularTop5();
+          setPopularProducts(data);
+        } catch (err: any) {
+          console.error('인기 상품 조회 실패:', err);
+          setError('인기 상품을 불러오는데 실패했습니다.');
+        } finally {
+          setIsLoading(false);
+        }
+    };
+    
+    const handleLikeToggle = async (productId: number) => {
+        // TODO: 찜하기 API 연동
+        console.log('찜하기:', productId);
+    };
 
     // OAuth2 로그인 성공 처리
     useEffect(() => {
@@ -64,6 +93,26 @@ export default function HomePage() {
         );
     }
 
+    // 로딩 중
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#925C4C]"></div>
+      </div>
+    );
+  }
+
+  // 에러 발생
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
     // 메인 페이지
     return (
         <div>
@@ -101,6 +150,36 @@ export default function HomePage() {
                     </li>
                 </ul>
             </div>
+
+            <section className="mb-12">
+        <h2 className="text-2xl font-bold mb-6 text-gray-900">인기 상품 랭킹 TOP 5</h2>
+        
+        {popularProducts.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p>인기 상품이 없습니다.</p>
+          </div>
+        ) : (
+            <div className="grid grid-cols-5 gap-4">
+            {popularProducts.map((product, index) => (
+              <div key={product.productId} className="relative">
+                {/* 랭킹 배지 */}
+                <div className="absolute top-2 left-2 z-10">
+                  <span className="bg-[#925C4C] text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
+                    #{index + 1}
+                  </span>
+                </div>
+                
+                {/* 기존 ProductCard 컴포넌트 재사용 */}
+                <ProductCard 
+                  product={product} 
+                  onLikeToggle={handleLikeToggle}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
         </div>
     );
 }
