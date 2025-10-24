@@ -123,7 +123,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             </svg>
           </button>
           <div className="text-xs text-gray-500">
-            {product.likeCount}
+            {likeCount}
           </div>
         </div>
       </div>

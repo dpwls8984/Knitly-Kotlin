@@ -8,6 +8,7 @@ export interface ProductListResponse {
     price: number;
     purchaseCount: number;
     likeCount: number;
+    isLikedByUser: boolean;
     stockQuantity: number | null;
     avgReviewRating: number | null;
     createdAt: string;

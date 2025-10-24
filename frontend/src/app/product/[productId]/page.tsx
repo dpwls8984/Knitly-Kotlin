@@ -174,16 +174,21 @@ export default function ProductDetailPage() {
       })
       .then((data: ProductDetails) => { // 받아온 데이터 타입 명시
         setProduct(data);
-        setIsWished(data.isWishedByUser); // 백엔드 응답 사용
-        setWishCount(data.likeCount); // 백엔드의 likeCount 사용
       })
       .catch((err: any) => {
         console.error(err);
         setError(err.message);
       })
       .finally(() => setIsLoading(false));
-    }
+    } 
   }, [productId]); // productId가 변경될 때마다 재호출
+
+  useEffect(() => {
+    if (product) {
+      setIsWished(product.isWishedByUser);
+      setWishCount(product.likeCount);
+    }
+  }, [product]);
 
   // --- 5. 이벤트 핸들러 ---
 
