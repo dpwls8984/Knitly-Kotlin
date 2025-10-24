@@ -1,0 +1,59 @@
+[
+  {
+    "userId": 1,
+    "reviewId": 101,
+    "productId": 1,
+    "productTitle": "포근한 울 스웨터 (네이비)",
+    "productThumbnailUrl": "https://placehold.co/100x100/34495e/ffffff?text=Knitly",
+    "rating": 5,
+    "content": "너무 따뜻하고 색상도 마음에 듭니다. 겨울 내내 잘 입을 것 같아요! 배송도 빨랐습니다. 추천합니다.",
+    "createdDate": "2025-10-15",
+    "purchasedDate": "2025-10-10",
+    "reviewImageUrls": [
+      "https://placehold.co/200x200/34495e/ffffff?text=Image1",
+      "https://placehold.co/200x200/34495e/ffffff?text=Image2"
+    ]
+  },
+  {
+    "userId": 1,
+    "reviewId": 102,
+    "productId": 3,
+    "productTitle": "코튼 니트 비니 (베이지)",
+    "productThumbnailUrl": "https://placehold.co/100x100/f3e5ab/333333?text=Knitly",
+    "rating": 4,
+    "content": "촉감이 부드러워요. 다만 생각보다 얇아서 한겨울에는 추울 수도 있겠네요. 봄가을에 쓰기 좋습니다.",
+    "createdDate": "2025-10-15",
+    "purchasedDate": "2025-10-12",
+    "reviewImageUrls": [
+      "https://placehold.co/200x200/f3e5ab/333333?text=Image1"
+    ]
+  },
+  {
+    "userId": 1,
+    "reviewId": 103,
+    "productId": 5,
+    "productTitle": "캐시미어 머플러 (그레이)",
+    "productThumbnailUrl": "https://placehold.co/100x100/bdc3c7/333333?text=Knitly",
+    "rating": 5,
+    "content": "선물용으로 샀는데 받는 분이 아주 좋아하셨습니다. 포장도 꼼꼼하고 재질도 고급스러워요.",
+    "createdDate": "2025-10-20",
+    "purchasedDate": "2025-10-18",
+    "reviewImageUrls": [
+      "https://placehold.co/200x200/bdc3c7/333333?text=Image1",
+      "https://placehold.co/200x200/bdc3c7/333333?text=Image2",
+      "https://placehold.co/200x200/bdc3c7/333333?text=Image3"
+    ]
+  },
+  {
+    "userId": 1,
+    "reviewId": 104,
+    "productId": 5,
+    "productTitle": "캐시미어 머플러 (블랙)",
+    "productThumbnailUrl": "https://placehold.co/100x100/333333/ffffff?text=Knitly",
+    "rating": 5,
+    "content": "선물용으로 샀는데 받는 분이 아주 좋아하셨습니다. 포장도 꼼꼼하고 재질도 고급스러워요.",
+    "createdDate": "2025-10-20",
+    "purchasedDate": "2025-10-18",
+    "reviewImageUrls": []
+  }
+]
