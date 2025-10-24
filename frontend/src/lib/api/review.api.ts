@@ -14,7 +14,7 @@ export interface ReviewListItem {
     purchasedDate?: string;
   }
   
-  //내가 쓴 리뷰 조회회
+  //내가 쓴 리뷰 조회
   export const getMyReviews = async (page = 0, size = 10): Promise<PageResponse<ReviewListItem>> => {
     const response = await api.get(`/mypage/reviews`, { params: { page, size } });
     return response.data;

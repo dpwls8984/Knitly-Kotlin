@@ -23,14 +23,14 @@ public class ReviewController {
     private final ReviewService reviewService;
 
     // 1. 리뷰 작성 폼용 상품 정보 조회
-    @GetMapping("product/{productId}/review")
+    @GetMapping("products/{productId}/review")
     public ResponseEntity<ReviewCreateResponse> getReviewInfo(@PathVariable Long productId) {
         ReviewCreateResponse response = reviewService.getReviewFormInfo(productId);
         return ResponseEntity.ok(response);
     }
 
     // 1. 리뷰 등록
-    @PostMapping("product/{productId}/reviews")
+    @PostMapping("products/{productId}/reviews")
     public ResponseEntity<Void> createReview(
             @AuthenticationPrincipal User user,
             @PathVariable Long productId,
