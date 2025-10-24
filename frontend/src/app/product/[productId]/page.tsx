@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 
 import { getProductReviews } from '@/lib/api/review.api';
 import { ProductReviewItem, PageResponse } from '@/types/review.types';
+import { addLike, removeFavorite } from '@/lib/api/like.api';
 
 import Link from 'next/link';
 
@@ -256,17 +257,43 @@ export default function ProductDetailPage() {
   };
 
   // (기능 4) 찜 버튼 핸들러
-  const handleWishClick = () => {
-    // (가정) 로그인 상태 확인 로직 추가 필요
-    
-    // 즉각적인 UI 반응
-    setIsWished((prev) => !prev);
-    setWishCount((prevCount) => (isWished ? prevCount - 1 : prevCount + 1));
+  const handleWishClick = async () => {
+    // (가정) 로그인 상태 확인 로직 (필요시 추가)
+    // if (!isLoggedIn) {
+    //   router.push('/login');
+    //   return;
+    // }
 
-    // (가정) 백엔드 API 호출 (Toggling) - 실제 구현 시 주석 해제
-    // fetch(`/products/${productId}/wish`, { method: isWished ? 'DELETE' : 'POST', ... });
-    console.log(isWished ? '찜 취소 API 호출' : '찜 등록 API 호출');
-  };
+    if (!productId) return;
+    
+    // 1. 현재 상태를 미리 저장 (롤백 대비)
+    const originalIsWished = isWished;
+        
+     // 2. 즉각적인 UI 반응 (Optimistic Update)
+    setIsWished((prev) => !prev);
+    // (찜 개수는 요청대로 수정합니다 - 유저가 냅두라고 한 건 이 로직 자체를 냅두라는 의미로 파악)
+    setWishCount((prevCount) => (originalIsWished ? prevCount - 1 : prevCount + 1));
+    
+    try {
+      // 3. API 호출
+      if (originalIsWished) {
+        // [찜 취소] : 원래 찜 되어 있었다면 -> 취소 API 호출
+        await removeFavorite(Number(productId));
+      } else {
+          // [찜 등록] : 원래 찜 안되어 있었다면 -> 등록 API 호출
+          await addLike(Number(productId));
+      }
+          
+      } catch (error) {
+          // 4. API 호출 실패 시
+          console.error('찜 처리 실패:', error);
+          alert('찜 상태 변경에 실패했습니다. 다시 시도해 주세요.');
+          
+          // [롤백] UI를 원래 상태로 되돌림
+          setIsWished(originalIsWished);
+          setWishCount((prevCount) => (originalIsWished ? prevCount + 1 : prevCount - 1));
+        }
+    };
   
   // (기능 5) 장바구니 / 구매하기 핸들러
   const handleAddToCart = () => {

@@ -14,3 +14,8 @@ export const getMyFavorites = async (
 export const removeFavorite = async (productId: number): Promise<void> => {
   await api.delete(`/products/${productId}/like`);
 };
+
+//찜 등록록
+export const addLike = async (productId: number): Promise<void> => {
+  await api.post(`/products/${productId}/like`);
+};
