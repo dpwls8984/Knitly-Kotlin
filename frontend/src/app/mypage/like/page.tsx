@@ -89,7 +89,7 @@ export default function LikesPage() {
                       e.stopPropagation();
                       handleUnlike(product.productId);
                     }}
-                    className="absolute top-2 right-2"
+                    className="absolute bottom-2 right-2"
                   >
                     <svg
                       className="w-6 h-6 text-[#925C4C] fill-current"

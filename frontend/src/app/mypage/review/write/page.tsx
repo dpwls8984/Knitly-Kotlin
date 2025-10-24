@@ -15,21 +15,21 @@ interface OrderItem {
 const mockOrderItems: OrderItem[] = [
   {
     id: 'itemA1',
-    productId: 'prod_abc',
+    productId: '1',
     productName: '따뜻한 겨울 스웨터 도안',
     price: 15000,
     productImage: 'https://via.placeholder.com/150',
   },
   {
     id: 'itemA2',
-    productId: 'prod_def',
+    productId: '2',
     productName: '아가일 패턴 양말 도안',
     price: 7000,
     productImage: 'https://via.placeholder.com/150',
   },
   {
     id: 'itemB1',
-    productId: 'prod_ghi',
+    productId: '3',
     productName: '초보자용 목도리 도안',
     price: 5000,
     productImage: 'https://via.placeholder.com/150',
@@ -40,9 +40,8 @@ export default function ReviewWritePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // 쿼리에서 orderItemId와 orderDate 가져오기
-  const orderItemId = searchParams.get('orderItemId');
-  const orderDate = searchParams.get('orderDate') || '';
+  // 쿼리에서 productId 가져오기
+  const productId = searchParams.get('productId');
 
   const [item, setItem] = useState<OrderItem | null>(null);
   const [rating, setRating] = useState(0);
@@ -51,14 +50,14 @@ export default function ReviewWritePage() {
 
   // 선택한 상품 정보 가져오기
   useEffect(() => {
-    if (orderItemId) {
-      const found = mockOrderItems.find((i) => i.id === orderItemId);
+    if (productId) {
+      const found = mockOrderItems.find((i) => i.productId === productId);
       setItem(found || null);
     }
-  }, [orderItemId]);
+  }, [productId]);
 
-  if (!orderItemId)
-    return <div className="p-6 text-center text-gray-500">주문 상품 정보가 없습니다.</div>;
+  if (!productId)
+    return <div className="p-6 text-center text-gray-500">상품 정보가 없습니다.</div>;
   if (!item)
     return <div className="p-6 text-center text-gray-500">해당 상품 정보를 불러올 수 없습니다.</div>;
 
@@ -101,7 +100,6 @@ export default function ReviewWritePage() {
         />
         <div>
           <div className="font-medium text-lg mb-1">{item.productName}</div>
-          <div className="text-sm text-gray-500">구매일: {orderDate}</div>
         </div>
       </div>
 

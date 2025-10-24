@@ -1,6 +1,7 @@
 package com.mysite.knitly.domain.product.review.controller;
 
 import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest;
+import com.mysite.knitly.domain.product.review.dto.ReviewCreateResponse;
 import com.mysite.knitly.domain.product.review.dto.ReviewDeleteRequest;
 import com.mysite.knitly.domain.product.review.dto.ReviewListResponse;
 import com.mysite.knitly.domain.product.review.service.ReviewService;
@@ -21,15 +22,22 @@ import java.util.List;
 public class ReviewController {
     private final ReviewService reviewService;
 
-    // 1️. 리뷰 등록
-    @PostMapping("/products/{productId}/reviews")
-    public ResponseEntity<ReviewListResponse> createReview(
+    // 1. 리뷰 작성 폼용 상품 정보 조회
+    @GetMapping("product/{productId}/review")
+    public ResponseEntity<ReviewCreateResponse> getReviewInfo(@PathVariable Long productId) {
+        ReviewCreateResponse response = reviewService.getReviewFormInfo(productId);
+        return ResponseEntity.ok(response);
+    }
+
+    // 1. 리뷰 등록
+    @PostMapping("product/{productId}/reviews")
+    public ResponseEntity<Void> createReview(
             @AuthenticationPrincipal User user,
             @PathVariable Long productId,
             @Valid @ModelAttribute ReviewCreateRequest request
     ) {
-        ReviewListResponse response = reviewService.createReview(productId, user, request);
-        return ResponseEntity.ok(response);
+        reviewService.createReview(productId, user, request);
+        return ResponseEntity.ok().build();
     }
 
     // 2️. 리뷰 소프트 삭제(마이 페이지에서)

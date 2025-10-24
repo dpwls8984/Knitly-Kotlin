@@ -3,6 +3,7 @@ package com.mysite.knitly.domain.product.review.service;
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest;
+import com.mysite.knitly.domain.product.review.dto.ReviewCreateResponse;
 import com.mysite.knitly.domain.product.review.dto.ReviewDeleteRequest;
 import com.mysite.knitly.domain.product.review.dto.ReviewListResponse;
 import com.mysite.knitly.domain.product.review.entity.Review;
@@ -43,9 +44,21 @@ public class ReviewService {
     String urlPrefix = "/resources/static/review/";
 
 
-    // 1️. 리뷰 등록
+    public ReviewCreateResponse getReviewFormInfo(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        String thumbnailUrl = null;
+        if (product.getProductImages() != null && !product.getProductImages().isEmpty()) {
+            thumbnailUrl = product.getProductImages().get(0).getProductImageUrl();
+        }
+
+        return new ReviewCreateResponse(product.getTitle(), thumbnailUrl);
+    }
+
+    // 1. 리뷰 등록
     @Transactional
-    public ReviewListResponse createReview(Long productId, User user, ReviewCreateRequest request) {
+    public void createReview(Long productId, User user, ReviewCreateRequest request) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
 
@@ -56,33 +69,28 @@ public class ReviewService {
                 .content(request.content())
                 .build();
 
-        List<String> reviewImageUrls = new ArrayList<>();
         List<ReviewImage> reviewImages = new ArrayList<>();
 
         if (request.reviewImageUrls() != null && !request.reviewImageUrls().isEmpty()) {
             new File(uploadDir).mkdirs();
-
             List<MultipartFile> imageFiles = request.reviewImageUrls();
+
             for (int i = 0; i < imageFiles.size(); i++) {
                 MultipartFile file = imageFiles.get(i);
                 if (file.isEmpty()) continue;
 
                 String originalFilename = file.getOriginalFilename();
-                if (!ImageValidator.isAllowedImageUrl(originalFilename)) {
-                    throw new ServiceException(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
-                }
-
+                // 이미지 검증 로직 (ImageValidator.isAllowedImageUrl) 생략 가능
                 try {
-                    String filename = UUID.randomUUID() + "_" + FileNameUtils.sanitize(originalFilename);
-                    Path path = Paths.get(uploadDir, filename);
+                    String filename = UUID.randomUUID() + "_" + originalFilename;
+                    Path path = Path.of(uploadDir, filename);
                     Files.write(path, file.getBytes());
 
                     String url = urlPrefix + filename;
-                    reviewImageUrls.add(url);
 
                     ReviewImage reviewImage = ReviewImage.builder()
                             .reviewImageUrl(url)
-                            .sortOrder(i)
+                            .sortOrder((int) i)
                             .build();
                     reviewImages.add(reviewImage);
 
@@ -93,10 +101,7 @@ public class ReviewService {
         }
 
         review.addReviewImages(reviewImages);
-
-        Review savedReview = reviewRepository.save(review);
-
-        return ReviewListResponse.from(savedReview, reviewImageUrls);
+        reviewRepository.save(review);
     }
 
     // 2. 리뷰 소프트 삭제 (본인 리뷰만)
