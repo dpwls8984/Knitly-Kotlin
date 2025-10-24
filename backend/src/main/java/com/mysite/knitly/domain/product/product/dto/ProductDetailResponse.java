@@ -12,7 +12,7 @@ public record ProductDetailResponse(
         ProductCategory productCategory,
         String sizeInfo,
         Double price,
-        //String createdAt,
+        String createdAt,
         Integer stockQuantity,
 
         Integer likeCount,
@@ -30,7 +30,7 @@ public record ProductDetailResponse(
                 product.getProductCategory(),
                 product.getSizeInfo(),
                 product.getPrice(),
-                //product.getCreatedAt().toString(),
+                product.getCreatedAt().toString(),
                 product.getStockQuantity(),
                 product.getLikeCount(),
                 isLikedByUser,
