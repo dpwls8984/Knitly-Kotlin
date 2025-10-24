@@ -22,7 +22,7 @@ interface ProductDetails {
   likeCount: number;
   avgReviewRating: number | null;
   productImageUrls: string[];
-  isWishedByUser: boolean;
+  isLikedByUser: boolean;
 }
 
 /**
@@ -185,7 +185,7 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (product) {
-      setIsWished(product.isWishedByUser);
+      setIsWished(product.isLikedByUser);
       setWishCount(product.likeCount);
     }
   }, [product]);
