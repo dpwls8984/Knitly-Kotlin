@@ -48,8 +48,8 @@ public class PaymentService {
     // 결제 승인
     @Transactional
     public PaymentConfirmResponse confirmPayment(PaymentConfirmRequest request) {
-        // 1. 주문 정보 조회 및 검증
-        Order order = orderRepository.findById(Long.parseLong(request.orderId()))
+        // 1. 주문 정보 조회 및 검증 (tossOrderId로 조회)
+        Order order = orderRepository.findByTossOrderId(request.orderId())
                 .orElseThrow(() -> new ServiceException(ErrorCode.ORDER_NOT_FOUND));
 
         // 2. 주문 금액 검증

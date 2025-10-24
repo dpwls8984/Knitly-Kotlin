@@ -24,7 +24,7 @@ export default function CheckoutPage() {
   
   const [ready, setReady] = useState(false);
   const [items, setItems] = useState<CheckoutItem[]>([]);
-  const [orderId, setOrderId] = useState<string>('');
+  const [tossOrderId, setTossOrderId] = useState<string>(''); // tossOrderId로 변경
   const paymentWidgetRef = useRef<any>(null);
 
   // 1. 인증 확인
@@ -59,7 +59,7 @@ export default function CheckoutPage() {
 
     const initializePayment = async () => {
       try {
-        // 3-1. 주문 생성
+        // 3-1. 주문 생성 (백엔드에서 tossOrderId 자동 생성)
         const accessToken = localStorage.getItem('accessToken');
         const productIds = items.map(item => item.productId);
         
@@ -77,8 +77,15 @@ export default function CheckoutPage() {
         }
 
         const orderData = await orderResponse.json();
-        const createdOrderId = String(orderData.orderId || orderData.id);
-        setOrderId(createdOrderId);
+        
+        // ✅ 백엔드에서 생성된 tossOrderId를 사용
+        const generatedTossOrderId = orderData.tossOrderId;
+        if (!generatedTossOrderId) {
+          throw new Error('주문 번호(tossOrderId)를 받지 못했습니다.');
+        }
+        
+        setTossOrderId(generatedTossOrderId);
+        console.log('생성된 tossOrderId:', generatedTossOrderId);
 
         // 3-2. 토스페이먼츠 SDK 로드 및 위젯 초기화
         const tossPayments = await loadTossPayments(clientKey);
@@ -126,7 +133,7 @@ export default function CheckoutPage() {
 
   // 4. 결제 요청
   const handlePayment = async () => {
-    if (!paymentWidgetRef.current || !orderId) {
+    if (!paymentWidgetRef.current || !tossOrderId) {
       alert('결제 준비가 완료되지 않았습니다.');
       return;
     }
@@ -137,8 +144,11 @@ export default function CheckoutPage() {
         ? `${items[0].title} 외 ${items.length - 1}건`
         : items[0].title;
 
+      // ✅ 백엔드에서 받은 tossOrderId를 사용
+      console.log('결제 요청 - tossOrderId:', tossOrderId);
+      
       await paymentWidgetRef.current.requestPayment({
-        orderId: orderId,
+        orderId: tossOrderId, // ✅ 백엔드에서 생성된 올바른 형식의 tossOrderId
         orderName: orderName,
         successUrl: `${window.location.origin}/checkout/success`,
         failUrl: `${window.location.origin}/checkout/fail`,
@@ -151,66 +161,52 @@ export default function CheckoutPage() {
     }
   };
 
-  // 총 결제 금액 계산
-  const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
+  // 로딩 중
+  if (!isAuthenticated || items.length === 0) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#925C4C]"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">주문/결제</h1>
-
-      {/* 주문 상품 정보 */}
-      <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">주문 상품</h2>
-        <div className="space-y-4">
-          {items.map((item, index) => (
-            <div key={`${item.productId}-${index}`} className="flex items-center justify-between border-b pb-4">
-              <div className="flex items-center gap-4">
-                {item.imageUrl && (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="w-20 h-20 object-cover rounded"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 
-                        `https://placehold.co/100x100/CCCCCC/FFFFFF?text=No+Image`;
-                    }}
-                  />
-                )}
-                <div>
-                  <p className="font-medium">{item.title}</p>
-                </div>
-              </div>
-              <p className="text-lg font-semibold">{item.price.toLocaleString()}원</p>
-            </div>
-          ))}
-        </div>
-
-        {/* 총 결제 금액 */}
-        <div className="mt-6 pt-4 border-t">
-          <div className="flex justify-between items-center">
-            <span className="text-xl font-bold">총 결제 금액</span>
-            <span className="text-2xl font-bold text-[#925C4C]">
-              {totalAmount.toLocaleString()}원
+    <div className="max-w-2xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">결제하기</h1>
+      
+      {/* 주문 상품 목록 */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4">주문 상품</h2>
+        {items.map((item, index) => (
+          <div key={index} className="flex justify-between items-center py-2">
+            <span>{item.title}</span>
+            <span className="font-medium">{item.price.toLocaleString()}원</span>
+          </div>
+        ))}
+        <div className="border-t mt-4 pt-4">
+          <div className="flex justify-between items-center font-bold text-lg">
+            <span>총 결제금액</span>
+            <span className="text-[#925C4C]">
+              {items.reduce((sum, item) => sum + item.price, 0).toLocaleString()}원
             </span>
           </div>
         </div>
       </div>
 
-      {/* 결제 위젯 영역 */}
-      <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">결제 수단</h2>
-        <div id="payment-method" className="min-h-[300px]"></div>
-        <div id="agreement" className="mt-4"></div>
+      {/* 토스페이먼츠 결제 UI */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div id="payment-method" />
+        <div id="agreement" className="mt-4" />
       </div>
 
       {/* 결제하기 버튼 */}
       <button
         onClick={handlePayment}
         disabled={!ready}
-        className={`w-full py-4 rounded-lg text-white font-bold text-lg transition-colors ${
+        className={`w-full py-4 rounded-lg font-semibold text-lg transition-colors ${
           ready
-            ? 'bg-[#925C4C] hover:bg-[#7a4c3e]'
-            : 'bg-gray-400 cursor-not-allowed'
+            ? 'bg-[#925C4C] text-white hover:bg-[#7a4c3e] cursor-pointer'
+            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
         }`}
       >
         {ready ? '결제하기' : '결제 준비 중...'}
