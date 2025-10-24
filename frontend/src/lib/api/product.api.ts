@@ -97,6 +97,7 @@ export interface ProductDetail {
     price: number;
     stockQuantity: number | null;
     likeCount: number;
+    isLikedByUser: boolean;
     avgReviewRating: number | null;
     productImageUrls: string[];
 }

@@ -23,7 +23,7 @@ interface ProductDetails {
   likeCount: number;
   avgReviewRating: number | null;
   productImageUrls: string[];
-  isWishedByUser: boolean;
+  isLikedByUser: boolean;
 }
 
 /**
@@ -183,16 +183,15 @@ export default function ProductDetailPage() {
       })
       .then((data: ProductDetails) => { // 받아온 데이터 타입 명시
         setProduct(data);
-        setIsWished(data.isWishedByUser); // 백엔드 응답 사용
-        setWishCount(data.likeCount); // 백엔드의 likeCount 사용
       })
       .catch((err: any) => {
         console.error(err);
         setError(err.message);
       })
       .finally(() => setIsLoading(false));
-    }
+    } 
   }, [productId]); // productId가 변경될 때마다 재호출
+
 
   // ▼▼▼ [수정] isAlreadyInCart 계산 위치 및 방식 변경 ▼▼▼
   // 컴포넌트 렌더링 로직 내에서 계산합니다.
@@ -200,7 +199,7 @@ export default function ProductDetailPage() {
     ? cartItems.some(item => item.productId === product.productId)
     : false;
   // ▲▲▲ [수정] isAlreadyInCart 계산 위치 및 방식 변경 ▲▲▲
-
+  
   // --- 5. 이벤트 핸들러 ---
 
   // 이미지 캐러셀 핸들러
