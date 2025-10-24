@@ -23,23 +23,42 @@ import java.util.List;
 public class ReviewController {
     private final ReviewService reviewService;
 
-    // 1. 리뷰 작성 폼용 상품 정보 조회
-    @GetMapping("products/{productId}/review")
-    public ResponseEntity<ReviewCreateResponse> getReviewInfo(@PathVariable Long productId) {
-        ReviewCreateResponse response = reviewService.getReviewFormInfo(productId);
+    @GetMapping("/reviews/form")
+    public ResponseEntity<ReviewCreateResponse> getReviewInfo(@RequestParam Long orderItemId) {
+        ReviewCreateResponse response = reviewService.getReviewFormInfo(orderItemId);
         return ResponseEntity.ok(response);
     }
+    // ▲▲▲ [수정 1] ▲▲▲
 
-    // 1. 리뷰 등록
-    @PostMapping("products/{productId}/reviews")
+    // ▼▼▼ [수정 2] 리뷰 등록 엔드포인트 변경 ▼▼▼
+    // (기존) @PostMapping("products/{productId}/reviews")
+    @PostMapping("/reviews")
     public ResponseEntity<Void> createReview(
             @AuthenticationPrincipal User user,
-            @PathVariable Long productId,
+            @RequestParam Long orderItemId,
             @Valid @ModelAttribute ReviewCreateRequest request
     ) {
-        reviewService.createReview(productId, user, request);
+        reviewService.createReview(orderItemId, user, request);
         return ResponseEntity.ok().build();
     }
+
+//    // 1. 리뷰 작성 폼용 상품 정보 조회
+//    @GetMapping("products/{productId}/review")
+//    public ResponseEntity<ReviewCreateResponse> getReviewInfo(@PathVariable Long productId) {
+//        ReviewCreateResponse response = reviewService.getReviewFormInfo(productId);
+//        return ResponseEntity.ok(response);
+//    }
+//
+//    // 1. 리뷰 등록
+//    @PostMapping("products/{productId}/reviews")
+//    public ResponseEntity<Void> createReview(
+//            @AuthenticationPrincipal User user,
+//            @PathVariable Long productId,
+//            @Valid @ModelAttribute ReviewCreateRequest request
+//    ) {
+//        reviewService.createReview(productId, user, request);
+//        return ResponseEntity.ok().build();
+//    }
 
     // 2️. 리뷰 소프트 삭제(마이 페이지에서)
     @DeleteMapping("/reviews/{reviewId}")

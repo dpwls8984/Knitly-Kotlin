@@ -23,6 +23,7 @@ public enum ErrorCode {
     // Order 3000
     OUT_OF_STOCK("3001", HttpStatus.BAD_REQUEST, "품절된 상품입니다."),
     ORDER_NOT_FOUND("3002", HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
+    ORDER_ITEM_NOT_FOUND("3003", HttpStatus.NOT_FOUND, "주문 상품을 찾을 수 없습니다."),
 
     // Post 4000
     POST_NOT_FOUND("4001", HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),

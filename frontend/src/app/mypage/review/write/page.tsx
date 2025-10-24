@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, ChangeEvent } from 'react';
-import { ReviewCreateRequest, ReviewCreateResponse } from '@/types/review.types';
+import { ReviewCreateResponse } from '@/types/review.types';
 import { createReview } from '@/lib/api/review.api';
 import api from '@/lib/api/axios';
 
@@ -10,7 +10,7 @@ export default function ReviewWritePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const productId = searchParams.get('productId');
+  const orderItemId = searchParams.get('orderItemId');
   const [item, setItem] = useState<ReviewCreateResponse | null>(null);
   const [rating, setRating] = useState(0);
   const [content, setContent] = useState('');
@@ -18,19 +18,21 @@ export default function ReviewWritePage() {
 
   // GET 상품 정보 (리뷰 폼용)
   useEffect(() => {
-    if (!productId) return;
+    if (!orderItemId) return;
     const fetchProduct = async () => {
       try {
-        const response = await api.get<ReviewCreateResponse>(`/products/${productId}/review`);
+        const response = await api.get<ReviewCreateResponse>(
+          `/reviews/form?orderItemId=${orderItemId}`
+        );
         setItem(response.data);
       } catch (error) {
         console.error('상품 정보 로딩 실패', error);
       }
     };
     fetchProduct();
-  }, [productId]);
+  }, [orderItemId]);
 
-  if (!productId) return <div className="p-6 text-center text-gray-500">상품 정보가 없습니다.</div>;
+  if (!orderItemId) return <div className="p-6 text-center text-gray-500">상품 정보가 없습니다.</div>;
   if (!item) return <div className="p-6 text-center text-gray-500">상품 정보를 불러오는 중입니다...</div>;
 
   const handleRatingChange = (value: number) => setRating(value);
@@ -43,10 +45,23 @@ export default function ReviewWritePage() {
   const handleImageRemove = (index: number) => setImages(prev => prev.filter((_, i) => i !== index));
 
   const handleSubmit = async () => {
-    if (!productId) return;
+    if (!orderItemId) return;
     try {
-      const data: ReviewCreateRequest = { rating, content, images };
-      await createReview(Number(productId), data);
+      const formData = new FormData();
+      formData.append('rating', String(rating));
+      formData.append('content', content);
+      images.forEach((file) => {
+        formData.append('reviewImageUrls', file);
+      });
+
+      // 백엔드 ReviewController의 createReview 엔드포인트 호출
+      await api.post(`/reviews?orderItemId=${orderItemId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      
       alert('리뷰가 등록되었습니다.');
       router.push('/mypage/review');
     } catch (error) {
