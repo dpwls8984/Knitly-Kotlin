@@ -62,9 +62,10 @@ public class MyPageController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "likedAt"));
+        var pageable = PageRequest.of(page, size);
         return PageResponse.of(service.getMyFavorites(principal.getUserId(), pageable));
     }
+
     // 리뷰
     @GetMapping("/reviews")
     public PageResponse<ReviewListItem> myReviews(
@@ -73,6 +74,6 @@ public class MyPageController {
             @RequestParam(defaultValue = "10") int size
     ) {
         var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return PageResponse.of(service.getMyReviews(principal.getUserId(), pageable));
+        return PageResponse.of(service.getMyReviewsV2(principal.getUserId(), pageable));
     }
 }

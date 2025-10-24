@@ -10,12 +10,18 @@ export interface ReviewListItem {
     createdDate: string;
     purchasedDate?: string;
   }
+
+  export interface ReviewCreateRequest {
+    rating: number;
+    content: string;
+    images?: File[];
+  }
   
   export interface PageResponse<T> {
     content: T[];
     totalPages: number;
     totalElements: number;
     size: number;
-    number: number; // 현재 페이지
+    number: number;
   }
   

@@ -17,4 +17,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @EntityGraph(attributePaths = {"user", "reviewImages"})
     List<Review> findByProduct_ProductIdAndIsDeletedFalse(Long productId, Pageable pageable);
+
+    //마이페이지 리뷰 조회
+    @EntityGraph(attributePaths = {"product", "reviewImages"})
+    List<Review> findByUser_UserIdAndIsDeletedFalse(Long userId, Pageable pageable);
+
+    long countByUser_UserIdAndIsDeletedFalse(Long userId);
 }
