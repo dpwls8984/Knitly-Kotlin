@@ -32,7 +32,7 @@ export const createReview = async (productId: number, data: { rating: number; co
   formData.append('content', data.content);
 
   if (data.images && data.images.length > 0) {
-    data.images.forEach((file) => formData.append('images', file));
+    data.images.forEach(file => formData.append('reviewImageUrls', file));
   }
 
   const response = await api.post(`/products/${productId}/reviews`, formData, {

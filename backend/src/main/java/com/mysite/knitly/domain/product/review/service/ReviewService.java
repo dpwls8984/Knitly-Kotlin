@@ -73,6 +73,7 @@ public class ReviewService {
 
         if (request.reviewImageUrls() != null && !request.reviewImageUrls().isEmpty()) {
             new File(uploadDir).mkdirs();
+
             List<MultipartFile> imageFiles = request.reviewImageUrls();
 
             for (int i = 0; i < imageFiles.size(); i++) {
@@ -80,7 +81,6 @@ public class ReviewService {
                 if (file.isEmpty()) continue;
 
                 String originalFilename = file.getOriginalFilename();
-                // 이미지 검증 로직 (ImageValidator.isAllowedImageUrl) 생략 가능
                 try {
                     String filename = UUID.randomUUID() + "_" + originalFilename;
                     Path path = Path.of(uploadDir, filename);
@@ -89,8 +89,9 @@ public class ReviewService {
                     String url = urlPrefix + filename;
 
                     ReviewImage reviewImage = ReviewImage.builder()
+                            .review(review)          // ✅ 반드시 review 설정
                             .reviewImageUrl(url)
-                            .sortOrder((int) i)
+                            .sortOrder(i)
                             .build();
                     reviewImages.add(reviewImage);
 
@@ -103,6 +104,7 @@ public class ReviewService {
         review.addReviewImages(reviewImages);
         reviewRepository.save(review);
     }
+
 
     // 2. 리뷰 소프트 삭제 (본인 리뷰만)
     @Transactional

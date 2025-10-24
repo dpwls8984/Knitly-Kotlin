@@ -16,6 +16,12 @@ export interface ReviewListItem {
     content: string;
     images?: File[];
   }
+
+  // 리뷰 작성 폼용 상품 정보
+export interface ReviewCreateResponse {
+  productTitle: string;
+  productThumbnailUrl: string;
+}
   
   export interface PageResponse<T> {
     content: T[];

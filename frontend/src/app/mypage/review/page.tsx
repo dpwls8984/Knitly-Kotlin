@@ -159,11 +159,14 @@ export default function MyReviewsPage() {
                   <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                     {images.length > 0 ? (
                       <>
+                        {/* 현재 이미지 */}
                         <img
                           src={images[idx]}
                           alt={`review-${review.reviewId}-${idx}`}
                           className="w-full h-full object-cover"
                         />
+
+                        {/* 좌우 버튼 */}
                         {images.length > 1 && (
                           <>
                             <button
@@ -190,7 +193,7 @@ export default function MyReviewsPage() {
                   </div>
                 </div>
               </div>
-            )}
+              )}
           </div>
         );
       })}

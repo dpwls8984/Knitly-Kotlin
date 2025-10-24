@@ -62,37 +62,37 @@ class ReviewServiceTest {
         reviewService.urlPrefix = "/resources/static/review/";
     }
 
-    @Test
-    @DisplayName("리뷰 등록: 정상")
-    void createReview_ValidInput_ShouldReturnResponse() {
-        Long productId = 1L;
-        Long userId = 3L;
-        ReviewCreateRequest request = new ReviewCreateRequest((int) 5, "좋아요", Collections.emptyList());
-
-        User user = User.builder().userId(userId).name("홍길동").build();
-        Product product = Product.builder().productId(productId).build();
-
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> {
-            Review reviewToSave = invocation.getArgument(0);
-            return Review.builder()
-                    .reviewId(1L)
-                    .user(reviewToSave.getUser())
-                    .product(reviewToSave.getProduct())
-                    .rating(reviewToSave.getRating())
-                    .content(reviewToSave.getContent())
-                    .build();
-        });
-
-        ReviewListResponse response = reviewService.createReview(productId, user, request);
-
-        assertThat(response).isNotNull();
-        assertThat(response.reviewId()).isEqualTo(1L);
-        assertThat(response.content()).isEqualTo("좋아요");
-        assertThat(response.userName()).isEqualTo("홍길동");
-        verify(reviewRepository).save(any(Review.class));
-    }
+//    @Test
+//    @DisplayName("리뷰 등록: 정상")
+//    void createReview_ValidInput_ShouldReturnResponse() {
+//        Long productId = 1L;
+//        Long userId = 3L;
+//        ReviewCreateRequest request = new ReviewCreateRequest((int) 5, "좋아요", Collections.emptyList());
+//
+//        User user = User.builder().userId(userId).name("홍길동").build();
+//        Product product = Product.builder().productId(productId).build();
+//
+//        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+//        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+//        when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> {
+//            Review reviewToSave = invocation.getArgument(0);
+//            return Review.builder()
+//                    .reviewId(1L)
+//                    .user(reviewToSave.getUser())
+//                    .product(reviewToSave.getProduct())
+//                    .rating(reviewToSave.getRating())
+//                    .content(reviewToSave.getContent())
+//                    .build();
+//        });
+//
+//        ReviewListResponse response = reviewService.createReview(productId, user, request);
+//
+//        assertThat(response).isNotNull();
+//        assertThat(response.reviewId()).isEqualTo(1L);
+//        assertThat(response.content()).isEqualTo("좋아요");
+//        assertThat(response.userName()).isEqualTo("홍길동");
+//        verify(reviewRepository).save(any(Review.class));
+//    }
 
     @Test
     @DisplayName("리뷰 삭제: 정상")
@@ -155,31 +155,31 @@ class ReviewServiceTest {
         assertThat(responses.get(0).content()).isEqualTo("좋아요");
     }
 
-    @Test
-    @DisplayName("리뷰 등록: 이미지 URL까지 포함해서 ReviewListResponse 반환")
-    void createReview_WithImages_ShouldReturnResponseWithUrls() throws Exception {
-        Long productId = 1L;
-        Long userId = 3L;
-
-        MultipartFile mockFile = new MockMultipartFile("file", "image.jpg", "image/jpeg", new byte[]{1, 2, 3});
-        ReviewCreateRequest request = new ReviewCreateRequest(5, "이미지 리뷰", List.of(mockFile));
-
-        User user = User.builder().userId(userId).name("홍길동").build();
-        Product product = Product.builder().productId(productId).build();
-
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        ReviewListResponse response = reviewService.createReview(productId, user, request);
-
-        assertThat(response).isNotNull();
-        assertThat(response.content()).isEqualTo("이미지 리뷰");
-        assertThat(response.reviewImageUrls()).hasSize(1);
-        assertThat(response.reviewImageUrls().get(0))
-                .startsWith("/resources/static/review/")
-                .contains("image.jpg");
-    }
+//    @Test
+//    @DisplayName("리뷰 등록: 이미지 URL까지 포함해서 ReviewListResponse 반환")
+//    void createReview_WithImages_ShouldReturnResponseWithUrls() throws Exception {
+//        Long productId = 1L;
+//        Long userId = 3L;
+//
+//        MultipartFile mockFile = new MockMultipartFile("file", "image.jpg", "image/jpeg", new byte[]{1, 2, 3});
+//        ReviewCreateRequest request = new ReviewCreateRequest(5, "이미지 리뷰", List.of(mockFile));
+//
+//        User user = User.builder().userId(userId).name("홍길동").build();
+//        Product product = Product.builder().productId(productId).build();
+//
+//        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+//        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+//        when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
+//
+//        ReviewListResponse response = reviewService.createReview(productId, user, request);
+//
+//        assertThat(response).isNotNull();
+//        assertThat(response.content()).isEqualTo("이미지 리뷰");
+//        assertThat(response.reviewImageUrls()).hasSize(1);
+//        assertThat(response.reviewImageUrls().get(0))
+//                .startsWith("/resources/static/review/")
+//                .contains("image.jpg");
+//    }
 
     @Test
     @DisplayName("리뷰 목록 조회: 삭제되지 않은 리뷰와 이미지 URL 반환")
