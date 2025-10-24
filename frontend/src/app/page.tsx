@@ -69,22 +69,6 @@ export default function HomePage() {
         <div>
             <h1 className="text-3xl font-bold mb-4">메인페이지</h1>
 
-            {user ? (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-                    <h2 className="text-xl font-semibold mb-2">
-                        안녕하세요, {user.name}님! 👋
-                    </h2>
-                    <p className="text-gray-600">
-                        Email: {user.email}
-                    </p>
-                </div>
-            ) : (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
-                    <p className="text-gray-600">
-                        로그인하시면 더 많은 서비스를 이용하실 수 있습니다.
-                    </p>
-                </div>
-            )}
 
             <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <h3 className="font-semibold mb-2">개발 정보:</h3>
