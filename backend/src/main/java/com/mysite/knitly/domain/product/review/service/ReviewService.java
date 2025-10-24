@@ -131,7 +131,6 @@ public class ReviewService {
         return reviews.map(review -> {
             List<String> imageUrls = review.getReviewImages().stream()
                     .map(ReviewImage::getReviewImageUrl)
-                    .map(url -> "/review/" + url)
                     .toList();
             return ReviewListResponse.from(review, imageUrls);
         });

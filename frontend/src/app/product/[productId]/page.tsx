@@ -9,6 +9,11 @@ import Link from 'next/link';
 import { addLike, removeFavorite } from '@/lib/api/like.api';
 import { useCartStore } from '@/lib/store/cartStore';
 
+import { getProductReviews } from '@/lib/api/review.api';
+import { ProductReviewItem } from '@/types/review.types';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 // --- 백엔드 연동 ---
 // 1. 수정된 ProductDetails 타입 (ProductDetailResponse.java 기반)
 interface ProductDetails {
@@ -69,7 +74,7 @@ const StarIcon = () => (
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
     fill="#FFC107" // 노란색 채우기
-    className="w-5 h-5" // 크기 조절 (찜 아이콘보다 약간 작게)
+    className="w-5 h-5" 
   >
     <path
       fillRule="evenodd"
@@ -78,6 +83,26 @@ const StarIcon = () => (
     />
   </svg>
 );
+
+//리뷰 탭 내부에서 사용할 별점 아이콘
+const ReviewStarIcon = ({ filled }: { filled: boolean }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill={filled ? '#FFC107' : 'none'} // 👈 채우기/비우기
+      stroke={filled ? '#FFC107' : 'currentColor'}
+      strokeWidth={1.5}
+      className="w-5 h-5 text-gray-400"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.31h5.404a.563.563 0 01.31.956l-4.118 3.523a.563.563 0 00-.18.51l1.257 5.273a.563.563 0 01-.815.61l-4.596-2.919a.563.563 0 00-.58 0l-4.596 2.919a.563.563 0 01-.815-.61l1.257-5.273a.563.563 0 00-.18-.51l-4.118-3.523a.563.563 0 01.31-.956h5.404a.563.563 0 00.475.31l2.125-5.111z"
+      />
+    </svg>
+  );
+
+
 /**
  * 탭 버튼 컴포넌트
  */
@@ -112,6 +137,94 @@ const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) =>
   </div>
 );
 
+const ReviewItem = ({ review }: { review: ProductReviewItem }) => {
+  // 1. 이미지 캐러셀 상태
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // 2. 캐러셀 핸들러
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 상위 div 클릭 이벤트 전파 방지
+    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % review.reviewImageUrls.length);
+  };
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 상위 div 클릭 이벤트 전파 방지
+    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + review.reviewImageUrls.length) % review.reviewImageUrls.length);
+  };
+
+  // 3. 유저명 마스킹 (요청: 김**)
+  const maskUserName = (name: string) => {
+    if (!name) return "***";
+    if (name.length === 1) return name + "**";
+    return name[0] + "*".repeat(name.length - 1);
+  };
+
+  const hasImages = review.reviewImageUrls && review.reviewImageUrls.length > 0;
+
+  return (
+    <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 border-b border-gray-200 py-6">
+      
+      {/* 1. 왼쪽: 이미지 캐러셀 (이미지가 있을 경우) */}
+      {hasImages && (
+        <div className="relative w-full sm:w-28 sm:h-28 md:w-32 md:h-32 aspect-square sm:aspect-auto flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden shadow">
+          <img
+            src={`${API_URL}${review.reviewImageUrls[currentImageIndex]}`}
+            alt={`리뷰 이미지 ${currentImageIndex + 1}`}
+            className="w-full h-full object-cover"
+            onError={(e) => { 
+              (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/CCCCCC/FFFFFF?text=Load+Error';
+            }}
+          />
+          {/* 캐러셀 버튼 */}
+          {review.reviewImageUrls.length > 1 && (
+            <>
+              <button
+                onClick={handlePrevImage}
+                className="absolute top-1/2 left-1 transform -translate-y-1/2 bg-white/70 hover:bg-white rounded-full p-1 transition-colors shadow"
+                aria-label="이전 이미지"
+              >
+                <ChevronLeftIcon />
+              </button>
+              <button
+                onClick={handleNextImage}
+                className="absolute top-1/2 right-1 transform -translate-y-1/2 bg-white/70 hover:bg-white rounded-full p-1 transition-colors shadow"
+                aria-label="다음 이미지"
+              >
+                <ChevronRightIcon />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 2. 오른쪽: 리뷰 내용 */}
+      <div className={`flex-1 min-w-0 ${!hasImages ? 'w-full' : ''}`}> {/* 이미지가 없으면 전체 너비 사용 */}
+        {/* 상단: 작성자, 날짜, 별점 */}
+        <div className="flex flex-wrap items-center justify-between mb-2 gap-2"> {/* flex-wrap과 gap 추가 */}
+          <div className="flex items-center space-x-3">
+            {/* 작성자 */}
+            <span className="text-gray-800 font-semibold truncate">{maskUserName(review.userName)}</span>
+            {/* 날짜 */}
+            <span className="text-gray-500 text-sm flex-shrink-0">
+              {new Date(review.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+          
+          {/* 별점 */}
+          <div className="flex items-center flex-shrink-0"> {/* ml-4 제거 */}
+            {[...Array(5)].map((_, i) => (
+              <ReviewStarIcon key={i} filled={i < review.rating} />
+            ))}
+          </div>
+        </div>
+
+        {/* 하단: 리뷰 내용 */}
+        <p className="text-gray-800 whitespace-pre-wrap break-words text-left">
+          {review.content}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 // --- 제품 상세 페이지 메인 컴포넌트 ---
 export default function ProductDetailPage() {
@@ -135,19 +248,16 @@ export default function ProductDetailPage() {
   // 탭 상태
   const [activeTab, setActiveTab] = useState<'info' | 'size' | 'review'>('info');
   // ---
-  // ▼▼▼ [추가] 리뷰 탭 DOM 요소에 접근하기 위한 ref ▼▼▼
+  
   const reviewTabRef = useRef<HTMLDivElement>(null);
-
-  // ▼▼▼ [추가] 찜 처리 로딩 상태 ▼▼▼
   const [isWishLoading, setIsWishLoading] = useState(false);
   
-  // ▼▼▼ [수정] Zustand 훅 사용 방식 변경 ▼▼▼
-  // 필요한 함수/상태를 개별적으로 가져옵니다.
   const addToCart = useCartStore((state) => state.addToCart);
-  // isInCart 함수는 스토어 내부에 정의되어 있으므로 스토어 자체에서 가져올 필요는 없습니다.
-  // 대신 장바구니 아이템 목록 전체를 가져옵니다.
   const cartItems = useCartStore((state) => state.items);
-  // ▲▲▲ [수정] Zustand 훅 사용 방식 변경 ▲▲▲
+
+  const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
+  const [isReviewLoading, setIsReviewLoading] = useState(false);
+  const [hasFetchedReviews, setHasFetchedReviews] = useState(false);
 
   // --- 4. 데이터 페칭 (실제 API 호출) ---
   useEffect(() => {
@@ -192,6 +302,33 @@ export default function ProductDetailPage() {
     } 
   }, [productId]); // productId가 변경될 때마다 재호출
 
+  useEffect(() => {
+    setReviews([]);
+    setHasFetchedReviews(false);
+    setIsReviewLoading(false); // 혹시 모를 로딩 상태도 리셋
+  }, [productId]);
+
+  useEffect(() => {
+    if (activeTab !== 'review' || isReviewLoading || hasFetchedReviews) {
+      return;
+    }
+
+    const fetchReviews = async () => {
+      if (!productId) return; 
+      setIsReviewLoading(true);
+      setHasFetchedReviews(true);
+      try {
+        const data = await getProductReviews(Number(productId), 0, 10);
+        setReviews(data.content);
+      } catch (err) {
+        console.error("리뷰를 불러오는데 실패했습니다.", err);
+        setHasFetchedReviews(false);
+      } finally {
+        setIsReviewLoading(false);
+      }
+    };
+    fetchReviews();
+  }, [activeTab, productId, isReviewLoading, hasFetchedReviews]);
 
   // ▼▼▼ [수정] isAlreadyInCart 계산 위치 및 방식 변경 ▼▼▼
   // 컴포넌트 렌더링 로직 내에서 계산합니다.
@@ -249,6 +386,7 @@ export default function ProductDetailPage() {
     }
   };
   
+
 // ▼▼▼ [수정] 장바구니 버튼 핸들러 (내부 로직 변경 없음) ▼▼▼
 const handleAddToCart = () => {
   if (!product) return;
@@ -506,11 +644,30 @@ const handleAddToCart = () => {
           {/* ▼▼▼ [수정] 리뷰 탭에 ref 연결 ▼▼▼ */}
           {activeTab === 'review' && (
             <div ref={reviewTabRef} className="text-center py-10 text-gray-500"> {/* ref 연결 */}
-              {/* 별점 표시는 상단으로 이동했으므로 여기서는 제거 */}
-              {/* 리뷰 개수도 표시하고 싶다면 백엔드에서 reviewCount 필드 추가 필요 */}
-              <p>리뷰 섹션이 여기에 표시됩니다.</p>
-              <p>(현재는 구현 범위가 아닙니다.)</p>
-            </div>
+              {/* 1. 로딩 중 */}
+              {isReviewLoading && reviews.length === 0 && (
+                <div className="flex justify-center items-center py-10">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#925C4C]"></div>
+                </div>
+              )}
+
+              {/* 2. 리뷰 없음 */}
+              {!isReviewLoading && reviews.length === 0 && (
+                <div className="text-center py-10 text-gray-500">
+                  <p>작성된 리뷰가 없습니다.</p>
+                </div>
+              )}
+
+              {/* 3. 리뷰 목록 */}
+              {reviews.length > 0 && (
+                <div className="divide-y divide-gray-200">
+                  {reviews.map((review) => (
+                    <ReviewItem key={review.reviewId} review={review} />
+                  ))}
+                </div>
+              )}
+
+             </div>
           )}
           {/* ▲▲▲ [수정] 리뷰 탭 ▲▲▲ */}
         </div>
