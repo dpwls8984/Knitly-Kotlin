@@ -16,11 +16,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import com.mysite.knitly.utility.config.JsonAuthEntryPoint;        // 401 JSON
+import com.mysite.knitly.utility.config.JsonAccessDeniedHandler;   // 403 JSON
 
 import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -28,6 +31,9 @@ public class SecurityConfig {
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    // 401/403을 JSON으로 내려주기 위한 핸들러
+    private final JsonAuthEntryPoint jsonAuthEntryPoint;
+    private final JsonAccessDeniedHandler jsonAccessDeniedHandler;
 
     /**
      * CORS 설정
@@ -84,11 +90,30 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
+                // 401/403 을 JSON 응답으로 고정
+                .exceptionHandling(eh -> eh
+                        .authenticationEntryPoint(jsonAuthEntryPoint)      // 401
+                        .accessDeniedHandler(jsonAccessDeniedHandler)      // 403
+                )
+
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
 
                         // 커뮤니티 게시글 목록/상세 조회는 로그인 없이 허용
                         .requestMatchers(HttpMethod.GET, "/community/posts/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/community/comments/**").permitAll()
+                        // 댓글 조회(게시글 하위 경로) 공개: 목록 & count 모두 포함
+                        .requestMatchers(HttpMethod.GET, "/community/posts/*/comments").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/community/posts/*/comments/**").permitAll()
+
+                        // 커뮤니티 "쓰기/수정/삭제"는 인증 필요
+                        .requestMatchers(HttpMethod.POST,   "/community/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT,    "/community/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH,  "/community/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/community/**").authenticated()
+
+                        // 마이페이지는 전부 인증 필요
+                        .requestMatchers("/mypage/**").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/products", "/products/**", "/users/*/products").permitAll() // 상품 목록 API 공개
                         .requestMatchers(HttpMethod.GET, "/home/**").permitAll() // 홈 화면 API 공개

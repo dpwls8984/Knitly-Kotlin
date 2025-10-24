@@ -17,7 +17,7 @@ public class MyPageQueryRepository {
     @PersistenceContext
     private EntityManager em;
 
-    // 주문 내역 조회 (카드안에 상품 묶음별로 표시)
+    // 주문 내역 조회 (카드 안에 묶음별로 표시)
     public Page<OrderCardResponse> findOrderCards(Long userId, Pageable pageable) {
         List<Long> orderIds = em.createQuery("""
                         select o.orderId from Order o
@@ -32,7 +32,8 @@ public class MyPageQueryRepository {
         if (orderIds.isEmpty()) return new PageImpl<>(List.of(), pageable, 0);
 
         Long total = em.createQuery("""
-                        select count(o.orderId) from Order o
+                        select count(o.orderId)
+                        from Order o
                         where o.user.userId = :uid
                         """, Long.class)
                 .setParameter("uid", userId)
@@ -50,22 +51,37 @@ public class MyPageQueryRepository {
                 .setParameter("ids", orderIds)
                 .getResultList();
 
-        Map<Long, OrderCardResponse> map = new LinkedHashMap<>();
+        // 불변 DTO 조립
+        Map<Long, LocalDateTime> orderedAtMap = new LinkedHashMap<>();
+        Map<Long, Double> totalMap = new LinkedHashMap<>();
+        Map<Long, List<OrderLine>> itemsMap = new LinkedHashMap<>();
+
         for (Object[] r : rows) {
             Long oId = (Long) r[0];
             LocalDateTime orderedAt = (LocalDateTime) r[1];
-            Double totalPrice = (Double) r[2];
+            Double totalPrice = (r[2] == null) ? 0d : ((Number) r[2]).doubleValue();
             Long productId = (Long) r[3];
             String productTitle = (String) r[4];
             Integer quantity = (Integer) r[5];
-            Double orderPrice = (Double) r[6];
+            Double orderPrice = (r[6] == null) ? 0d : ((Number) r[6]).doubleValue();
 
-            OrderCardResponse card = map.computeIfAbsent(oId,
-                    k -> OrderCardResponse.of(oId, orderedAt, totalPrice));
-            card.items().add(new OrderLine(productId, productTitle, quantity, orderPrice));
+            orderedAtMap.putIfAbsent(oId, orderedAt);
+            totalMap.putIfAbsent(oId, totalPrice);
+            itemsMap.computeIfAbsent(oId, k -> new ArrayList<>())
+                    .add(new OrderLine(productId, productTitle, quantity, orderPrice));
         }
 
-        return new PageImpl<>(new ArrayList<>(map.values()), pageable, total);
+        List<OrderCardResponse> cards = new ArrayList<>();
+        for (Long id : itemsMap.keySet()) {
+            cards.add(new OrderCardResponse(
+                    id,
+                    orderedAtMap.get(id),
+                    totalMap.get(id),
+                    Collections.unmodifiableList(itemsMap.get(id))
+            ));
+        }
+
+        return new PageImpl<>(cards, pageable, total);
     }
 
     // 내가 쓴 글 조회 (검색 + 요약표시)
@@ -75,14 +91,17 @@ public class MyPageQueryRepository {
                     p.id,
                     p.title,
                     SUBSTRING(p.content, 1, 10),
-                    (SELECT i FROM p.imageUrls i LIMIT 1),
+                    /* ElementCollection은 LIMIT 불가 → 대표값으로 MIN(i) 사용 */
+                    (SELECT MIN(i) FROM Post p2 JOIN p2.imageUrls i WHERE p2 = p),
                     p.createdAt
                 )
                 FROM Post p
                 WHERE p.author.userId = :uid
                   AND p.deleted = false
                 """;
-        if (query != null && !query.isBlank()) base += " AND LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%'))";
+        if (query != null && !query.isBlank()) {
+            base += " AND LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%'))";
+        }
 
         var q = em.createQuery(base + " ORDER BY p.createdAt DESC", MyPostListItemResponse.class)
                 .setParameter("uid", userId);
@@ -94,7 +113,8 @@ public class MyPageQueryRepository {
                 .getResultList();
 
         long total = em.createQuery("""
-                        SELECT COUNT(p.id) FROM Post p
+                        SELECT COUNT(p.id)
+                        FROM Post p
                         WHERE p.author.userId = :uid AND p.deleted = false
                         """, Long.class)
                 .setParameter("uid", userId)
@@ -106,7 +126,7 @@ public class MyPageQueryRepository {
     // 내가 쓴 댓글 조회 (검색 + 요약표시)
     public Page<MyCommentListItem> findMyComments(Long userId, String query, Pageable pageable) {
         String base = """
-                SELECT new com.mysite.knitly.domain.mypage.dto.CommentListItem(
+                SELECT new com.mysite.knitly.domain.mypage.dto.MyCommentListItem(
                     c.id,
                     c.post.id,
                     FUNCTION('DATE', c.createdAt),
@@ -116,7 +136,9 @@ public class MyPageQueryRepository {
                 WHERE c.author.userId = :uid
                   AND c.deleted = false
                 """;
-        if (query != null && !query.isBlank()) base += " AND LOWER(c.content) LIKE LOWER(CONCAT('%', :q, '%'))";
+        if (query != null && !query.isBlank()) {
+            base += " AND LOWER(c.content) LIKE LOWER(CONCAT('%', :q, '%'))";
+        }
 
         var q = em.createQuery(base + " ORDER BY c.createdAt DESC", MyCommentListItem.class)
                 .setParameter("uid", userId);
@@ -128,7 +150,8 @@ public class MyPageQueryRepository {
                 .getResultList();
 
         long total = em.createQuery("""
-                        SELECT COUNT(c.id) FROM Comment c
+                        SELECT COUNT(c.id)
+                        FROM Comment c
                         WHERE c.author.userId = :uid AND c.deleted = false
                         """, Long.class)
                 .setParameter("uid", userId)

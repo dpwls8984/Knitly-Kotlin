@@ -7,5 +7,6 @@ public record MyPostListItemResponse(
         String title,
         String excerpt,
         String thumbnailUrl,
+
         LocalDateTime createdAt
 ) {}
