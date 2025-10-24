@@ -7,6 +7,7 @@ import Link from 'next/link';
 // import { useAuthStore } from '@/lib/store/authStore';
 
 import { addLike, removeFavorite } from '@/lib/api/like.api';
+import { useCartStore } from '@/lib/store/cartStore';
 
 // --- 백엔드 연동 ---
 // 1. 수정된 ProductDetails 타입 (ProductDetailResponse.java 기반)
@@ -139,6 +140,14 @@ export default function ProductDetailPage() {
 
   // ▼▼▼ [추가] 찜 처리 로딩 상태 ▼▼▼
   const [isWishLoading, setIsWishLoading] = useState(false);
+  
+  // ▼▼▼ [수정] Zustand 훅 사용 방식 변경 ▼▼▼
+  // 필요한 함수/상태를 개별적으로 가져옵니다.
+  const addToCart = useCartStore((state) => state.addToCart);
+  // isInCart 함수는 스토어 내부에 정의되어 있으므로 스토어 자체에서 가져올 필요는 없습니다.
+  // 대신 장바구니 아이템 목록 전체를 가져옵니다.
+  const cartItems = useCartStore((state) => state.items);
+  // ▲▲▲ [수정] Zustand 훅 사용 방식 변경 ▲▲▲
 
   // --- 4. 데이터 페칭 (실제 API 호출) ---
   useEffect(() => {
@@ -183,13 +192,14 @@ export default function ProductDetailPage() {
     } 
   }, [productId]); // productId가 변경될 때마다 재호출
 
-  useEffect(() => {
-    if (product) {
-      setIsWished(product.isLikedByUser);
-      setWishCount(product.likeCount);
-    }
-  }, [product]);
 
+  // ▼▼▼ [수정] isAlreadyInCart 계산 위치 및 방식 변경 ▼▼▼
+  // 컴포넌트 렌더링 로직 내에서 계산합니다.
+  const isAlreadyInCart = product
+    ? cartItems.some(item => item.productId === product.productId)
+    : false;
+  // ▲▲▲ [수정] isAlreadyInCart 계산 위치 및 방식 변경 ▲▲▲
+  
   // --- 5. 이벤트 핸들러 ---
 
   // 이미지 캐러셀 핸들러
@@ -239,12 +249,26 @@ export default function ProductDetailPage() {
     }
   };
   
-  // 장바구니 / 구매하기 핸들러
-  const handleAddToCart = () => {
-    // (가정) POST /cart { productId: product.productId, quantity: 1 }
-    console.log(`장바구니 담기 API 호출: productId=${product?.productId}`);
-    alert('장바구니에 담겼습니다. (Mock)');
-  };
+// ▼▼▼ [수정] 장바구니 버튼 핸들러 (내부 로직 변경 없음) ▼▼▼
+const handleAddToCart = () => {
+  if (!product) return;
+
+  // isAlreadyInCart 값은 위에서 계산된 것을 사용합니다.
+  if (isAlreadyInCart) {
+    alert('이미 장바구니에 담긴 상품입니다.');
+    return;
+  }
+
+  addToCart({
+    productId: product.productId,
+    title: product.title,
+    price: product.price,
+    imageUrl: product.productImageUrls?.[0] || undefined,
+  });
+
+  alert(`${product.title} 상품이 장바구니에 담겼습니다.`);
+};
+// ▲▲▲ [수정] 장바구니 버튼 핸들러 ▲▲▲
   
   const handleBuyNow = () => {
     // 장바구니 페이지로 이동
@@ -386,10 +410,21 @@ export default function ProductDetailPage() {
           <div className="border-t border-b border-gray-200 py-6 my-4 space-y-4">
             {/* 장바구니 / 찜 버튼 */}
             <div className="flex items-center space-x-4">
+              {/* ▼▼▼ [수정] 장바구니 버튼 상태 반영 (isAlreadyInCart 사용) ▼▼▼ */}
               <button
                 onClick={handleAddToCart}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg transition-colors">장바구니</button>
-              
+                // isAlreadyInCart 값에 따라 버튼 비활성화/스타일 변경
+                disabled={isAlreadyInCart}
+                className={`flex-1 font-bold py-3 px-6 rounded-lg transition-colors ${
+                  isAlreadyInCart
+                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                }`}
+              >
+                {isAlreadyInCart ? '장바구니에 담김' : '장바구니'}
+              </button>
+              {/* ▲▲▲ [수정] 장바구니 버튼 상태 반영 ▲▲▲ */}
+
               {/* 찜 버튼 영역 (별점은 위로 이동) */}
               <div className="flex flex-col items-center">
                 {/* ▼▼▼ [수정] 찜 버튼에 disabled 속성 추가 ▼▼▼ */}
