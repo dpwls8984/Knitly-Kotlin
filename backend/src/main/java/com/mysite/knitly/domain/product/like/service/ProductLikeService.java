@@ -26,10 +26,6 @@ public class ProductLikeService {
         String redisKey = "likes:product:" + productId;
         String userKey = userId.toString();
 
-        if (Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(redisKey, userKey))) {
-            return;
-        }
-
         redisTemplate.opsForSet().add(redisKey, userKey);
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
         rabbitTemplate.convertAndSend(EXCHANGE_NAME, LIKE_ROUTING_KEY, eventDto);
