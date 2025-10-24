@@ -156,7 +156,7 @@ class OrderServiceTest {
             });
         }
 
-        latch.await(10, TimeUnit.SECONDS); // 이전보다 시간을 줄여도 충분할 겁니다.
+        latch.await(10, TimeUnit.SECONDS); //시간 3으로 하면 무조건 실패하고, 10으로 하면 성공함. 3~10 사이의 값 넣어보면서 테스트 가능
         executorService.shutdown();
 
         // then

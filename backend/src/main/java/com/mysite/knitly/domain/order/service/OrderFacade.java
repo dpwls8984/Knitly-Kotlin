@@ -21,7 +21,16 @@ public class OrderFacade {
     public OrderCreateResponse createOrderWithLock(User user, OrderCreateRequest request) {
         // 락 키는 첫 번째 상품 ID를 기준으로 단순하게 생성 (혹은 모든 ID 조합)
         String lockKey = generateCompositeLockKey(request.productIds());
+
+        long startTime = System.currentTimeMillis();
+        long waitTimeMillis = 2000; // 최대 2초 대기
+
         while (!redisLockService.tryLock(lockKey)) {
+            // 현재 시간과 시작 시간을 비교하여 대기 시간을 초과했는지 확인
+            if (System.currentTimeMillis() - startTime > waitTimeMillis) {
+                // 대기 시간을 초과하면 예외를 발생시켜 실패 처리합니다.
+                throw new RuntimeException("Lock acquisition timed out for key: " + lockKey);
+            }
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
