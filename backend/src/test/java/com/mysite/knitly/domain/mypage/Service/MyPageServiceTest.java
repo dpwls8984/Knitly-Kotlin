@@ -12,12 +12,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,7 +34,7 @@ class MyPageServiceTest {
     @Test
     @DisplayName("주문 카드 조회 - Repository 위임 확인")
     void getOrderCards() {
-        var card = OrderCardResponse.of(1L, LocalDateTime.now(), 10000.0);
+        var card = OrderCardResponse.of(1L, LocalDateTime.now(), BigDecimal.valueOf(10000));
         var page = new PageImpl<>(List.of(card), PageRequest.of(0, 3), 1);
 
         given(repo.findOrderCards(eq(10L), any())).willReturn(page);
@@ -78,7 +80,7 @@ class MyPageServiceTest {
     @Test
     @DisplayName("내가 찜한 상품 조회")
     void getMyFavorites() {
-        var f = new FavoriteProductItem(9001L, "인기 도안", "t.jpg", 9900.0, 4.2, LocalDate.of(2025,1,3));
+        var f = new FavoriteProductItem(9001L, "인기 도안", "t.jpg", BigDecimal.valueOf(9900), 4.2, LocalDate.of(2025,1,3));
         var page = new PageImpl<>(List.of(f), PageRequest.of(0, 10), 1);
 
         given(repo.findMyFavoriteProducts(eq(10L), any())).willReturn(page);

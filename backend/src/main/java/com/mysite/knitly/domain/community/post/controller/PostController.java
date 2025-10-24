@@ -41,27 +41,31 @@ public class PostController {
     }
 
     @PostMapping
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
     public ResponseEntity<PostResponse> create(
-            @AuthenticationPrincipal User user,
             @Valid @RequestBody PostCreateRequest request
+            , @AuthenticationPrincipal User user
+
     ) {
         PostResponse res = postService.create(request, user);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
     @PutMapping("/{postId}")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
     public ResponseEntity<PostResponse> update(
-            @AuthenticationPrincipal User user,
             @PathVariable("postId") Long postId,
-            @Valid @RequestBody PostUpdateRequest request
+            @Valid @RequestBody PostUpdateRequest request,
+            @AuthenticationPrincipal User user
     ) {
         return ResponseEntity.ok(postService.update(postId, request, user));
     }
 
     @DeleteMapping("/{postId}")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
-            @AuthenticationPrincipal User user,
-            @PathVariable("postId") Long postId
+            @PathVariable Long postId,
+            @AuthenticationPrincipal User user
     ) {
         postService.delete(postId, user);
         return ResponseEntity.noContent().build();

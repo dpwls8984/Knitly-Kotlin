@@ -54,8 +54,9 @@ public class CommentController {
             return ResponseEntity.badRequest().build();
         }
         CommentResponse resp = commentService.create(request, user);
+        // 리소스 구조 일관성: /community/posts/{postId}/comments/{commentId}
         return ResponseEntity
-                .created(URI.create("/community/comments/" + resp.id()))
+                .created(URI.create(String.format("/community/posts/%d/comments/%d", postId, resp.id())))
                 .body(resp);
     }
 
@@ -75,8 +76,8 @@ public class CommentController {
     @DeleteMapping("/comments/{commentId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long commentId
+            @PathVariable Long commentId,
+            @AuthenticationPrincipal User user
     ) {
         commentService.delete(commentId, user);
         return ResponseEntity.noContent().build();

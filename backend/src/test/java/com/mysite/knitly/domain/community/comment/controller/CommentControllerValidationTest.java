@@ -111,7 +111,7 @@ class CommentControllerValidationTest {
                         .content(body)
                         .with(withAuth(author)))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", startsWith("/community/comments/")))
+                .andExpect(header().string("Location", startsWith("/community/posts/" + postId + "/comments/")))
                 .andExpect(jsonPath("$.content").value("정상 댓글"));
     }
 
@@ -126,7 +126,7 @@ class CommentControllerValidationTest {
                         .content(om.writeValueAsString(root))
                         .with(withAuth(author)))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", startsWith("/community/comments/")))
+                .andExpect(header().string("Location", startsWith("/community/posts/" + postId + "/comments/")))
                 .andReturn();
 
         long rootId = om.readTree(rootRes.getResponse().getContentAsString()).get("id").asLong();
@@ -141,7 +141,7 @@ class CommentControllerValidationTest {
                         .content(om.writeValueAsString(reply))
                         .with(withAuth(author)))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", startsWith("/community/comments/")))
+                .andExpect(header().string("Location", startsWith("/community/posts/" + postId + "/comments/")))
                 .andExpect(jsonPath("$.content").value("대댓글"));
     }
 }
