@@ -32,4 +32,9 @@ public class UserStore {
     public void updateStoreDetail(String storeDetail) {
         this.storeDetail = storeDetail;
     }
+
+    public UserStore(User user, String storeDetail) {
+        this.user = user;
+        this.storeDetail = storeDetail;
+    }
 }

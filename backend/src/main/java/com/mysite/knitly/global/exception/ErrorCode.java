@@ -81,6 +81,8 @@ public enum ErrorCode {
     DESIGN_NOT_ON_SALE("2013", HttpStatus.BAD_REQUEST, "판매중이 아닌 도안입니다."),
     DESIGN_ALREADY_ON_SALE("2014", HttpStatus.BAD_REQUEST, "이미 판매중인 도안입니다."),
     DESIGN_NOT_STOPPED("2015", HttpStatus.BAD_REQUEST, "이미 판매중지된 도안입니다."),
+    DESIGN_UNAUTHORIZED_ACCESS("2016", HttpStatus.FORBIDDEN, "본인의 도안만 접근할 수 있습니다."),
+    DESIGN_FILE_NOT_FOUND("2017", HttpStatus.NOT_FOUND, "도안 파일을 찾을 수 없습니다."),
 
     // Event 6000
 
