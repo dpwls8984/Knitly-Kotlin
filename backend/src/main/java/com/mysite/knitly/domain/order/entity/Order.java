@@ -28,7 +28,7 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private User user;
+    private User user; // 구매자
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -47,6 +47,22 @@ public class Order {
     public Order(User user, Double totalPrice) {
         this.user = user;
         this.totalPrice = totalPrice;
+    }
+
+    //== 생성 메서드 ==//
+    public static Order create(User user, List<OrderItem> orderItems) {
+        Order order = new Order();
+        order.user = user; // 사용자 정보 설정
+
+        // 모든 주문 상품을 추가하고 총액 계산
+        double totalPrice = 0.0;
+        for (OrderItem orderItem : orderItems) {
+            order.addOrderItem(orderItem);
+            totalPrice += orderItem.getOrderPrice();
+        }
+        order.totalPrice = totalPrice;
+
+        return order;
     }
 
     //== 연관관계 편의 메서드 ==//

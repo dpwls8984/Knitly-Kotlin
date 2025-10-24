@@ -56,6 +56,9 @@ dependencies {
     // Swagger/OpenAPI
     // SpringDoc OpenAPI (Swagger 3) - WebMVC 및 Swagger UI 포함
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.11")
+
+    implementation("com.fasterxml.jackson.core:jackson-databind")
+
 }
 
 tasks.withType<Test> {

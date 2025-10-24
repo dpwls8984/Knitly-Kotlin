@@ -1,30 +1,25 @@
-// 상품 카테고리
-export enum ProductCategory {
-    PATTERN = 'PATTERN',
-    KIT = 'KIT',
-    MATERIAL = 'MATERIAL',
-}
-
-// 상품 목록 응답
+/**
+ * 상품 목록 조회 응답 (백엔드 ProductListResponse와 매핑)
+ */
 export interface ProductListResponse {
     productId: number;
     title: string;
-    productCategory: ProductCategory;
+    productCategory: 'TOP' | 'BOTTOM' | 'OUTER' | 'BAG' | 'ETC';
     price: number;
     purchaseCount: number;
     likeCount: number;
     stockQuantity: number | null;
-    avgReviewRating: number;
+    avgReviewRating: number | null;
     createdAt: string;
     thumbnailUrl: string | null;
-
-    // 상태 플래그
     isFree: boolean;
     isLimited: boolean;
     isSoldOut: boolean;
 }
 
-// 페이지네이션 응답
+/**
+ * 페이지네이션 응답
+ */
 export interface PageResponse<T> {
     content: T[];
     pageable: {
@@ -42,9 +37,14 @@ export interface PageResponse<T> {
     totalPages: number;
     totalElements: number;
     last: boolean;
-    first: boolean;
     size: number;
     number: number;
+    sort: {
+        empty: boolean;
+        sorted: boolean;
+        unsorted: boolean;
+    };
     numberOfElements: number;
+    first: boolean;
     empty: boolean;
 }

@@ -1,6 +1,9 @@
 package com.mysite.knitly.global.config;
 
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -106,4 +109,20 @@ public class RabbitMQConfig {
     public Binding orderEmailDlqBinding(Queue orderEmailDeadLetterQueue, DirectExchange deadLetterExchange) {
         return BindingBuilder.bind(orderEmailDeadLetterQueue).to(deadLetterExchange).with(DEAD_LETTER_ROUTING_KEY_PREFIX + "order.email.queue");
     }
+
+    // JSON 메시지 컨버터
+    @Bean
+    public Jackson2JsonMessageConverter jackson2JsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+
+    // RabbitTemplate에 JSON 컨버터 적용
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
+                                         Jackson2JsonMessageConverter converter) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(converter);
+        return template;
+    }
+
 }

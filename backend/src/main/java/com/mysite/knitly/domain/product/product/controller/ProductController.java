@@ -22,6 +22,7 @@ public class ProductController {
 
     private final ProductService productService;
 
+    // 판매 등록
     @PostMapping("/{designId}/sale")
     public ResponseEntity<ProductRegisterResponse> registerProduct(
             @AuthenticationPrincipal User user,

@@ -52,7 +52,7 @@ public class Product {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private User user; // 판매자
 
     @Column(nullable = false)
     private Integer purchaseCount; // 누적수

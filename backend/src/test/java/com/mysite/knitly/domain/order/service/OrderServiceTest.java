@@ -1,157 +1,261 @@
-/*
 package com.mysite.knitly.domain.order.service;
 
+import com.mysite.knitly.domain.design.entity.Design;
+import com.mysite.knitly.domain.design.entity.DesignState;
+import com.mysite.knitly.domain.design.repository.DesignRepository;
 import com.mysite.knitly.domain.order.dto.OrderCreateRequest;
-import com.mysite.knitly.domain.order.entity.Order;
+import com.mysite.knitly.domain.order.dto.OrderCreateResponse;
 import com.mysite.knitly.domain.order.repository.OrderRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
+import com.mysite.knitly.domain.product.product.entity.ProductCategory;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
+import com.mysite.knitly.domain.user.entity.Provider;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepositoryTmp;
-import com.mysite.knitly.global.exception.ErrorCode;
-import com.mysite.knitly.global.exception.ServiceException;
+import com.mysite.knitly.domain.user.repository.UserRepository;
+import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.stereotype.Service;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+@SpringBootTest(properties = "spring.profiles.active=test")
 class OrderServiceTest {
 
-    @InjectMocks
+    private static final Logger log = LoggerFactory.getLogger(OrderServiceTest.class);
+
+    @Autowired
     private OrderService orderService;
 
-    @Mock
-    private OrderRepository orderRepository;
-    @Mock
+    @Autowired
     private ProductRepository productRepository;
-    @Mock
-    private UserRepositoryTmp userRepository;
 
-    @Test
-    @DisplayName("성공: 한정/상시 판매 상품을 함께 주문하면 정상적으로 주문이 생성된다")
-    void createOrder_Success() {
-        UUID userId = UUID.randomUUID();
-        User fakeUser = User.builder().userId(userId).build();
+    @Autowired
+    private OrderRepository orderRepository;
 
-        Product limitedProduct = Product.builder().productId(1L).price(10000.0).stockQuantity(5).isDeleted(false).build();
-        Product unlimitedProduct = Product.builder().productId(2L).price(15000.0).stockQuantity(null).isDeleted(false).build();
+    @Autowired
+    private UserRepository userRepository;
 
-        OrderCreateRequest request = new OrderCreateRequest(List.of(1L, 2L));
+    @Autowired
+    private DesignRepository designRepository;
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-        when(productRepository.findById(1L)).thenReturn(Optional.of(limitedProduct));
-        when(productRepository.findById(2L)).thenReturn(Optional.of(unlimitedProduct));
+    @Autowired
+    private OrderFacade orderFacade;
 
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
-            Order orderToSave = invocation.getArgument(0);
+    private Product testProduct;
 
-            return orderToSave;
-        });
+    private Product testProduct2;
+    private User testUser;
 
-        // Mock Product 객체에 대해 spy를 사용하여 실제 메서드(decreaseStock) 호출을 추적
-        Product spyLimitedProduct = spy(limitedProduct);
-        when(productRepository.findById(1L)).thenReturn(Optional.of(spyLimitedProduct));
+    @BeforeEach
+    void setUp() {
+        orderRepository.deleteAll();
+        productRepository.deleteAll();
+        designRepository.deleteAll();
+        userRepository.deleteAll();
 
-        var response = orderService.createOrder(userId, request);
+        testUser = userRepository.save(
+                User.builder()
+                        .email("test@knitly.com")
+                        .name("concurrentUser")
+                        .socialId("concurrentSocialId")
+                        .provider(Provider.GOOGLE)
+                        .build()
+        );
 
-        // 1. 응답 데이터 검증
-        assertThat(response.totalPrice()).isEqualTo(25000.0);
-        assertThat(response.orderItems()).hasSize(2);
+        Design testDesign = designRepository.save(
+                Design.builder()
+                        .user(testUser)
+                        .designName("하트 패턴")
+                        .pdfUrl("/files/2025/10/17/uuid_하트패턴.pdf")
+                        .gridData("[]")
+                        .designState(DesignState.ON_SALE)
+                        .build()
+        );
 
-        // 2. 재고 차감 로직 검증
-        verify(spyLimitedProduct, times(1)).decreaseStock(1); // 한정 상품의 재고만 1번 차감되었는지 확인
+        testProduct = productRepository.save(
+                Product.builder()
+                        .title("한정판 니트")
+                        .design(testDesign)
+                        .user(testUser)
+                        .description("한정판으로 제작된 특별한 니트입니다.")
+                        .sizeInfo("Free")
+                        .productCategory(ProductCategory.TOP)
+                        .price(10000.0)
+                        .purchaseCount(0)
+                        .likeCount(50)
+                        .stockQuantity(10)
+                        .isDeleted(false)
+                        .build()
+        );
 
-        // 3. 주문 저장 데이터 검증
-        ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
-        verify(orderRepository).save(orderCaptor.capture());
-        Order savedOrder = orderCaptor.getValue();
-        assertThat(savedOrder.getTotalPrice()).isEqualTo(25000.0);
-        assertThat(savedOrder.getOrderItems().get(0).getOrderPrice()).isEqualTo(10000.0);
+        Design testDesign2 = designRepository.save(
+                Design.builder()
+                        .user(testUser)
+                        .designName("별 패턴")
+                        .pdfUrl("/files/2025/10/17/uuid_별패턴.pdf")
+                        .gridData("[]")
+                        .designState(DesignState.ON_SALE)
+                        .build()
+        );
+
+        testProduct2 = productRepository.save(
+                Product.builder()
+                        .title("한정판 코스터")
+                        .design(testDesign2)
+                        .user(testUser)
+                        .description("한정판으로 제작된 특별한 코스터입니다.")
+                        .sizeInfo("Free")
+                        .productCategory(ProductCategory.ETC)
+                        .price(5000.0)
+                        .purchaseCount(0)
+                        .likeCount(50)
+                        .stockQuantity(3)
+                        .isDeleted(false)
+                        .build()
+        );
     }
 
     @Test
-    @DisplayName("실패: 품절된 상품을 주문하면 예외가 발생한다")
-    void createOrder_Fail_OutOfStock() {
-        UUID userId = UUID.randomUUID();
-        User fakeUser = User.builder().userId(userId).build();
-        Product soldOutProduct = Product.builder().productId(1L).price(10000.0).stockQuantity(0).isDeleted(false).build();
-        OrderCreateRequest request = new OrderCreateRequest(List.of(1L));
+    @DisplayName("동시에 100개의 주문 요청이 들어와도 실제 주문은 10개만 생성된다.")
+    void concurrent_order_creation_test() throws InterruptedException {
+        // given
+        int threadCount = 100;
+        ExecutorService executorService = Executors.newFixedThreadPool(32);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0); // 성공/실패 추적용
+        AtomicInteger failCount = new AtomicInteger(0); // 실패 횟수도 추적
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-        when(productRepository.findById(1L)).thenReturn(Optional.of(soldOutProduct));
+        // when
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    OrderCreateRequest request = new OrderCreateRequest(
+                            List.of(testProduct.getProductId())
+                    );
+                    // Facade를 통해 주문 생성 로직 호출
+                    orderFacade.createOrderWithLock(testUser, request);
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // 락 획득 실패, 재고 부족 등의 예외는 의도된 실패이므로 무시
+                    // 실패시 카운트 증가
+                    failCount.incrementAndGet();
+                    // 실패 로그는 DEBUG 레벨로 남겨서 평소엔 안 보이게 처리
+                    log.debug("Order failed as expected: {}", e.getMessage());
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
 
-        Product spySoldOutProduct = spy(soldOutProduct);
-        when(productRepository.findById(1L)).thenReturn(Optional.of(spySoldOutProduct));
+        latch.await(10, TimeUnit.SECONDS); //시간 3으로 하면 무조건 실패하고, 10으로 하면 성공함. 3~10 사이의 값 넣어보면서 테스트 가능
+        executorService.shutdown();
 
-        ServiceException exception = assertThrows(ServiceException.class, () -> {
-            orderService.createOrder(userId, request);
-        });
+        // then
+        Product updatedProduct = productRepository.findById(testProduct.getProductId()).orElseThrow();
+        long dbOrderCount = orderRepository.count();
 
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.OUT_OF_STOCK);
+        log.info("""
+                
+                ===========================================================
+                [Test Summary] : {}
+                -----------------------------------------------------------
+                - 총 요청 수 : {}
+                - 초기 재고  : {}
+                -----------------------------------------------------------
+                - 성공 (Atomic): {}
+                - 실패 (Atomic): {}
+                - DB에 생성된 주문 수: {}
+                - 남은 최종 재고: {}
+                ===========================================================
+                """,
+                "100 requests for 10 stocks",
+                threadCount,
+                10,
+                successCount.get(),
+                failCount.get(),
+                dbOrderCount,
+                updatedProduct.getStockQuantity()
+        );
+
+        // 검증: 재고는 0, DB에 저장된 주문은 10개, 성공 카운트도 10개
+        assertThat(updatedProduct.getStockQuantity()).isEqualTo(0);
+        assertThat(orderRepository.count()).isEqualTo(10);
+        assertThat(successCount.get()).isEqualTo(10);
     }
 
     @Test
-    @DisplayName("실패: 판매 중지된 상품을 주문하면 예외가 발생한다")
-    void createOrder_Fail_ProductIsDeleted() {
-        UUID userId = UUID.randomUUID();
-        User fakeUser = User.builder().userId(userId).build();
-        Product deletedProduct = Product.builder().productId(1L).isDeleted(true).build();
-        OrderCreateRequest request = new OrderCreateRequest(List.of(1L));
+    @DisplayName("동시에 200개의 주문 요청이 들어와도 실제 주문은 3개만 생성된다.")
+    void concurrent_order_creation_test2() throws InterruptedException {
+        // given
+        int threadCount = 200;
+        ExecutorService executorService = Executors.newFixedThreadPool(32);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0); // 성공/실패 추적용
+        AtomicInteger failCount = new AtomicInteger(0); // 실패 횟수도 추적
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-        when(productRepository.findById(1L)).thenReturn(Optional.of(deletedProduct));
+        // when
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    OrderCreateRequest request = new OrderCreateRequest(
+                            List.of(testProduct2.getProductId())
+                    );
+                    // Facade를 통해 주문 생성 로직 호출
+                    orderFacade.createOrderWithLock(testUser, request);
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // 락 획득 실패, 재고 부족 등의 예외는 의도된 실패이므로 무시
+                    // 실패시 카운트 증가
+                    failCount.incrementAndGet();
+                    log.debug("Order failed as expected: {}", e.getMessage());
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
 
-        ServiceException exception = assertThrows(ServiceException.class, () -> {
-            orderService.createOrder(userId, request);
-        });
+        latch.await(10, TimeUnit.SECONDS);
+        executorService.shutdown();
 
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_ALREADY_DELETED);
+        // then
+        Product updatedProduct = productRepository.findById(testProduct2.getProductId()).orElseThrow();
+        long dbOrderCount = orderRepository.count();
+
+        log.info("""
+                
+                ===========================================================
+                [Test Summary] : {}
+                -----------------------------------------------------------
+                - 총 요청 수 : {}
+                - 초기 재고  : {}
+                -----------------------------------------------------------
+                - 성공 (Atomic): {}
+                - 실패 (Atomic): {}
+                - DB에 생성된 주문 수: {}
+                - 남은 최종 재고: {}
+                ===========================================================
+                """,
+                "200 requests for 3 stocks",
+                threadCount,
+                3,
+                successCount.get(),
+                failCount.get(),
+                dbOrderCount,
+                updatedProduct.getStockQuantity()
+        );
+
+        // 검증: 재고는 0, DB에 저장된 주문은 3개, 성공 카운트도 3개
+        assertThat(updatedProduct.getStockQuantity()).isEqualTo(0);
+        assertThat(orderRepository.count()).isEqualTo(3);
+        assertThat(successCount.get()).isEqualTo(3);
     }
-
-    @Test
-    @DisplayName("실패: 남은 재고보다 많은 수량을 주문하면 예외가 발생한다")
-    void createOrder_Fail_StockInsufficient() {
-        UUID userId = UUID.randomUUID();
-        User fakeUser = User.builder().userId(userId).build();
-
-        // 재고가 1개만 남은 상품을 준비
-        Product limitedProduct = Product.builder()
-                .productId(1L)
-                .price(10000.0)
-                .stockQuantity(1) // ⚠️ 재고 1개
-                .isDeleted(false)
-                .build();
-
-        // 재고가 1개인 상품을 2개 주문하는 요청을 생성
-        OrderCreateRequest request = new OrderCreateRequest(List.of(1L, 1L)); // ⚠️ 2개 주문
-
-        when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-
-        Product spyLimitedProduct = spy(limitedProduct);
-        when(productRepository.findById(1L)).thenReturn(Optional.of(spyLimitedProduct));
-
-        // 주문 생성 시 Product.decreaseStock() 내부에서 예외가 발생하는지 검증
-        ServiceException exception = assertThrows(ServiceException.class, () -> {
-            orderService.createOrder(userId, request);
-        });
-
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_STOCK_INSUFFICIENT);
-
-        // 예외가 발생했으므로, save는 절대 호출되지 않았어야 함
-        verify(orderRepository, never()).save(any(Order.class));
-    }
-}*/
+}
