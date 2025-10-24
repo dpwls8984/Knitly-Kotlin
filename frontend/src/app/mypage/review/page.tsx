@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMyReviews, deleteReview, ReviewListItem } from "@/lib/api/review.api";
+import { getMyReviews, deleteReview } from "@/lib/api/review.api";
+import { ReviewListItem, PageResponse } from "@/types/review.types";
 
 export default function MyReviewsPage() {
 

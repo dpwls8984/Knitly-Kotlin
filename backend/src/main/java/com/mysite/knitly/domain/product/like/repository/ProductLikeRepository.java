@@ -11,6 +11,9 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Set;
+
 @Repository
 public interface ProductLikeRepository extends JpaRepository<ProductLike, ProductLikeId> {
     Page<ProductLike> findByUser_UserId(Long userId, Pageable pageable);
@@ -19,4 +22,9 @@ public interface ProductLikeRepository extends JpaRepository<ProductLike, Produc
         ProductLikeId id = new ProductLikeId(userId, productId);
         deleteById(id);
     }
+
+    @Query("SELECT pl.product.productId FROM ProductLike pl WHERE pl.user.userId = :userId AND pl.product.productId IN :productIds")
+    Set<Long> findLikedProductIdsByUserId(@Param("userId") Long userId, @Param("productIds") List<Long> productIds);
+
+    boolean existsByUser_UserIdAndProduct_ProductId(Long userId, Long productId);
 }

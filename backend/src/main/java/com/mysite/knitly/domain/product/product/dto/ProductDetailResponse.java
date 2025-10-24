@@ -16,11 +16,13 @@ public record ProductDetailResponse(
         Integer stockQuantity,
 
         Integer likeCount,
+
+        boolean isLikedByUser,
         //Long designId
         Double avgReviewRating,
         List<String> productImageUrls
 ) {
-    public static ProductDetailResponse from(Product product, List<String> imageUrls) {
+    public static ProductDetailResponse from(Product product, List<String> imageUrls, boolean isLikedByUser) {
         return new ProductDetailResponse(
                 product.getProductId(),
                 product.getTitle(),
@@ -31,6 +33,7 @@ public record ProductDetailResponse(
                 //product.getCreatedAt().toString(),
                 product.getStockQuantity(),
                 product.getLikeCount(),
+                isLikedByUser,
                 //product.getDesign().getDesignId()
                 product.getAvgReviewRating(),
                 imageUrls
