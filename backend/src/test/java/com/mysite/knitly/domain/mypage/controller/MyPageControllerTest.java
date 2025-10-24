@@ -76,9 +76,9 @@ class MyPageControllerTest {
     @Test
     @DisplayName("GET /api/mypage/orders → 주문 카드 페이지")
     void orders() throws Exception {
-        OrderCardResponse card1 = OrderCardResponse.of(101L, LocalDateTime.of(2025, 1, 2, 10, 0), BigDecimal.valueOf(30000));
-        card1.items().add(new OrderLine(11L, "도안 A", 1, BigDecimal.valueOf(10000)));
-        card1.items().add(new OrderLine(12L, "도안 B", 2, BigDecimal.valueOf(20000)));
+        OrderCardResponse card1 = OrderCardResponse.of(101L, LocalDateTime.of(2025, 1, 2, 10, 0), 30000.0);
+        card1.items().add(new OrderLine(11L, "도안 A", 1, 10000.0));
+        card1.items().add(new OrderLine(12L, "도안 B", 2, 20000.0));
 
         var page = new PageImpl<>(List.of(card1), PageRequest.of(0, 3), 1);
         given(service.getOrderCards(eq(1L), Mockito.<Pageable>any())).willReturn(page);
@@ -134,7 +134,7 @@ class MyPageControllerTest {
     @Test
     @DisplayName("GET /api/mypage/favorites → 내가 찜한 상품 페이지")
     void myFavorites() throws Exception {
-        var f1 = new FavoriteProductItem(9001L, "인기 도안", "t.jpg", BigDecimal.valueOf(9900), 4.5, LocalDate.of(2025, 1, 5));
+        var f1 = new FavoriteProductItem(9001L, "인기 도안", "t.jpg", 9900.0, 4.5, LocalDate.of(2025, 1, 5));
         var page = new PageImpl<>(List.of(f1), PageRequest.of(0, 10), 1);
         given(service.getMyFavorites(eq(1L), Mockito.<Pageable>any())).willReturn(page);
 

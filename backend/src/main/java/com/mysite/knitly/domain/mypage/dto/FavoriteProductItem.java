@@ -10,7 +10,7 @@ public record FavoriteProductItem(
         Long productId,
         String productTitle,
         String thumbnailUrl,
-        BigDecimal price,
+        Double price,
         Double averageRating,
         LocalDate likedAt
 ) {}

@@ -8,7 +8,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -18,11 +17,10 @@ public class MyPageQueryRepository {
     @PersistenceContext
     private EntityManager em;
 
-    // 주문 내역 조회 (카드 안에 상품 묶음)
+    // 주문 내역 조회 (카드 안에 묶음별로 표시)
     public Page<OrderCardResponse> findOrderCards(Long userId, Pageable pageable) {
         List<Long> orderIds = em.createQuery("""
-                        select o.orderId
-                        from Order o
+                        select o.orderId from Order o
                         where o.user.userId = :uid
                         order by o.createdAt desc
                         """, Long.class)
@@ -55,17 +53,17 @@ public class MyPageQueryRepository {
 
         // 불변 DTO 조립
         Map<Long, LocalDateTime> orderedAtMap = new LinkedHashMap<>();
-        Map<Long, BigDecimal> totalMap = new LinkedHashMap<>();
+        Map<Long, Double> totalMap = new LinkedHashMap<>();
         Map<Long, List<OrderLine>> itemsMap = new LinkedHashMap<>();
 
         for (Object[] r : rows) {
             Long oId = (Long) r[0];
             LocalDateTime orderedAt = (LocalDateTime) r[1];
-            BigDecimal totalPrice = (r[2] == null) ? BigDecimal.ZERO : (BigDecimal) r[2];
+            Double totalPrice = (r[2] == null) ? 0d : ((Number) r[2]).doubleValue();
             Long productId = (Long) r[3];
             String productTitle = (String) r[4];
             Integer quantity = (Integer) r[5];
-            BigDecimal orderPrice = (r[6] == null) ? BigDecimal.ZERO : (BigDecimal) r[6];
+            Double orderPrice = (r[6] == null) ? 0d : ((Number) r[6]).doubleValue();
 
             orderedAtMap.putIfAbsent(oId, orderedAt);
             totalMap.putIfAbsent(oId, totalPrice);
