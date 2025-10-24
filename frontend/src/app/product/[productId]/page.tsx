@@ -303,6 +303,13 @@ export default function ProductDetailPage() {
   }, [productId]); // productId가 변경될 때마다 재호출
 
   useEffect(() => {
+    if (product) {
+      setIsWished(product.isLikedByUser);
+      setWishCount(product.likeCount);
+    }
+  }, [product]);
+
+  useEffect(() => {
     setReviews([]);
     setHasFetchedReviews(false);
     setIsReviewLoading(false); // 혹시 모를 로딩 상태도 리셋
