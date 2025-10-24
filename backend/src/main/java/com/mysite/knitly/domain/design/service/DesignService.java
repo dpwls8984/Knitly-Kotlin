@@ -38,7 +38,6 @@ public class DesignService {
     private final ObjectMapper objectMapper;
     private final FileValidator fileValidator;
 
-
     // 도안 생성
     @Transactional
     public DesignResponse createDesign(User user, DesignRequest request) {
@@ -96,12 +95,12 @@ public class DesignService {
         String sanitized = FileNameUtils.sanitize(base);
 
         String pdfUrl = localFileStorage.savePdfFile(pdfBytes, sanitized);
-
+        String defaultGrid = "{}";
         Design design = Design.builder()
                 .user(user)
-                .designName(request.designName())
+                .designName(sanitized)
                 .pdfUrl(pdfUrl)
-                .gridData(null)
+                .gridData(defaultGrid)
                 .designState(DesignState.BEFORE_SALE)
                 .build();
 
@@ -162,5 +161,42 @@ public class DesignService {
         int i = original.lastIndexOf('.');
         return i > 0 ? original.substring(0, i) : original;
     }
+
+    // 판매 중지 - ON_SALE -> STOPPED
+    @Transactional
+    public void stopDesignSale(User user, Long designId) {
+        Design design = designRepository.findById(designId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.DESIGN_NOT_FOUND));
+
+        // 본인 도안인지 확인
+        if (!design.isOwnedBy(user.getUserId())) {
+            throw new ServiceException(ErrorCode.DESIGN_UNAUTHORIZED_DELETE);
+        }
+
+        // Design 엔티티의 stopSale() 메서드 호출
+        // ON_SALE 상태가 아니면 예외 발생
+        design.stopSale();
+
+        log.info("도안 판매 중지 완료 - designId={}, userId={}", designId, user.getUserId());
+    }
+
+    // 판매 재개 - STOPPED -> ON_SALE
+    @Transactional
+    public void relistDesign(User user, Long designId) {
+        Design design = designRepository.findById(designId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.DESIGN_NOT_FOUND));
+
+        // 본인 도안인지 확인
+        if (!design.isOwnedBy(user.getUserId())) {
+            throw new ServiceException(ErrorCode.DESIGN_UNAUTHORIZED_DELETE);
+        }
+
+        // Design 엔티티의 relist() 메서드 호출
+        // STOPPED 상태가 아니면 예외 발생
+        design.relist();
+
+        log.info("도안 판매 재개 완료 - designId={}, userId={}", designId, user.getUserId());
+    }
+
 }
 

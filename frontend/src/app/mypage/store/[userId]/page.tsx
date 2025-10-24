@@ -229,7 +229,7 @@ export default function SellerStorePage() {
 
             {/* 페이지네이션 */}
             {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-8">
+                <div className="flex gap-2 items-center justify-center mt-6">
                     <button
                         onClick={() => setPage(p => Math.max(0, p - 1))}
                         disabled={page === 0}
@@ -239,8 +239,24 @@ export default function SellerStorePage() {
                     </button>
 
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        const pageNum = page < 3 ? i : page - 2 + i;
-                        if (pageNum >= totalPages) return null;
+                        // 현재 페이지를 중심으로 페이지 번호 계산
+                        let pageNum;
+                        if (totalPages <= 5) {
+                            // 전체 페이지가 5개 이하면 그대로 표시
+                            pageNum = i;
+                        } else if (page < 2) {
+                            // 처음 부분 (0, 1 페이지)
+                            pageNum = i;
+                        } else if (page > totalPages - 3) {
+                            // 마지막 부분
+                            pageNum = totalPages - 5 + i;
+                        } else {
+                            // 중간 부분 (현재 페이지를 중심으로)
+                            pageNum = page - 2 + i;
+                        }
+
+                        // 유효하지 않은 페이지 번호는 렌더링하지 않음
+                        if (pageNum < 0 || pageNum >= totalPages) return null;
 
                         return (
                             <button
@@ -295,7 +311,7 @@ function ProductCard({ product, isMyStore }: ProductCardProps) {
             onClick={handleViewDetail}
         >
             {/* 이미지 */}
-            <div className="relative h-48 bg-gray-200">
+            <div className="relative aspect-square w-full bg-gray-200">
                 {product.thumbnailUrl ? (
                     <img
                         src={product.thumbnailUrl}
@@ -336,14 +352,14 @@ function ProductCard({ product, isMyStore }: ProductCardProps) {
 
                 <div className="flex justify-between items-center mb-3">
           <span className="text-xl font-bold text-[#925C4C]">
-            {product.isFree ? '무료' : `₩${product.price.toLocaleString()}`}
+            {product.isFree ? '무료' : `${product.price.toLocaleString()}원`}
           </span>
                     <div className="text-sm text-gray-600">
                         ⭐ {product.avgReviewRating.toFixed(1)}
                     </div>
                 </div>
 
-                <div className="flex gap-4 text-sm text-gray-600 mb-4">
+                <div className="flex gap-4 text-sm text-gray-600 mb-4 justify-between">
                     <span>❤️ {product.likeCount}</span>
                     {isMyStore && (
                     <span> 구매 횟수: {product.purchaseCount}</span>
