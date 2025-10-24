@@ -1,5 +1,7 @@
 package com.mysite.knitly.domain.product.review.service;
 
+import com.mysite.knitly.domain.order.entity.OrderItem;
+import com.mysite.knitly.domain.order.repository.OrderItemRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest;
@@ -41,14 +43,17 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final OrderItemRepository orderItemRepository;
 
     String uploadDir = System.getProperty("user.dir") + "/uploads/review/";
     String urlPrefix = "/review/";
 
 
-    public ReviewCreateResponse getReviewFormInfo(Long productId) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
+    public ReviewCreateResponse getReviewFormInfo(Long orderItemId) {
+        OrderItem orderItem = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.ORDER_ITEM_NOT_FOUND)); // (ErrorCode 추가 필요)
+
+        Product product = orderItem.getProduct();
 
         String thumbnailUrl = null;
         if (product.getProductImages() != null && !product.getProductImages().isEmpty()) {
@@ -60,13 +65,18 @@ public class ReviewService {
 
     // 1. 리뷰 등록
     @Transactional
-    public void createReview(Long productId, User user, ReviewCreateRequest request) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
+    public void createReview(Long orderItemId, User user, ReviewCreateRequest request) {
+        // 1. orderItemId로 OrderItem을 찾습니다.
+        OrderItem orderItem = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.ORDER_ITEM_NOT_FOUND));
+
+        // 2. OrderItem에서 Product를 가져옵니다.
+        Product product = orderItem.getProduct();
 
         Review review = Review.builder()
                 .user(user)
                 .product(product)
+                .orderItem(orderItem)
                 .rating(request.rating())
                 .content(request.content())
                 .build();

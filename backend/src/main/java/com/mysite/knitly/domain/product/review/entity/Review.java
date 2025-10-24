@@ -1,5 +1,6 @@
 package com.mysite.knitly.domain.product.review.entity;
 
+import com.mysite.knitly.domain.order.entity.OrderItem;
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.user.entity.User;
 import jakarta.persistence.*;
@@ -35,6 +36,10 @@ public class Review {
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_item_id", nullable = false)
+    private OrderItem orderItem;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
