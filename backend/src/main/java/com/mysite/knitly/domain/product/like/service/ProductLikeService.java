@@ -40,8 +40,6 @@ public class ProductLikeService {
         redisTemplate.opsForSet().remove(redisKey, userKey);
 
         // DB 삭제는 항상 수행
-        productLikeRepository.deleteByUserIdAndProductId(userId, productId);
-
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
         rabbitTemplate.convertAndSend(EXCHANGE_NAME, DISLIKE_ROUTING_KEY, eventDto);
 

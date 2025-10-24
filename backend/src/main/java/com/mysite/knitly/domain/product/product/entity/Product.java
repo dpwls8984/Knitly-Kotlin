@@ -125,6 +125,21 @@ public class Product {
             images.forEach(image -> image.setProduct(this)); // 양방향 연관관계 설정
         }
     }
+
+    public void increaseLikeCount() {
+        if (this.likeCount == null) {
+            this.likeCount = 0;
+        }
+        this.likeCount += 1;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount == null || this.likeCount <= 0) {
+            this.likeCount = 0;
+        } else {
+            this.likeCount -= 1;
+        }
+    }
 }
 
 //CREATE TABLE `products` (

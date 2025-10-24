@@ -56,6 +56,8 @@ public class LikeEventConsumer {
                     .product(product)
                     .build();
 
+            product.increaseLikeCount();
+
             // 5. DB 저장
             productLikeRepository.save(productLike);
             log.info("Successfully saved like to DB: {}", productLikeId);
@@ -73,11 +75,26 @@ public class LikeEventConsumer {
     @RabbitListener(queues = DISLIKE_QUEUE_NAME)
     public void handleDislikeEvent(LikeEventRequest eventDto) {
         log.info("[handleDislikeEvent] received event: {}", eventDto);
-
         ProductLikeId productLikeId = new ProductLikeId(eventDto.userId(), eventDto.productId());
 
-        // existsById 제거
-        productLikeRepository.deleteById(productLikeId);
-        log.info("[handleDislikeEvent] ProductLike deleted (if existed): {}", productLikeId);
+        try {
+            if (productLikeRepository.existsById(productLikeId)) {
+
+                Product product = productRepository.findById(eventDto.productId())
+                        .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
+
+                product.decreaseLikeCount();
+
+                productLikeRepository.deleteById(productLikeId);
+
+                log.info("[handleDislikeEvent] ProductLike deleted and count decremented: {}", productLikeId);
+
+            } else {
+                log.warn("[handleDislikeEvent] ProductLike not found in DB, skipping: {}", productLikeId);
+            }
+        } catch (Exception e) {
+            log.error("[handleDislikeEvent] Error processing dislike event: {}", eventDto, e);
+            throw new AmqpRejectAndDontRequeueException("DB operation failed during dislike.", e);
+        }
     }
 }
