@@ -24,6 +24,15 @@ interface ProductDetails {
   isWishedByUser: boolean;
 }
 
+interface Review {
+  reviewId: number;
+  rating: number; // 1~5
+  content: string;
+  createdAt: string; // ISO 문자열
+  userName: string;
+  reviewImageUrls: string[];
+}
+
 // 2. Mock 데이터
 const mockProduct: ProductDetails = {
   id: 'prod-abc-123',
@@ -45,6 +54,34 @@ const mockProduct: ProductDetails = {
   isWishedByUser: false,
 };
 // ---
+const mockReviews: Review[] = [
+  {
+    reviewId: 1,
+    rating: 5,
+    content: '정말 부드럽고 따뜻한 스웨터에요! 도안도 따라하기 쉬워요.',
+    createdAt: '2023-10-10T14:32:00',
+    userName: 'Alice',
+    reviewImageUrls: ['https://placehold.co/150x150/925C4C/fff?text=Review1']
+  },
+  {
+    reviewId: 2,
+    rating: 4,
+    content: '디자인이 예쁘고 만족스럽습니다. 배송이 조금 늦었어요.',
+    createdAt: '2023-10-12T09:20:00',
+    userName: 'Bob',
+    reviewImageUrls: []
+  },
+  {
+    reviewId: 3,
+    rating: 3,
+    content: '실물이 사진보다 조금 작네요. 품질은 무난합니다.',
+    createdAt: '2023-10-15T17:45:00',
+    userName: 'Charlie',
+    reviewImageUrls: ['https://placehold.co/150x150/EAD9D5/000?text=Review3', 'https://placehold.co/150x150/D5E0EA/000?text=Review3-2']
+  },
+];
+
+
 
 /**
  * 찜(하트) 버튼 아이콘 SVG 컴포넌트
@@ -117,6 +154,26 @@ const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) =>
     <dd className="w-2/3 text-gray-900">{value}</dd>
   </div>
 );
+
+const ReviewItem = ({ review }: { review: Review }) => {
+  return (
+    <div className="border-b border-gray-200 py-4">
+      <div className="flex justify-between items-center mb-2">
+        <span className="font-semibold">{review.userName}</span>
+        <span className="text-yellow-500">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span>
+      </div>
+      <p className="text-gray-700 mb-2 whitespace-pre-wrap">{review.content}</p>
+      {review.reviewImageUrls.length > 0 && (
+        <div className="flex space-x-2 mt-2">
+          {review.reviewImageUrls.map((url, idx) => (
+            <img key={idx} src={url} alt={`리뷰 이미지 ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg" />
+          ))}
+        </div>
+      )}
+      <p className="text-gray-400 text-sm mt-1">{new Date(review.createdAt).toLocaleDateString()}</p>
+    </div>
+  );
+};
 
 
 // --- 제품 상세 페이지 메인 컴포넌트 ---
@@ -386,10 +443,12 @@ export default function ProductDetailPage() {
           
           {/* 리뷰 탭 */}
           {activeTab === 'review' && (
-            <div className="text-center py-10 text-gray-500">
-              {/* 요청하신 대로, 리뷰 탭은 비워둡니다. */}
-              <p>리뷰 섹션이 여기에 표시됩니다.</p>
-              <p>(현재는 구현 범위가 아닙니다.)</p>
+          <div>
+            {mockReviews.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">등록된 리뷰가 없습니다.</div>
+              ) : (
+                mockReviews.map((review) => <ReviewItem key={review.reviewId} review={review} />)
+              )}
             </div>
           )}
         </div>

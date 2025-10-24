@@ -1,0 +1,35 @@
+[
+    {
+      "productId": 101,
+      "productTitle": "따뜻한 겨울 스웨터",
+      "thumbnailUrl": "https://placehold.co/300x300/925C4C/fff?text=Product1",
+      "price": 15000,
+      "averageRating": 4.8,
+      "likedAt": "2023-10-12"
+    },
+    {
+      "productId": 102,
+      "productTitle": "포근한 가을 니트",
+      "thumbnailUrl": "https://placehold.co/300x300/EAD9D5/fff?text=Product2",
+      "price": 22000,
+      "averageRating": 4.5,
+      "likedAt": "2023-10-15"
+    },
+    {
+      "productId": 103,
+      "productTitle": "심플 캐시미어 머플러",
+      "thumbnailUrl": "https://placehold.co/300x300/D5E0EA/fff?text=Product3",
+      "price": 18000,
+      "averageRating": 4.2,
+      "likedAt": "2023-10-18"
+    },
+    {
+      "productId": 104,
+      "productTitle": "핸드메이드 울 장갑",
+      "thumbnailUrl": "https://placehold.co/300x300/925C4C/fff?text=Product4",
+      "price": 12000,
+      "averageRating": 4.7,
+      "likedAt": "2023-10-20"
+    }
+  ]
+  
