@@ -28,7 +28,7 @@ public class ProductWithThumbnailDto {
     /**
      * ProductListResponse로 변환
      */
-    public ProductListResponse toResponse() {
+    public ProductListResponse toResponse(boolean isLikedByUser) {
         return new ProductListResponse(
                 this.productId,
                 this.title,
@@ -36,6 +36,7 @@ public class ProductWithThumbnailDto {
                 this.price,
                 this.purchaseCount,
                 this.likeCount,
+                isLikedByUser,
                 this.stockQuantity,
                 this.avgReviewRating,
                 this.createdAt,

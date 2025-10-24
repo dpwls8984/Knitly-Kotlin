@@ -45,7 +45,7 @@ export default function LikesPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">내 찜 목록</h1>
+        <h2 className="text-[#925C4C] text-2xl font-bold mb-3">내 찜</h2>
 
         {loading ? (
           <div className="flex justify-center items-center h-64">

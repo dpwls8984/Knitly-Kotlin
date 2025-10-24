@@ -2,6 +2,7 @@ package com.mysite.knitly.domain.product.product.service;
 
 import com.mysite.knitly.domain.design.entity.Design;
 import com.mysite.knitly.domain.design.repository.DesignRepository;
+import com.mysite.knitly.domain.product.like.repository.ProductLikeRepository;
 import com.mysite.knitly.domain.product.product.dto.*;
 import com.mysite.knitly.domain.product.product.entity.*;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
@@ -27,6 +28,7 @@ public class ProductService {
     private final DesignRepository designRepository;
     private final RedisProductService redisProductService;
     private final FileStorageService fileStorageService;
+    private final ProductLikeRepository productLikeRepository;
 
     public ProductRegisterResponse registerProduct(User seller, Long designId, ProductRegisterRequest request) {
 
@@ -155,6 +157,7 @@ public class ProductService {
 
     // 상품 목록 조회
     public Page<ProductListResponse> getProducts(
+            User user, // 컨트롤러에서 받은 User 객체
             ProductCategory category,
             ProductFilterType filterType,
             ProductSortType sortType,
@@ -162,24 +165,47 @@ public class ProductService {
 
         ProductFilterType effectiveFilter = (filterType == null) ? ProductFilterType.ALL : filterType;
 
-        // 필터 우선순위: FREE/LIMITED면 카테고리 무시
         ProductCategory effectiveCategory =
                 (effectiveFilter == ProductFilterType.ALL) ? category : null;
 
+        Page<Product> productPage;
 
-        // 인기순은 Redis에서 처리
         if (sortType == ProductSortType.POPULAR) {
-            return getProductsByPopular(effectiveCategory, effectiveFilter, pageable)
-                    .map(ProductListResponse::from);
+            productPage = getProductsByPopular(effectiveCategory, effectiveFilter, pageable);
+        } else {
+            Pageable sortedPageable = createPageable(pageable, sortType);
+            productPage = getFilteredProducts(effectiveCategory, effectiveFilter, sortedPageable);
         }
 
-        // 정렬 조건 생성
-        Pageable sortedPageable = createPageable(pageable, sortType);
+        // '좋아요' 누른 상품 ID 목록을 한 번에 조회
+        Set<Long> likedProductIds = getLikedProductIds(user, productPage.getContent());
 
-        // 조회 조건에 따라 분기
-        Page<Product> page = getFilteredProducts(effectiveCategory, effectiveFilter, sortedPageable);
+        // DTO의 from(Product, boolean) 메서드를 사용하여 변환
+        return productPage.map(product ->
+                ProductListResponse.from(
+                        product,
+                        likedProductIds.contains(product.getProductId())
+                )
+        );
+    }
 
-        return page.map(ProductListResponse::from);
+    private Set<Long> getLikedProductIds(User user, List<Product> products) {
+        // 1. 비로그인 사용자이거나 상품 목록이 비어있으면 빈 Set 반환
+        if (user == null || products.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        // 2. 상품 ID 목록 추출
+        List<Long> productIds = products.stream()
+                .map(Product::getProductId)
+                .toList();
+
+        // 3. [수정] 제공된 레포지토리의 메서드명과 User의 ID 필드명(userId)을 사용
+        //    (user.getId() -> user.getUserId()로 가정)
+        return productLikeRepository.findLikedProductIdsByUserId(
+                user.getUserId(), // user.userId 필드에 접근
+                productIds
+        );
     }
 
 
@@ -274,7 +300,9 @@ public class ProductService {
         Page<ProductWithThumbnailDto> dtoPage = productRepository.findByUserIdWithThumbnail(userId, pageable);
 
         // DTO -> Response 변환
-        Page<ProductListResponse> responsePage = dtoPage.map(ProductWithThumbnailDto::toResponse);
+        Page<ProductListResponse> responsePage = dtoPage.map(
+                dto -> dto.toResponse(true) // 찜한 목록이므로 isLikedByUser = true
+        );
 
         return responsePage;
     }
@@ -328,7 +356,7 @@ public class ProductService {
 
     // 상품 상세 조회 로직 추가
     @Transactional(readOnly = true) // 데이터를 읽기만 하므로 readOnly=true로 성능 최적화
-    public ProductDetailResponse getProductDetail(Long productId) {
+    public ProductDetailResponse getProductDetail(User user, Long productId) {
         // N+1 방지를 위해 User, Design 등 연관 정보를 함께 가져오는 것이 좋음
         Product product = productRepository.findProductDetailById(productId) // 예시 메서드
                 .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
@@ -342,6 +370,13 @@ public class ProductService {
                 .map(ProductImage::getProductImageUrl)
                 .collect(Collectors.toList());
 
-        return ProductDetailResponse.from(product, imageUrls);
+        boolean isLiked = false;
+        if (user != null) {
+            Long userId = user.getUserId();
+
+            isLiked = productLikeRepository.existsByUser_UserIdAndProduct_ProductId(userId, productId);
+        }
+
+        return ProductDetailResponse.from(product, imageUrls, isLiked);
     }
 }

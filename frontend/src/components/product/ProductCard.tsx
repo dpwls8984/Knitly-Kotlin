@@ -2,15 +2,25 @@
 
 import { useRouter } from 'next/navigation';
 import { ProductListResponse } from '@/types/product.types';
+import { useState, useEffect } from 'react';
+import { addLike, removeFavorite } from '@/lib/api/like.api';
 
 interface ProductCardProps {
   product: ProductListResponse;
-  onLikeToggle: (productId: number) => void;
 }
 
-export default function ProductCard({ product, onLikeToggle }: ProductCardProps) {
+export default function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
   const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
+  const [isLiked, setIsLiked] = useState(product.isLikedByUser);
+  const [likeCount, setLikeCount] = useState(product.likeCount);
+  const [isLiking, setIsLiking] = useState(false);
+
+  useEffect(() => {
+    setIsLiked(product.isLikedByUser);
+    setLikeCount(product.likeCount);
+  }, [product.isLikedByUser, product.likeCount]);
 
   const handleCardClick = () => {
     router.push(`/product/${product.productId}`);
@@ -23,10 +33,34 @@ export default function ProductCard({ product, onLikeToggle }: ProductCardProps)
     alert('판매자 스토어 페이지로 이동합니다. (구현 예정)');
   };
 
-  const handleLikeClick = (e: React.MouseEvent) => {
+  const handleLikeClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onLikeToggle(product.productId);
+    if (isLiking) return;
+    setIsLiking(true);
+
+    const originalIsLiked = isLiked;
+    const originalLikeCount = likeCount;
+
+    setIsLiked((prev) => !prev);
+    setLikeCount((prevCount) => (originalIsLiked ? prevCount - 1 : prevCount + 1));
+    
+    try {
+      // 6. 상태에 따라 API 호출
+      if (originalIsLiked) {
+        await removeFavorite(product.productId);
+      } else {
+        await addLike(product.productId);
+      }
+    } catch (error) {
+      console.error('찜 처리 실패:', error);
+      // 7. API 호출 실패 시 UI 롤백
+      setIsLiked(originalIsLiked);
+      setLikeCount(originalLikeCount);
+      alert('찜 상태 변경에 실패했습니다.');
+    } finally {
+      setIsLiking(false); // 로딩 상태 해제
+    }
   };
 
   return (
@@ -72,10 +106,11 @@ export default function ProductCard({ product, onLikeToggle }: ProductCardProps)
           <button
             onClick={handleLikeClick}
             className="flex-shrink-0"
+            disabled={isLiking}
           >
             <svg
-              className="w-5 h-5 text-gray-400"
-              fill="none"
+              className={`w-5 h-5 ${isLiked ? 'text-[#925C4C]' : 'text-gray-400'}`}
+              fill={isLiked ? 'currentColor' : 'none'}
               stroke="currentColor"
               viewBox="0 0 24 24"
             >

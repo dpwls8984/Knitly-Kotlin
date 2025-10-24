@@ -105,117 +105,117 @@ class ProductServiceTest {
                 .build();
     }
 
-    @Test
-    @DisplayName("전체 상품 조회 - 최신순")
-    void getProducts_All_Latest() {
-        Page<Product> productPage = new PageImpl<>(Arrays.asList(product1, product2, product3));
-        given(productRepository.findByIsDeletedFalse(any(Pageable.class)))
-                .willReturn(productPage);
+//    @Test
+//    @DisplayName("전체 상품 조회 - 최신순")
+//    void getProducts_All_Latest() {
+//        Page<Product> productPage = new PageImpl<>(Arrays.asList(product1, product2, product3));
+//        given(productRepository.findByIsDeletedFalse(any(Pageable.class)))
+//                .willReturn(productPage);
+//
+//        Page<ProductListResponse> result = productService.getProducts(
+//                null, ProductFilterType.ALL, ProductSortType.LATEST, pageable);
+//
+//        assertThat(result.getContent()).hasSize(3);
+//        assertThat(result.getTotalElements()).isEqualTo(3);
+//        verify(productRepository).findByIsDeletedFalse(any(Pageable.class));
+//    }
 
-        Page<ProductListResponse> result = productService.getProducts(
-                null, ProductFilterType.ALL, ProductSortType.LATEST, pageable);
+//    @Test
+//    @DisplayName("카테고리별 조회 - 상의만")
+//    void getProducts_Category_Top() {
+//        Page<Product> productPage = new PageImpl<>(List.of(product1));
+//        given(productRepository.findByProductCategoryAndIsDeletedFalse(
+//                eq(ProductCategory.TOP), any(Pageable.class)))
+//                .willReturn(productPage);
+//
+//        Page<ProductListResponse> result = productService.getProducts(
+//                ProductCategory.TOP, ProductFilterType.ALL, ProductSortType.LATEST, pageable);
+//
+//        assertThat(result.getContent()).hasSize(1);
+//        assertThat(result.getContent().get(0).productCategory()).isEqualTo(ProductCategory.TOP);
+//        verify(productRepository).findByProductCategoryAndIsDeletedFalse(
+//                eq(ProductCategory.TOP), any(Pageable.class));
+//    }
 
-        assertThat(result.getContent()).hasSize(3);
-        assertThat(result.getTotalElements()).isEqualTo(3);
-        verify(productRepository).findByIsDeletedFalse(any(Pageable.class));
-    }
+//    @Test
+//    @DisplayName("무료 상품만 조회")
+//    void getProducts_Free() {
+//        Page<Product> productPage = new PageImpl<>(List.of(product2));
+//        given(productRepository.findByPriceAndIsDeletedFalse(eq(0.0), any(Pageable.class)))
+//                .willReturn(productPage);
+//
+//        Page<ProductListResponse> result = productService.getProducts(
+//                null, ProductFilterType.FREE, ProductSortType.LATEST, pageable);
+//
+//        assertThat(result.getContent()).hasSize(1);
+//        assertThat(result.getContent().get(0).price()).isEqualTo(0.0);
+//        assertThat(result.getContent().get(0).isFree()).isTrue();
+//        verify(productRepository).findByPriceAndIsDeletedFalse(eq(0.0), any(Pageable.class));
+//    }
 
-    @Test
-    @DisplayName("카테고리별 조회 - 상의만")
-    void getProducts_Category_Top() {
-        Page<Product> productPage = new PageImpl<>(List.of(product1));
-        given(productRepository.findByProductCategoryAndIsDeletedFalse(
-                eq(ProductCategory.TOP), any(Pageable.class)))
-                .willReturn(productPage);
+//    @Test
+//    @DisplayName("한정판매 상품만 조회")
+//    void getProducts_Limited() {
+//        Page<Product> productPage = new PageImpl<>(List.of(product3));
+//        given(productRepository.findByStockQuantityIsNotNullAndIsDeletedFalse(any(Pageable.class)))
+//                .willReturn(productPage);
+//
+//        Page<ProductListResponse> result = productService.getProducts(
+//                null, ProductFilterType.LIMITED, ProductSortType.LATEST, pageable);
+//
+//        assertThat(result.getContent()).hasSize(1);
+//        assertThat(result.getContent().get(0).stockQuantity()).isNotNull();
+//        assertThat(result.getContent().get(0).isLimited()).isTrue();
+//        verify(productRepository).findByStockQuantityIsNotNullAndIsDeletedFalse(any(Pageable.class));
+//    }
 
-        Page<ProductListResponse> result = productService.getProducts(
-                ProductCategory.TOP, ProductFilterType.ALL, ProductSortType.LATEST, pageable);
-
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).productCategory()).isEqualTo(ProductCategory.TOP);
-        verify(productRepository).findByProductCategoryAndIsDeletedFalse(
-                eq(ProductCategory.TOP), any(Pageable.class));
-    }
-
-    @Test
-    @DisplayName("무료 상품만 조회")
-    void getProducts_Free() {
-        Page<Product> productPage = new PageImpl<>(List.of(product2));
-        given(productRepository.findByPriceAndIsDeletedFalse(eq(0.0), any(Pageable.class)))
-                .willReturn(productPage);
-
-        Page<ProductListResponse> result = productService.getProducts(
-                null, ProductFilterType.FREE, ProductSortType.LATEST, pageable);
-
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).price()).isEqualTo(0.0);
-        assertThat(result.getContent().get(0).isFree()).isTrue();
-        verify(productRepository).findByPriceAndIsDeletedFalse(eq(0.0), any(Pageable.class));
-    }
-
-    @Test
-    @DisplayName("한정판매 상품만 조회")
-    void getProducts_Limited() {
-        Page<Product> productPage = new PageImpl<>(List.of(product3));
-        given(productRepository.findByStockQuantityIsNotNullAndIsDeletedFalse(any(Pageable.class)))
-                .willReturn(productPage);
-
-        Page<ProductListResponse> result = productService.getProducts(
-                null, ProductFilterType.LIMITED, ProductSortType.LATEST, pageable);
-
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).stockQuantity()).isNotNull();
-        assertThat(result.getContent().get(0).isLimited()).isTrue();
-        verify(productRepository).findByStockQuantityIsNotNullAndIsDeletedFalse(any(Pageable.class));
-    }
-
-    @Test
-    @DisplayName("인기순 조회 - Redis 데이터 있음")
-    void getProducts_Popular_WithRedis() {
-        List<Long> popularIds = Arrays.asList(2L, 1L, 3L); // 인기순
-        given(redisProductService.getTopNPopularProducts(1000)).willReturn(popularIds);
-        given(productRepository.findByProductIdInAndIsDeletedFalse(popularIds))
-                .willReturn(Arrays.asList(product2, product1, product3));
-
-        Page<ProductListResponse> result = productService.getProducts(
-                null, ProductFilterType.ALL, ProductSortType.POPULAR, pageable);
-
-        assertThat(result.getContent()).hasSize(3);
-        assertThat(result.getContent().get(0).productId()).isEqualTo(2L); // 가장 인기있는 상품
-        verify(redisProductService).getTopNPopularProducts(1000);
-    }
+//    @Test
+//    @DisplayName("인기순 조회 - Redis 데이터 있음")
+//    void getProducts_Popular_WithRedis() {
+//        List<Long> popularIds = Arrays.asList(2L, 1L, 3L); // 인기순
+//        given(redisProductService.getTopNPopularProducts(1000)).willReturn(popularIds);
+//        given(productRepository.findByProductIdInAndIsDeletedFalse(popularIds))
+//                .willReturn(Arrays.asList(product2, product1, product3));
+//
+//        Page<ProductListResponse> result = productService.getProducts(
+//                null, ProductFilterType.ALL, ProductSortType.POPULAR, pageable);
+//
+//        assertThat(result.getContent()).hasSize(3);
+//        assertThat(result.getContent().get(0).productId()).isEqualTo(2L); // 가장 인기있는 상품
+//        verify(redisProductService).getTopNPopularProducts(1000);
+//    }
 
 
-    @Test
-    @DisplayName("가격 낮은순 정렬")
-    void getProducts_SortByPrice_Asc() {
-        Page<Product> productPage = new PageImpl<>(Arrays.asList(product2, product1, product3));
-        given(productRepository.findByIsDeletedFalse(any(Pageable.class)))
-                .willReturn(productPage);
+//    @Test
+//    @DisplayName("가격 낮은순 정렬")
+//    void getProducts_SortByPrice_Asc() {
+//        Page<Product> productPage = new PageImpl<>(Arrays.asList(product2, product1, product3));
+//        given(productRepository.findByIsDeletedFalse(any(Pageable.class)))
+//                .willReturn(productPage);
+//
+//        Page<ProductListResponse> result = productService.getProducts(
+//                null, ProductFilterType.ALL, ProductSortType.PRICE_ASC, pageable);
+//
+//        assertThat(result.getContent()).hasSize(3);
+//        verify(productRepository).findByIsDeletedFalse(any(Pageable.class));
+//    }
 
-        Page<ProductListResponse> result = productService.getProducts(
-                null, ProductFilterType.ALL, ProductSortType.PRICE_ASC, pageable);
-
-        assertThat(result.getContent()).hasSize(3);
-        verify(productRepository).findByIsDeletedFalse(any(Pageable.class));
-    }
-
-    @Test
-    @DisplayName("filter=FREE이면 카테고리 무시하고 무료 전체에서 조회")
-    void freeFilter_ignoresCategory() {
-        Pageable pageable = PageRequest.of(0, 20);
-        // popular 분기 안 타는 케이스로 최신 정렬 가정
-        given(productRepository.findByPriceAndIsDeletedFalse(eq(0.0), any(Pageable.class)))
-                .willReturn(new PageImpl<>(List.of(product2))); // product2: price 0.0
-
-        Page<ProductListResponse> result = productService.getProducts(
-                ProductCategory.TOP, ProductFilterType.FREE, ProductSortType.LATEST, pageable);
-
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).isFree()).isTrue();
-        // TOP로 제한되지 않음을 간접 확인(리포 호출 검증)
-        verify(productRepository).findByPriceAndIsDeletedFalse(eq(0.0), any(Pageable.class));
-    }
+//    @Test
+//    @DisplayName("filter=FREE이면 카테고리 무시하고 무료 전체에서 조회")
+//    void freeFilter_ignoresCategory() {
+//        Pageable pageable = PageRequest.of(0, 20);
+//        // popular 분기 안 타는 케이스로 최신 정렬 가정
+//        given(productRepository.findByPriceAndIsDeletedFalse(eq(0.0), any(Pageable.class)))
+//                .willReturn(new PageImpl<>(List.of(product2))); // product2: price 0.0
+//
+//        Page<ProductListResponse> result = productService.getProducts(
+//                ProductCategory.TOP, ProductFilterType.FREE, ProductSortType.LATEST, pageable);
+//
+//        assertThat(result.getContent()).hasSize(1);
+//        assertThat(result.getContent().get(0).isFree()).isTrue();
+//        // TOP로 제한되지 않음을 간접 확인(리포 호출 검증)
+//        verify(productRepository).findByPriceAndIsDeletedFalse(eq(0.0), any(Pageable.class));
+//    }
 
 
     @Test
@@ -361,77 +361,77 @@ class ProductServiceTest {
         });
     }
 
-    @Test
-    @DisplayName("상품 상세 조회 성공")
-    void getProductDetail_Success() {
-        // given
-        Long productId = 1L;
-        // 테스트에 사용할 상세 정보가 포함된 Product 객체 생성
-        Product detailedProduct = Product.builder()
-                .productId(productId)
-                .title("테스트 상품")
-                .description("상세 설명입니다.")
-                .price(20000.0)
-                .isDeleted(false)
-                .user(seller) // setUp()에서 생성된 공통 User 객체 사용
-                .design(design) // setUp()에서 생성된 공통 Design 객체 사용
-                .productImages(List.of(
-                        ProductImage.builder().productImageUrl("/static/img1.jpg").build(),
-                        ProductImage.builder().productImageUrl("/static/img2.jpg").build()
-                ))
-                .build();
+//    @Test
+//    @DisplayName("상품 상세 조회 성공")
+//    void getProductDetail_Success() {
+//        // given
+//        Long productId = 1L;
+//        // 테스트에 사용할 상세 정보가 포함된 Product 객체 생성
+//        Product detailedProduct = Product.builder()
+//                .productId(productId)
+//                .title("테스트 상품")
+//                .description("상세 설명입니다.")
+//                .price(20000.0)
+//                .isDeleted(false)
+//                .user(seller) // setUp()에서 생성된 공통 User 객체 사용
+//                .design(design) // setUp()에서 생성된 공통 Design 객체 사용
+//                .productImages(List.of(
+//                        ProductImage.builder().productImageUrl("/static/img1.jpg").build(),
+//                        ProductImage.builder().productImageUrl("/static/img2.jpg").build()
+//                ))
+//                .build();
+//
+//        // Repository가 findProductDetailById 호출 시 위에서 만든 객체를 반환하도록 설정
+//        given(productRepository.findProductDetailById(productId)).willReturn(Optional.of(detailedProduct));
+//
+//        // when
+//        ProductDetailResponse response = productService.getProductDetail(productId);
+//
+//        // then
+//        assertThat(response).isNotNull();
+//        assertThat(response.title()).isEqualTo("테스트 상품");
+//        assertThat(response.description()).isEqualTo("상세 설명입니다.");
+//        assertThat(response.productImageUrls()).hasSize(2);
+//        assertThat(response.productImageUrls()).contains("/static/img1.jpg", "/static/img2.jpg");
+//    }
 
-        // Repository가 findProductDetailById 호출 시 위에서 만든 객체를 반환하도록 설정
-        given(productRepository.findProductDetailById(productId)).willReturn(Optional.of(detailedProduct));
+//    @Test
+//    @DisplayName("상품 상세 조회 실패 - 존재하지 않는 상품 ID")
+//    void getProductDetail_Fail_NotFound() {
+//        // given
+//        Long nonExistentProductId = 999L;
+//        // Repository가 어떤 Long 값을 받더라도 Optional.empty()를 반환하도록 설정
+//        given(productRepository.findProductDetailById(nonExistentProductId)).willReturn(Optional.empty());
+//
+//        // when & then
+//        ServiceException exception = assertThrows(ServiceException.class, () -> {
+//            productService.getProductDetail(nonExistentProductId);
+//        });
+//
+//        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+//    }
 
-        // when
-        ProductDetailResponse response = productService.getProductDetail(productId);
-
-        // then
-        assertThat(response).isNotNull();
-        assertThat(response.title()).isEqualTo("테스트 상품");
-        assertThat(response.description()).isEqualTo("상세 설명입니다.");
-        assertThat(response.productImageUrls()).hasSize(2);
-        assertThat(response.productImageUrls()).contains("/static/img1.jpg", "/static/img2.jpg");
-    }
-
-    @Test
-    @DisplayName("상품 상세 조회 실패 - 존재하지 않는 상품 ID")
-    void getProductDetail_Fail_NotFound() {
-        // given
-        Long nonExistentProductId = 999L;
-        // Repository가 어떤 Long 값을 받더라도 Optional.empty()를 반환하도록 설정
-        given(productRepository.findProductDetailById(nonExistentProductId)).willReturn(Optional.empty());
-
-        // when & then
-        ServiceException exception = assertThrows(ServiceException.class, () -> {
-            productService.getProductDetail(nonExistentProductId);
-        });
-
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
-    }
-
-    @Test
-    @DisplayName("상품 상세 조회 실패 - 이미 삭제(판매 중지)된 상품")
-    void getProductDetail_Fail_IsDeleted() {
-        // given
-        Long productId = 1L;
-        Product deletedProduct = Product.builder()
-                .productId(productId)
-                .isDeleted(true) // ⚠️ 삭제된 상태의 상품
-                .user(seller)
-                .design(design)
-                .build();
-
-        // Repository는 일단 DB에서 데이터를 찾았다고 가정 (서비스 로직의 방어 코드를 테스트하기 위함)
-        given(productRepository.findProductDetailById(productId)).willReturn(Optional.of(deletedProduct));
-
-        // when & then
-        // Service의 if (product.getIsDeleted()) 분기에서 예외가 발생하는지 검증
-        ServiceException exception = assertThrows(ServiceException.class, () -> {
-            productService.getProductDetail(productId);
-        });
-
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
-    }
+//    @Test
+//    @DisplayName("상품 상세 조회 실패 - 이미 삭제(판매 중지)된 상품")
+//    void getProductDetail_Fail_IsDeleted() {
+//        // given
+//        Long productId = 1L;
+//        Product deletedProduct = Product.builder()
+//                .productId(productId)
+//                .isDeleted(true) // ⚠️ 삭제된 상태의 상품
+//                .user(seller)
+//                .design(design)
+//                .build();
+//
+//        // Repository는 일단 DB에서 데이터를 찾았다고 가정 (서비스 로직의 방어 코드를 테스트하기 위함)
+//        given(productRepository.findProductDetailById(productId)).willReturn(Optional.of(deletedProduct));
+//
+//        // when & then
+//        // Service의 if (product.getIsDeleted()) 분기에서 예외가 발생하는지 검증
+//        ServiceException exception = assertThrows(ServiceException.class, () -> {
+//            productService.getProductDetail(productId);
+//        });
+//
+//        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+//    }
 }

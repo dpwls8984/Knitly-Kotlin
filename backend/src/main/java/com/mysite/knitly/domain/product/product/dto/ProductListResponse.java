@@ -12,6 +12,9 @@ public record ProductListResponse(
         Double price,
         Integer purchaseCount,
         Integer likeCount,
+
+        boolean isLikedByUser,
+
         Integer stockQuantity,
         Double avgReviewRating,
         LocalDateTime createdAt,
@@ -21,7 +24,7 @@ public record ProductListResponse(
         Boolean isSoldOut   // 품절 여부 (stockQuantity = 0)
 ) {
     // from 메서드는 그대로 유지하거나, 정적 팩토리 메서드로 변경할 수 있습니다.
-    public static ProductListResponse from(Product product) {
+    public static ProductListResponse from(Product product, boolean isLikedByUser) {
         // record는 생성자를 통해 필드를 초기화합니다.
         return new ProductListResponse(
                 product.getProductId(),
@@ -30,6 +33,7 @@ public record ProductListResponse(
                 product.getPrice(),
                 product.getPurchaseCount(),
                 product.getLikeCount(),
+                isLikedByUser,
                 product.getStockQuantity(),
                 product.getAvgReviewRating(),
                 product.getCreatedAt(),

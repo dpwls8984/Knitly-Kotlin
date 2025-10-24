@@ -5,8 +5,10 @@ import com.mysite.knitly.domain.product.product.dto.ProductListResponse;
 import com.mysite.knitly.domain.home.dto.HomeSummaryResponse;
 import com.mysite.knitly.domain.home.dto.LatestPostItem;
 import com.mysite.knitly.domain.home.dto.LatestReviewItem;
+import com.mysite.knitly.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,8 +23,10 @@ public class HomeController {
 
     // 메인화면: 인기 상품 Top5
     @GetMapping("/popular/top5")
-    public ResponseEntity<List<ProductListResponse>> popularTop5() {
-        return ResponseEntity.ok(homeSectionService.getPopularTop5());
+    public ResponseEntity<List<ProductListResponse>> popularTop5(
+            @AuthenticationPrincipal User user
+    ) {
+        return ResponseEntity.ok(homeSectionService.getPopularTop5(user));
     }
     // 추가: 최신 리뷰
     @GetMapping("/latest/reviews")
@@ -38,7 +42,9 @@ public class HomeController {
 
     // 추가: 홈 요약 (한 번 호출로 3섹션 모두)
     @GetMapping("/summary")
-    public ResponseEntity<HomeSummaryResponse> summary() {
-        return ResponseEntity.ok(homeSectionService.getHomeSummary());
+    public ResponseEntity<HomeSummaryResponse> summary(
+            @AuthenticationPrincipal User user
+    ) {
+        return ResponseEntity.ok(homeSectionService.getHomeSummary(user));
     }
 }

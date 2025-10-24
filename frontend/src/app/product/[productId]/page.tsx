@@ -173,6 +173,8 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState<'info' | 'size' | 'review'>('info');
   // ---
 
+  const [isWishLoading, setIsWishLoading] = useState(false);
+
   // 리뷰 데이터와 리뷰 탭 전용 로딩 상태
   const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
   const [isReviewLoading, setIsReviewLoading] = useState(false);
@@ -258,42 +260,31 @@ export default function ProductDetailPage() {
 
   // (기능 4) 찜 버튼 핸들러
   const handleWishClick = async () => {
-    // (가정) 로그인 상태 확인 로직 (필요시 추가)
-    // if (!isLoggedIn) {
-    //   router.push('/login');
-    //   return;
-    // }
+    if (!productId || isWishLoading) return;
 
-    if (!productId) return;
-    
-    // 1. 현재 상태를 미리 저장 (롤백 대비)
+    setIsWishLoading(true); // 찜 처리 시작
     const originalIsWished = isWished;
-        
-     // 2. 즉각적인 UI 반응 (Optimistic Update)
+
     setIsWished((prev) => !prev);
-    // (찜 개수는 요청대로 수정합니다 - 유저가 냅두라고 한 건 이 로직 자체를 냅두라는 의미로 파악)
     setWishCount((prevCount) => (originalIsWished ? prevCount - 1 : prevCount + 1));
-    
+
     try {
-      // 3. API 호출
       if (originalIsWished) {
-        // [찜 취소] : 원래 찜 되어 있었다면 -> 취소 API 호출
         await removeFavorite(Number(productId));
       } else {
-          // [찜 등록] : 원래 찜 안되어 있었다면 -> 등록 API 호출
           await addLike(Number(productId));
       }
           
-      } catch (error) {
-          // 4. API 호출 실패 시
-          console.error('찜 처리 실패:', error);
-          alert('찜 상태 변경에 실패했습니다. 다시 시도해 주세요.');
-          
-          // [롤백] UI를 원래 상태로 되돌림
-          setIsWished(originalIsWished);
-          setWishCount((prevCount) => (originalIsWished ? prevCount + 1 : prevCount - 1));
-        }
-    };
+    } catch (error) {
+        console.error('찜 처리 실패:', error);
+        alert('찜 상태 변경에 실패했습니다. 다시 시도해 주세요.');
+        
+        setIsWished(originalIsWished);
+        setWishCount((prevCount) => (originalIsWished ? prevCount + 1 : prevCount - 1));
+    } finally {
+      setIsWishLoading(false); // 찜 처리 완료 (성공/실패 무관)
+    }
+};
   
   // (기능 5) 장바구니 / 구매하기 핸들러
   const handleAddToCart = () => {
@@ -408,6 +399,7 @@ export default function ProductDetailPage() {
                   onClick={handleWishClick}
                   className="p-3 rounded-full hover:bg-gray-100 transition-colors"
                   aria-label="찜하기"
+                  disabled={isWishLoading}
                 >
                   <HeartIcon filled={isWished} />
                 </button>
