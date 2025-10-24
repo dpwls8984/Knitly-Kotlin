@@ -11,6 +11,5 @@ public record ReviewListItem(
         Integer rating,
         String content,
         List<String> reviewImageUrls,// 프론트에서 접기/펼치기
-        LocalDate createdDate,
-        LocalDate purchasedDate
+        LocalDate createdDate
 ) {}

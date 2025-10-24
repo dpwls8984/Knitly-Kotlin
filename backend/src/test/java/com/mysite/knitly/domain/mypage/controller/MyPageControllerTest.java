@@ -2,6 +2,7 @@ package com.mysite.knitly.domain.mypage.controller;
 
 import com.mysite.knitly.domain.mypage.dto.*;
 import com.mysite.knitly.domain.mypage.service.MyPageService;
+import com.mysite.knitly.domain.payment.service.PaymentService;
 import com.mysite.knitly.domain.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,11 +33,12 @@ class MyPageControllerTest {
     private MockMvc mvc;
     private MyPageService service;
     private User principal;
+    private PaymentService paymentService;
 
     @BeforeEach
     void setUp() {
         service = Mockito.mock(MyPageService.class);
-        MyPageController controller = new MyPageController(service);
+        MyPageController controller = new MyPageController(service, paymentService);
 
         HandlerMethodArgumentResolver forceUserResolver = new HandlerMethodArgumentResolver() {
             @Override

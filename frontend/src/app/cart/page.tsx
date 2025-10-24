@@ -232,7 +232,153 @@ export default function CartPage() {
 
   // 장바구니 로딩
   if (isLoading) {
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+}
+
+export default function CartPage() {
+  const router = useRouter();
+  const [cartItems, setCartItems] = useState<CartItem[]>([
+    {
+      id: '1',
+      name: '도안 상품 1',
+      price: 15000,
+      quantity: 1,
+      image: '/logo.png'
+    },
+    {
+      id: '2',
+      name: '도안 상품 2',
+      price: 25000,
+      quantity: 2,
+      image: '/logo.png'
+    }
+  ]);
+
+  const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  const handleQuantityChange = (id: string, newQuantity: number) => {
+    if (newQuantity <= 0) return;
+
+    setCartItems(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, quantity: newQuantity } : item
+      )
+    );
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setCartItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleOrder = () => {
+    // 장바구니 데이터를 localStorage에 저장하고 주문 페이지로 이동
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    router.push('/order');
+  };
+
+  if (cartItems.length === 0) {
     return (
+      <div className="max-w-4xl mx-auto p-6">
+        <h1 className="text-2xl font-bold mb-6">장바구니</h1>
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-6xl mb-4">🛒</div>
+          <h2 className="text-xl font-semibold text-gray-600 mb-2">장바구니가 비어있습니다</h2>
+          <p className="text-gray-500 mb-6">원하는 상품을 장바구니에 담아보세요.</p>
+          <Link
+            href="/product"
+            className="inline-block bg-[#925C4C] text-white px-6 py-3 rounded-md hover:bg-[#7a4a3a] font-semibold"
+          >
+            쇼핑 계속하기
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">장바구니</h1>
+
+      <div className="space-y-4">
+        {cartItems.map((item) => (
+          <div key={item.id} className="flex items-center space-x-4 p-4 border rounded-lg">
+            <img
+              src={item.image || '/logo.png'}
+              alt={item.name}
+              className="w-20 h-20 object-cover rounded"
+            />
+            <div className="flex-1">
+              <h3 className="font-medium text-lg">{item.name}</h3>
+              <p className="text-gray-600">개당 {item.price.toLocaleString()}원</p>
+            </div>
+
+            {/* 수량 조절 */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+              >
+                -
+              </button>
+              <span className="w-8 text-center">{item.quantity}</span>
+              <button
+                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+              >
+                +
+              </button>
+            </div>
+
+            <div className="text-right">
+              <p className="font-semibold text-lg">{(item.price * item.quantity).toLocaleString()}원</p>
+            </div>
+
+            <button
+              onClick={() => handleRemoveItem(item.id)}
+              className="text-red-500 hover:text-red-700 p-2"
+            >
+              🗑️
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* 총 금액 및 주문 버튼 */}
+      <div className="mt-8 p-6 bg-gray-50 rounded-lg">
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-lg font-semibold">총 결제금액</span>
+          <span className="text-2xl font-bold text-[#925C4C]">{totalAmount.toLocaleString()}원</span>
+        </div>
+
+        <div className="flex space-x-4">
+          <Link
+            href="/product"
+            className="flex-1 bg-gray-200 text-gray-800 text-center py-3 px-6 rounded-md hover:bg-gray-300 font-semibold"
+          >
+            쇼핑 계속하기
+          </Link>
+          <button
+            onClick={handleOrder}
+            className="flex-1 bg-[#925C4C] text-white py-3 px-6 rounded-md hover:bg-[#7a4a3a] font-semibold"
+          >
+            주문하기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
       <div className="flex justify-center items-center min-h-[60vh]">
         <p>장바구니를 불러오는 중...</p>
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#925C4C] ml-3"></div>

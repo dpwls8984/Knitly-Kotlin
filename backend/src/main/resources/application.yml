@@ -14,7 +14,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     properties:
       hibernate:
         format_sql: true
@@ -127,3 +127,7 @@ custom:
 frontend:
   url: ${FRONT_URL} # 개발 환경
   # url: https://www.myapp.com  # 프로덕션 환경
+# --- toss 연동 ---
+payment:
+  toss:
+    secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6

@@ -3,6 +3,11 @@
 // Next.js 및 React에서 필요한 훅들을 임포트합니다.
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+import { getProductReviews } from '@/lib/api/review.api';
+import { ProductReviewItem, PageResponse } from '@/types/review.types';
+import { addLike, removeFavorite } from '@/lib/api/like.api';
+
 import Link from 'next/link';
 
 // --- 백엔드 주니어님께 ---
@@ -22,15 +27,6 @@ interface ProductDetails {
   size: string;
   initialWishCount: number;
   isWishedByUser: boolean;
-}
-
-interface Review {
-  reviewId: number;
-  rating: number; // 1~5
-  content: string;
-  createdAt: string; // ISO 문자열
-  userName: string;
-  reviewImageUrls: string[];
 }
 
 // 2. Mock 데이터
@@ -53,35 +49,6 @@ const mockProduct: ProductDetails = {
   initialWishCount: 999,
   isWishedByUser: false,
 };
-// ---
-const mockReviews: Review[] = [
-  {
-    reviewId: 1,
-    rating: 5,
-    content: '정말 부드럽고 따뜻한 스웨터에요! 도안도 따라하기 쉬워요.',
-    createdAt: '2023-10-10T14:32:00',
-    userName: 'Alice',
-    reviewImageUrls: ['https://placehold.co/150x150/925C4C/fff?text=Review1']
-  },
-  {
-    reviewId: 2,
-    rating: 4,
-    content: '디자인이 예쁘고 만족스럽습니다. 배송이 조금 늦었어요.',
-    createdAt: '2023-10-12T09:20:00',
-    userName: 'Bob',
-    reviewImageUrls: []
-  },
-  {
-    reviewId: 3,
-    rating: 3,
-    content: '실물이 사진보다 조금 작네요. 품질은 무난합니다.',
-    createdAt: '2023-10-15T17:45:00',
-    userName: 'Charlie',
-    reviewImageUrls: ['https://placehold.co/150x150/EAD9D5/000?text=Review3', 'https://placehold.co/150x150/D5E0EA/000?text=Review3-2']
-  },
-];
-
-
 
 /**
  * 찜(하트) 버튼 아이콘 SVG 컴포넌트
@@ -155,24 +122,32 @@ const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) =>
   </div>
 );
 
-const ReviewItem = ({ review }: { review: Review }) => {
-  return (
-    <div className="border-b border-gray-200 py-4">
-      <div className="flex justify-between items-center mb-2">
-        <span className="font-semibold">{review.userName}</span>
-        <span className="text-yellow-500">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span>
-      </div>
-      <p className="text-gray-700 mb-2 whitespace-pre-wrap">{review.content}</p>
-      {review.reviewImageUrls.length > 0 && (
-        <div className="flex space-x-2 mt-2">
-          {review.reviewImageUrls.map((url, idx) => (
-            <img key={idx} src={url} alt={`리뷰 이미지 ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg" />
-          ))}
-        </div>
-      )}
-      <p className="text-gray-400 text-sm mt-1">{new Date(review.createdAt).toLocaleDateString()}</p>
+// ▼▼▼ [ 수정된 ReviewItem 컴포넌트 ] ▼▼▼
+const ReviewItem = ({ review }: { review: ProductReviewItem }) => {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
+ return (
+  <div className="border-b border-gray-200 py-4">
+   <div className="flex justify-between items-center mb-2">
+    <span className="font-semibold">{review.userName}</span>
+    <span className="text-yellow-500">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span>
+   </div>
+   <p className="text-gray-700 mb-2 whitespace-pre-wrap">{review.content}</p>
+   {review.reviewImageUrls.length > 0 && (
+    <div className="flex space-x-2 mt-2">
+     {review.reviewImageUrls.map((url, idx) => (
+      <img 
+              key={idx}
+              src={`${API_URL}${url}`} 
+              alt={`리뷰 이미지 ${idx + 1}`} 
+              className="w-20 h-20 object-cover rounded-lg" 
+            />
+     ))}
     </div>
-  );
+   )}
+   <p className="text-gray-400 text-sm mt-1">{new Date(review.createdAt).toLocaleDateString()}</p>
+  </div>
+ );
 };
 
 
@@ -197,6 +172,12 @@ export default function ProductDetailPage() {
   // (기능 7) 탭 상태
   const [activeTab, setActiveTab] = useState<'info' | 'size' | 'review'>('info');
   // ---
+
+  // 리뷰 데이터와 리뷰 탭 전용 로딩 상태
+  const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
+  const [isReviewLoading, setIsReviewLoading] = useState(false);
+  const [reviewPage, setReviewPage] = useState<PageResponse<ProductReviewItem> | null>(null);
+
 
   // --- 4. 데이터 페칭 (Mock 사용) ---
   useEffect(() => {
@@ -232,6 +213,37 @@ export default function ProductDetailPage() {
     }
   }, [productId]);
 
+  useEffect(() => {
+    // 1. 리뷰 탭이 아니거나
+    // 2. productId가 없거나
+    // 3. 이미 리뷰를 불러온 적이 있다면 (reviews.length > 0) -> API 재호출 방지
+    //    (만약 탭 누를 때마다 새로고침하려면 3번 조건 제거)
+    if (activeTab !== 'review' || !productId || reviews.length > 0) {
+      return;
+    }
+
+    const fetchReviews = async () => {
+      setIsReviewLoading(true);
+      try {
+        // (productId, page, size)
+        // ※ productId가 string일 수 있으니 Number()로 변환
+        const data = await getProductReviews(Number(productId), 0, 10);
+        setReviews(data.content);
+        setReviewPage(data); // 페이지 정보 저장 (나중에 '더보기' 버튼용)
+      } catch (error) {
+        console.error('리뷰를 불러오는 데 실패했습니다:', error);
+        setReviews([]); // 에러 시 빈 배열로
+      } finally {
+        setIsReviewLoading(false);
+      }
+    };
+
+    fetchReviews();
+
+  // '리뷰' 탭을 누르거나, productId가 바뀔 때만 이 훅이 실행됨
+  }, [productId, activeTab, reviews.length]);
+
+
   // --- 5. 이벤트 핸들러 ---
 
   // (기능 1) 이미지 캐러셀 핸들러
@@ -245,17 +257,43 @@ export default function ProductDetailPage() {
   };
 
   // (기능 4) 찜 버튼 핸들러
-  const handleWishClick = () => {
-    // (가정) 로그인 상태 확인 로직 추가 필요
-    
-    // 즉각적인 UI 반응
-    setIsWished((prev) => !prev);
-    setWishCount((prevCount) => (isWished ? prevCount - 1 : prevCount + 1));
+  const handleWishClick = async () => {
+    // (가정) 로그인 상태 확인 로직 (필요시 추가)
+    // if (!isLoggedIn) {
+    //   router.push('/login');
+    //   return;
+    // }
 
-    // (가정) 백엔드 API 호출 (Toggling) - 실제 구현 시 주석 해제
-    // fetch(`/products/${productId}/wish`, { method: isWished ? 'DELETE' : 'POST', ... });
-    console.log(isWished ? '찜 취소 API 호출' : '찜 등록 API 호출');
-  };
+    if (!productId) return;
+    
+    // 1. 현재 상태를 미리 저장 (롤백 대비)
+    const originalIsWished = isWished;
+        
+     // 2. 즉각적인 UI 반응 (Optimistic Update)
+    setIsWished((prev) => !prev);
+    // (찜 개수는 요청대로 수정합니다 - 유저가 냅두라고 한 건 이 로직 자체를 냅두라는 의미로 파악)
+    setWishCount((prevCount) => (originalIsWished ? prevCount - 1 : prevCount + 1));
+    
+    try {
+      // 3. API 호출
+      if (originalIsWished) {
+        // [찜 취소] : 원래 찜 되어 있었다면 -> 취소 API 호출
+        await removeFavorite(Number(productId));
+      } else {
+          // [찜 등록] : 원래 찜 안되어 있었다면 -> 등록 API 호출
+          await addLike(Number(productId));
+      }
+          
+      } catch (error) {
+          // 4. API 호출 실패 시
+          console.error('찜 처리 실패:', error);
+          alert('찜 상태 변경에 실패했습니다. 다시 시도해 주세요.');
+          
+          // [롤백] UI를 원래 상태로 되돌림
+          setIsWished(originalIsWished);
+          setWishCount((prevCount) => (originalIsWished ? prevCount + 1 : prevCount - 1));
+        }
+    };
   
   // (기능 5) 장바구니 / 구매하기 핸들러
   const handleAddToCart = () => {
@@ -444,11 +482,18 @@ export default function ProductDetailPage() {
           {/* 리뷰 탭 */}
           {activeTab === 'review' && (
           <div>
-            {mockReviews.length === 0 ? (
+            {/* 1. 리뷰 로딩 중일 때 */}
+            {isReviewLoading ? (
+              <div className="flex justify-center items-center py-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#925C4C]"></div>
+              </div>
+            ) : reviews.length === 0 ? (
+              // 2. 로딩 끝났는데 리뷰가 없을 때
               <div className="text-center py-10 text-gray-500">등록된 리뷰가 없습니다.</div>
-              ) : (
-                mockReviews.map((review) => <ReviewItem key={review.reviewId} review={review} />)
-              )}
+            ) : (
+              // 3. 로딩 끝났고 리뷰가 있을 때 (mockReviews -> reviews)
+              reviews.map((review) => <ReviewItem key={review.reviewId} review={review} />)
+            )}
             </div>
           )}
         </div>

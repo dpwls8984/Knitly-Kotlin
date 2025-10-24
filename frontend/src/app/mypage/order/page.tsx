@@ -43,13 +43,13 @@ const mockOrders: Order[] = [
     items: [
       {
         id: 'itemA1',
-        productId: 'prod_abc',
+        productId: '1',
         productName: '따뜻한 겨울 스웨터 도안',
         price: 15000,
       },
       {
         id: 'itemA2',
-        productId: 'prod_def',
+        productId: '2',
         productName: '아가일 패턴 양말 도안',
         price: 7000,
       },
@@ -62,7 +62,7 @@ const mockOrders: Order[] = [
     items: [
       {
         id: 'itemB1',
-        productId: 'prod_ghi',
+        productId: '3',
         productName: '초보자용 목도리 도안',
         price: 5000,
       },
@@ -186,7 +186,7 @@ export default function OrderHistoryPage() {
                         반드시 수정이 필요합니다!
                     --- */}
                     <Link
-                      href={`/mypage/review/write?orderItemId=${item.id}&orderDate=${order.orderDate}`}
+                      href={`/mypage/review/write?productId=${item.productId}`}
                       className="bg-[#925C4C] text-white px-4 py-2 rounded-lg hover:bg-[#7a4c3e] transition-colors text-sm font-medium"
                     >
                       리뷰하기

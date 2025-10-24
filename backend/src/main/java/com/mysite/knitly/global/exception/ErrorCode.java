@@ -22,6 +22,7 @@ public enum ErrorCode {
 
     // Order 3000
     OUT_OF_STOCK("3001", HttpStatus.BAD_REQUEST, "품절된 상품입니다."),
+    ORDER_NOT_FOUND("3002", HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
 
     // Post 4000
     POST_NOT_FOUND("4001", HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
@@ -95,11 +96,19 @@ public enum ErrorCode {
     // File 7000
     FILE_STORAGE_FAILED("7601", HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장에 실패했습니다."),
 
-    // event 8000
-
+    // Payment 8000
+    PAYMENT_NOT_FOUND("8001", HttpStatus.NOT_FOUND, "결제 정보를 찾을 수 없습니다."),
+    PAYMENT_AMOUNT_MISMATCH("8002", HttpStatus.BAD_REQUEST, "결제 금액이 일치하지 않습니다."),
+    PAYMENT_API_CALL_FAILED("8003", HttpStatus.INTERNAL_SERVER_ERROR, "결제 API 호출에 실패했습니다."),
+    PAYMENT_CONFIRM_FAILED("8004", HttpStatus.INTERNAL_SERVER_ERROR, "결제 승인에 실패했습니다."),
+    PAYMENT_ALREADY_EXISTS("8005", HttpStatus.CONFLICT, "이미 결제가 완료된 주문입니다."),
+    PAYMENT_NOT_CANCELABLE("8006", HttpStatus.BAD_REQUEST, "취소할 수 없는 결제 상태입니다."),
+    PAYMENT_CANCEL_API_FAILED("8007", HttpStatus.INTERNAL_SERVER_ERROR, "결제 취소 API 호출에 실패했습니다."),
+    PAYMENT_CANCEL_FAILED("8008", HttpStatus.INTERNAL_SERVER_ERROR, "결제 취소에 실패했습니다."),
+    PAYMENT_UNAUTHORIZED_ACCESS("8009", HttpStatus.FORBIDDEN, "결제 정보에 접근할 권한이 없습니다."),
     // System 9000
 
-    LOCK_ACQUISITION_FAILED("8001", HttpStatus.INTERNAL_SERVER_ERROR, "락 획득에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    LOCK_ACQUISITION_FAILED("9001", HttpStatus.INTERNAL_SERVER_ERROR, "락 획득에 실패했습니다. 잠시 후 다시 시도해주세요.");
 
     private final String code;
     private final HttpStatus status;
