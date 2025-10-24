@@ -257,6 +257,7 @@ export default function ProductDetailPage() {
 
   const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
   const [isReviewLoading, setIsReviewLoading] = useState(false);
+  const [hasFetchedReviews, setHasFetchedReviews] = useState(false);
 
   // --- 4. 데이터 페칭 (실제 API 호출) ---
   useEffect(() => {
@@ -302,31 +303,32 @@ export default function ProductDetailPage() {
   }, [productId]); // productId가 변경될 때마다 재호출
 
   useEffect(() => {
-    if (product) {
-      setIsWished(product.isLikedByUser);
-      setWishCount(product.likeCount);
-    }
-  }, [product]);
+    setReviews([]);
+    setHasFetchedReviews(false);
+    setIsReviewLoading(false); // 혹시 모를 로딩 상태도 리셋
+  }, [productId]);
 
   useEffect(() => {
-    if (activeTab !== 'review' || reviews.length > 0 || isReviewLoading) {
+    if (activeTab !== 'review' || isReviewLoading || hasFetchedReviews) {
       return;
     }
 
     const fetchReviews = async () => {
       if (!productId) return; 
       setIsReviewLoading(true);
+      setHasFetchedReviews(true);
       try {
         const data = await getProductReviews(Number(productId), 0, 10);
         setReviews(data.content);
       } catch (err) {
         console.error("리뷰를 불러오는데 실패했습니다.", err);
+        setHasFetchedReviews(false);
       } finally {
         setIsReviewLoading(false);
       }
     };
     fetchReviews();
-  }, [activeTab, productId, isReviewLoading, reviews.length]);
+  }, [activeTab, productId, isReviewLoading, hasFetchedReviews]);
 
   // ▼▼▼ [수정] isAlreadyInCart 계산 위치 및 방식 변경 ▼▼▼
   // 컴포넌트 렌더링 로직 내에서 계산합니다.
