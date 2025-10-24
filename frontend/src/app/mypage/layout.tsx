@@ -62,6 +62,7 @@ export default function ProductLayout({
         { name: "리뷰 목록", href: "/mypage/review" },
         { name: "내 글", href: "/mypage/post" },
         { name: "내 댓글", href: "/mypage/comment" },
+        { name: "회원 탈퇴", href: "/mypage/quit"}
     ];
 
     return (
