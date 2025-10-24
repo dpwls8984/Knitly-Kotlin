@@ -8,8 +8,6 @@ import java.time.LocalDate;
 public record FavoriteProductItem(
         Long productId,
         String productTitle,
-        String thumbnailUrl,
-        Double price,
-        Double averageRating,
-        LocalDate likedAt
+        String sellerName,     // (판매자)
+        String thumbnailUrl
 ) {}

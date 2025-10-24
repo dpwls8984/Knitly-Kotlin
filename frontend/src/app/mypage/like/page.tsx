@@ -2,51 +2,44 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-
-interface FavoriteProductItem {
-  productId: number;
-  productTitle: string;
-  thumbnailUrl: string;
-  price: number;
-  averageRating: number;
-  likedAt: string;
-  isLiked: boolean;
-}
+import { getMyFavorites, removeFavorite } from '@/lib/api/like.api';
+import { FavoriteProductItem } from '@/types/like.types';
 
 export default function LikesPage() {
   const router = useRouter();
   const [products, setProducts] = useState<FavoriteProductItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
-    const fetchLikes = async () => {
+    const fetchFavorites = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/mocks/data/likes.json');
-        const data: FavoriteProductItem[] = await res.json();
-        setProducts(data.map(p => ({ ...p, isLiked: true })));
-      } catch (error) {
-        console.error('찜 목록 로딩 실패:', error);
+        const data = await getMyFavorites(page, 12);
+        setProducts(data.content);
+        setTotalPages(data.totalPages);
+      } catch (err) {
+        console.error('찜 목록 로딩 실패:', err);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchLikes();
-  }, []);
+    fetchFavorites();
+  }, [page]);
 
   const handleCardClick = (productId: number) => {
     router.push(`/product/${productId}`);
   };
 
-  const handleLikeToggle = (productId: number) => {
-    setProducts(prev =>
-      prev.map(p =>
-        p.productId === productId
-          ? { ...p, isLiked: !p.isLiked }
-          : p
-      )
-    );
+  // 찜 해제
+  const handleUnlike = async (productId: number) => {
+    try {
+      await removeFavorite(productId);
+      setProducts(prev => prev.filter(p => p.productId !== productId));
+    } catch (error) {
+      console.error('찜 해제 실패:', error);
+    }
   };
 
   return (
@@ -56,79 +49,83 @@ export default function LikesPage() {
 
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#925C4C]"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#925C4C]" />
           </div>
         ) : products.length === 0 ? (
           <div className="text-center text-gray-500 py-20">
             찜한 상품이 없습니다.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <div
-                key={product.productId}
-                onClick={() => handleCardClick(product.productId)}
-                className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-              >
-                {/* 상품 이미지 */}
-                <div className="aspect-square bg-gray-100 flex items-center justify-center">
-                  {product.thumbnailUrl ? (
-                    <img
-                      src={product.thumbnailUrl}
-                      alt={product.productTitle}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="text-gray-400 text-sm">이미지</div>
-                  )}
-                </div>
-
-                {/* 상품 정보 + 찜 버튼 */}
-                <div className="p-4 flex justify-between items-end">
-                  {/* 상품 정보 */}
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-1">
-                      {product.productTitle}
-                    </h3>
-                    <div className="text-sm font-bold text-[#925C4C]">
-                      {product.price.toLocaleString()}원
-                    </div>
-                  </div>
-
-                  {/* 찜 버튼 + 별 1개 */}
-                  <div className="flex flex-col items-center gap-1 ml-4">
-                    <div className="flex items-center gap-1 mb-1">
-                      <span className="text-yellow-500 text-sm">★</span>
-                      <span className="text-black text-xs ml-1">{product.averageRating.toFixed(1)}</span>
-                    </div>
-
-                    {/* 찜 버튼 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleLikeToggle(product.productId);
-                      }}
-                      className="flex-shrink-0"
-                    >
-                      <svg
-                        className={`w-5 h-5 ${product.isLiked ? 'text-[#925C4C] fill-current' : 'text-gray-400'}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {products.map((product) => (
+                <div
+                  key={product.productId}
+                  className="relative bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                >
+                  <div onClick={() => handleCardClick(product.productId)}>
+                    <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                      {product.thumbnailUrl ? (
+                        <img
+                          src={product.thumbnailUrl}
+                          alt={product.productTitle}
+                          className="w-full h-full object-cover"
                         />
-                      </svg>
-                    </button>
+                      ) : (
+                        <div className="text-gray-400 text-sm">이미지 없음</div>
+                      )}
+                    </div>
+
+                    <div className="p-4">
+                      <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-1">
+                        {product.productTitle}
+                      </h3>
+                      <p className="text-xs text-gray-500">{product.sellerName}</p>
+                    </div>
                   </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleUnlike(product.productId);
+                    }}
+                    className="absolute bottom-2 right-2"
+                  >
+                    <svg
+                      className="w-6 h-6 text-[#925C4C] fill-current"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 
+                        3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 
+                        14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 
+                        6.86-8.55 11.54L12 21.35z" />
+                    </svg>
+                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+
+            <div className="flex justify-center mt-8">
+              <button
+                disabled={page <= 0}
+                onClick={() => setPage(page - 1)}
+                className="px-4 py-2 text-sm border rounded disabled:text-gray-300 disabled:border-gray-200"
+              >
+                이전
+              </button>
+              <span className="px-4 py-2 text-sm">
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage(page + 1)}
+                className="px-4 py-2 text-sm border rounded disabled:text-gray-300 disabled:border-gray-200"
+              >
+                다음
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

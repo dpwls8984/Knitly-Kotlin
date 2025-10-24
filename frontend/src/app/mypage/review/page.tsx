@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { getMyReviews, deleteReview, ReviewListItem } from "@/lib/api/review.api";
 
 export default function MyReviewsPage() {
+
+  
   const router = useRouter();
 
   const [reviews, setReviews] = useState<ReviewListItem[]>([]);
@@ -38,7 +40,7 @@ export default function MyReviewsPage() {
     try {
       await deleteReview(reviewId);
       alert("리뷰가 삭제되었습니다.");
-      fetchReviews(page); // 삭제 후 현재 페이지 다시 불러오기
+      fetchReviews(page);
     } catch (error) {
       console.error("리뷰 삭제 실패:", error);
       alert("리뷰 삭제에 실패했습니다.");
@@ -65,6 +67,14 @@ export default function MyReviewsPage() {
     }));
   };
 
+  // ✅ 날짜별로 리뷰 묶기
+  const groupedReviews = reviews.reduce<Record<string, ReviewListItem[]>>((acc, review) => {
+    const date = review.createdDate; // LocalDate 형태 (e.g. '2025-10-23')
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(review);
+    return acc;
+  }, {});
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
@@ -81,14 +91,25 @@ export default function MyReviewsPage() {
         <div className="text-center text-gray-500 py-20">작성한 리뷰가 없습니다.</div>
       )}
 
-      {reviews.map(review => {
+      {/* ✅ 리뷰일별 그룹 렌더링 */}
+      {Object.keys(groupedReviews)
+  .sort((a, b) => (a < b ? 1 : -1)) // 최신 날짜가 위로
+  .map(date => (
+    <div key={date} className="mb-6">
+      {/* ✅ 리뷰 작성일 헤더 (디자인 수정됨) */}
+      <div className="text-gray-400 text-sm mb-2">{date}</div>
+
+      {/* 해당 날짜 리뷰들 */}
+      {groupedReviews[date].map(review => {
         const isOpen = openIds.includes(review.reviewId);
         const images = review.reviewImageUrls || [];
         const idx = currentImageIndex[review.reviewId] || 0;
 
         return (
-          <div key={review.reviewId} className="border border-gray-200 rounded-lg mb-2 p-3 bg-white shadow-sm relative">
-            {/* 상단 영역 */}
+          <div
+            key={review.reviewId}
+            className="border border-gray-200 rounded-lg mb-2 p-3 bg-white shadow-sm relative"
+          >
             <div className="flex justify-between items-start">
               <div className="flex items-center">
                 <img
@@ -98,9 +119,6 @@ export default function MyReviewsPage() {
                 />
                 <div>
                   <div className="font-medium">{review.productTitle}</div>
-                  <div className="text-sm text-gray-500">
-                    구매일: {review.purchasedDate || review.createdDate}
-                  </div>
                 </div>
               </div>
 
@@ -124,7 +142,13 @@ export default function MyReviewsPage() {
                   className="flex items-center gap-1 text-sm text-gray-400 cursor-pointer select-none w-fit"
                 >
                   <span>{isOpen ? "접기" : "펼쳐보기"}</span>
-                  <span className={`inline-block text-base transform transition-transform ${isOpen ? "rotate-180 -mt-0.5" : "rotate-0"}`}>⌃</span>
+                  <span
+                    className={`inline-block text-base transform transition-transform ${
+                      isOpen ? "rotate-180 -mt-0.5" : "rotate-0"
+                    }`}
+                  >
+                    ⌃
+                  </span>
                 </div>
               </div>
             </div>
@@ -134,42 +158,56 @@ export default function MyReviewsPage() {
               <div className="mt-3">
                 <div className="text-xs text-gray-400 mb-1 ml-0">리뷰사진</div>
                 <div className="flex items-start gap-4">
-                  <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                    {images.length > 0 ? (
-                      <>
-                        <img
-                          src={images[idx]}
-                          alt={`review-${review.reviewId}-${idx}`}
-                          className="w-full h-full object-cover"
-                        />
-                        {images.length > 1 && (
+                  {(() => {
+                    const BACKEND_URL = "http://localhost:8080";
+                    const hasImages = images.length > 0;
+                    const fullImageUrl = hasImages ? `${BACKEND_URL}${images[idx]}` : null;
+
+                    return (
+                      <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                        {hasImages ? (
                           <>
-                            <button
-                              onClick={() => prevImage(review.reviewId, images.length - 1)}
-                              className="absolute left-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white px-1 py-0.5 rounded-r hover:bg-black"
-                            >
-                              ‹
-                            </button>
-                            <button
-                              onClick={() => nextImage(review.reviewId, images.length - 1)}
-                              className="absolute right-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white px-1 py-0.5 rounded-l hover:bg-black"
-                            >
-                              ›
-                            </button>
+                            <img
+                              src={fullImageUrl ?? ""}
+                              alt={`review-${review.reviewId}-${idx}`}
+                              className="w-full h-full object-cover"
+                            />
+
+                            {images.length > 1 && (
+                              <>
+                                <button
+                                  onClick={() => prevImage(review.reviewId, images.length - 1)}
+                                  className="absolute left-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white px-1 py-0.5 rounded-r hover:bg-black"
+                                >
+                                  ‹
+                                </button>
+                                <button
+                                  onClick={() => nextImage(review.reviewId, images.length - 1)}
+                                  className="absolute right-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white px-1 py-0.5 rounded-l hover:bg-black"
+                                >
+                                  ›
+                                </button>
+                              </>
+                            )}
                           </>
+                        ) : (
+                          <span className="text-sm text-gray-500">사진 없음</span>
                         )}
-                      </>
-                    ) : (
-                      <span className="text-sm text-gray-500">사진 없음</span>
-                    )}
-                  </div>
+                      </div>
+                    );
+                  })()}
                   <div className="flex-1 text-sm leading-6 whitespace-pre-line">{review.content}</div>
                 </div>
               </div>
             )}
+
+
+
           </div>
         );
       })}
+    </div>
+  ))}
 
       {/* 페이지네이션 */}
       {totalPages > 1 && (
@@ -186,7 +224,11 @@ export default function MyReviewsPage() {
             <button
               key={i}
               onClick={() => fetchReviews(i)}
-              className={`px-4 py-2 rounded ${i === page ? 'bg-[#925C4C] text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+              className={`px-4 py-2 rounded ${
+                i === page
+                  ? "bg-[#925C4C] text-white"
+                  : "bg-gray-200 hover:bg-gray-300"
+              }`}
             >
               {i + 1}
             </button>

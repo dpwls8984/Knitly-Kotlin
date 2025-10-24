@@ -1,8 +1,5 @@
 package com.mysite.knitly.domain.product.like.dto;
 
-import java.util.UUID;
+import java.io.Serializable;
 
-public record LikeEventRequest(
-        Long userId,
-        Long productId
-) {}
+public record LikeEventRequest(Long userId, Long productId) implements Serializable {}
