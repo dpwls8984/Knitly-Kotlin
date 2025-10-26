@@ -30,6 +30,7 @@ public class ProductService {
     private final FileStorageService fileStorageService;
     private final ProductLikeRepository productLikeRepository;
 
+    @Transactional
     public ProductRegisterResponse registerProduct(User seller, Long designId, ProductRegisterRequest request) {
 
         Design design = designRepository.findById(designId)
@@ -64,6 +65,7 @@ public class ProductService {
         return ProductRegisterResponse.from(savedProduct, imageUrls);
     }
 
+    @Transactional
     public ProductModifyResponse modifyProduct(User currentUser, Long productId, ProductModifyRequest request) {
         Product product = findProductById(productId);
 
@@ -82,19 +84,43 @@ public class ProductService {
                 request.stockQuantity()
         );
 
-        // 1. 삭제할 기존 이미지 파일들의 URL을 미리 확보
+// 1. 기존 이미지 URL 전체
         List<String> oldImageUrls = product.getProductImages().stream()
                 .map(ProductImage::getProductImageUrl)
                 .collect(Collectors.toList());
 
-        // 2. 새로운 이미지 파일들을 저장하고 ProductImage 엔티티 리스트를 생성
+// 2. 유지할 기존 이미지 URL 목록 (프론트에서 전달된 값)
+        List<String> existingImageUrls = request.existingImageUrls() != null
+                ? request.existingImageUrls()
+                : new ArrayList<>();
+
+// 3. 삭제할 이미지 = oldImageUrls - existingImageUrls
+        List<String> deletedImageUrls = oldImageUrls.stream()
+                .filter(url -> !existingImageUrls.contains(url))
+                .collect(Collectors.toList());
+
+// 4. 새로운 이미지 파일을 저장
         List<ProductImage> newProductImages = saveProductImages(request.productImageUrls());
 
-        // 3. Product 엔티티의 이미지 리스트를 교체 (orphanRemoval=true에 의해 기존 DB 레코드는 자동 삭제됨), 엔티티에 반영
-        product.addProductImages(newProductImages);
+// 5. 유지할 기존 이미지 + 새 이미지 합치기
+        List<ProductImage> mergedImages = new ArrayList<>();
 
-        // 4. 기존 이미지 파일들을 파일 시스템에서 삭제
-        oldImageUrls.forEach(fileStorageService::deleteFile);
+// 기존 이미지 중 유지 대상만 다시 추가
+        for (ProductImage oldImg : product.getProductImages()) {
+            if (existingImageUrls.contains(oldImg.getProductImageUrl())) {
+                mergedImages.add(oldImg);
+            }
+        }
+
+// 새 이미지 추가
+        mergedImages.addAll(newProductImages);
+
+// 6. 엔티티 반영 (기존 이미지 중 유지 대상은 그대로, 삭제 대상은 orphanRemoval로 DB에서 제거)
+        product.addProductImages(mergedImages);
+
+// 7. 삭제할 이미지 파일 실제 삭제 (S3, 로컬 등)
+        deletedImageUrls.forEach(fileStorageService::deleteFile);
+
 
         List<String> currentImageUrls = product.getProductImages().stream()
                 .map(ProductImage::getProductImageUrl)
@@ -103,6 +129,7 @@ public class ProductService {
         return ProductModifyResponse.from(product, currentImageUrls);
     }
 
+    @Transactional
     public void deleteProduct(User currentUser, Long productId) {
         Product product = findProductById(productId);
 
@@ -156,6 +183,7 @@ public class ProductService {
     }
 
     // 상품 목록 조회
+    @Transactional(readOnly = true)
     public Page<ProductListResponse> getProducts(
             User user, // 컨트롤러에서 받은 User 객체
             ProductCategory category,

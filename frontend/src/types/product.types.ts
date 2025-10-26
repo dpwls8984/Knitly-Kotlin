@@ -49,3 +49,26 @@ export interface PageResponse<T> {
     first: boolean;
     empty: boolean;
 }
+
+export interface ProductRegisterResponse {
+    productId: number;
+    title: string;
+    description: string;
+    productCategory: 'TOP' | 'BOTTOM' | 'OUTER' | 'BAG' | 'ETC';
+    sizeInfo: string;
+    price: number;
+    createdAt: string;
+    stockQuantity: number | null; // Java의 Integer는 null일 수 있습니다.
+    designId: number;
+    productImageUrls: string[];
+  }
+
+  export interface ProductModifyResponse {
+    productId: number;
+    title: string;
+    description: string;
+    productCategory: 'TOP' | 'BOTTOM' | 'OUTER' | 'BAG' | 'ETC';
+    sizeInfo: string;
+    stockQuantity: number | null;
+    productImageUrls: string[];
+  }

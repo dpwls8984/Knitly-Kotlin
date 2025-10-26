@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Repository
 public class MyPageQueryRepository {
@@ -41,7 +42,8 @@ public class MyPageQueryRepository {
 
         List<Object[]> rows = em.createQuery("""
                         select o.orderId, o.createdAt, o.totalPrice,
-                               p.productId, p.title, oi.quantity, oi.orderPrice
+                               p.productId, p.title, oi.quantity, oi.orderPrice,
+                               oi.orderItemId
                         from Order o
                         join o.orderItems oi
                         join oi.product p
@@ -51,7 +53,26 @@ public class MyPageQueryRepository {
                 .setParameter("ids", orderIds)
                 .getResultList();
 
-        // 불변 DTO 조립
+        // 이 주문들에서 조회된 모든 상품 ID를 추출합니다.
+        Set<Long> productIdsInOrders = rows.stream()
+                .map(r -> (Long) r[3]) // rows에서 productId 추출
+                .collect(Collectors.toSet());
+
+        // 이 사용자가 리뷰를 작성한 Product ID 목록을 조회합니다.
+        Set<Long> orderItemIds = rows.stream()
+                .map(r -> (Long) r[7]) // rows[7]에서 orderItemId 추출
+                .collect(Collectors.toSet());
+
+        // 이 사용자가 리뷰를 작성한 'orderItemId' 목록을 조회합니다.
+        Set<Long> reviewedOrderItemIds = new HashSet<>(em.createQuery("""
+                    select r.orderItem.orderItemId from Review r
+                    where r.user.userId = :userId 
+                      and r.orderItem.orderItemId in :orderItemIds
+                    """, Long.class)
+                .setParameter("userId", userId)
+                .setParameter("orderItemIds", orderItemIds)
+                .getResultList());
+
         Map<Long, LocalDateTime> orderedAtMap = new LinkedHashMap<>();
         Map<Long, Double> totalMap = new LinkedHashMap<>();
         Map<Long, List<OrderLine>> itemsMap = new LinkedHashMap<>();
@@ -64,11 +85,15 @@ public class MyPageQueryRepository {
             String productTitle = (String) r[4];
             Integer quantity = (Integer) r[5];
             Double orderPrice = (r[6] == null) ? 0d : ((Number) r[6]).doubleValue();
+            Long orderItemId = (Long) r[7];
 
             orderedAtMap.putIfAbsent(oId, orderedAt);
             totalMap.putIfAbsent(oId, totalPrice);
+
+            boolean isReviewed = reviewedOrderItemIds.contains(orderItemId);
+
             itemsMap.computeIfAbsent(oId, k -> new ArrayList<>())
-                    .add(new OrderLine(productId, productTitle, quantity, orderPrice));
+                    .add(new OrderLine(orderItemId, productId, productTitle, quantity, orderPrice, isReviewed));
         }
 
         List<OrderCardResponse> cards = new ArrayList<>();
