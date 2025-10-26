@@ -21,10 +21,10 @@ public class HomeQueryRepository {
                     r.reviewId,
                     p.productId,
                     p.title,
-                    NULL,                  /* productThumbnailUrl 없음 → null */
+                    CAST(NULL AS string),
                     r.rating,
                     r.content,
-                    FUNCTION('DATE', r.createdAt)
+                    CAST(r.createdAt AS LocalDate)
                 )
                 FROM Review r
                 JOIN r.product p
@@ -42,7 +42,7 @@ public class HomeQueryRepository {
                     p.id,
                     p.title,
                     CAST(p.category AS string),
-                    NULL,                 /* thumbnailUrl: imageUrls 리스트 → 서버에선 null */
+                    CAST(NULL AS string),
                     p.createdAt
                 )
                 FROM Post p

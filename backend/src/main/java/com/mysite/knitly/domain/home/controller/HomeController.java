@@ -22,12 +22,12 @@ public class HomeController {
     private final HomeSectionService homeSectionService;
 
     // 메인화면: 인기 상품 Top5
-    @GetMapping("/popular/top5")
     public ResponseEntity<List<ProductListResponse>> popularTop5(
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal(errorOnInvalidType = false) User user
     ) {
         return ResponseEntity.ok(homeSectionService.getPopularTop5(user));
     }
+
     // 추가: 최신 리뷰
     @GetMapping("/latest/reviews")
     public ResponseEntity<List<LatestReviewItem>> latestReviews() {
@@ -43,7 +43,7 @@ public class HomeController {
     // 추가: 홈 요약 (한 번 호출로 3섹션 모두)
     @GetMapping("/summary")
     public ResponseEntity<HomeSummaryResponse> summary(
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal(errorOnInvalidType = false) User user
     ) {
         return ResponseEntity.ok(homeSectionService.getHomeSummary(user));
     }
