@@ -71,23 +71,6 @@ export default function MyPage() {
                     <p className="text-sm text-gray-600">제작한 도안을 관리하세요</p>
                 </button>
             </div>
-
-                    {/* ▼▼▼ 임시 테스트용 링크 (나중에 삭제) ▼▼▼ */}
-            <div className="mt-8 p-4 border-2 border-dashed border-red-400">
-                <h3 className="font-bold text-red-600">🧪 임시 테스트 링크</h3>
-                <ul className="list-disc list-inside mt-2 space-y-2">
-                <li>
-                    <Link href="/mypage/design/register/test-design-123" className="text-blue-600 hover:underline">
-                    '판매 등록' 페이지로 이동 (test-design-123)
-                    </Link>
-                </li>
-                <li>
-                    <Link href="/mypage/design/modify/product-abc-456" className="text-blue-600 hover:underline">
-                    '판매 수정' 페이지로 이동 (product-abc-456)
-                    </Link>
-                </li>
-                </ul>
-            </div>
         </div>
     );
 }

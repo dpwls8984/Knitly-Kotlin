@@ -62,3 +62,13 @@ export interface ProductRegisterResponse {
     designId: number;
     productImageUrls: string[];
   }
+
+  export interface ProductModifyResponse {
+    productId: number;
+    title: string;
+    description: string;
+    productCategory: 'TOP' | 'BOTTOM' | 'OUTER' | 'BAG' | 'ETC';
+    sizeInfo: string;
+    stockQuantity: number | null;
+    productImageUrls: string[];
+  }

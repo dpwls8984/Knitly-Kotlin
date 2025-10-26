@@ -21,6 +21,8 @@ public record ProductModifyRequest(
         @Size(max = 10, message = "상품 이미지는 최대 10개까지 등록할 수 있습니다.")
         List<MultipartFile> productImageUrls,
 
+        List<String> existingImageUrls,
+
         Integer stockQuantity
 ){
 }
