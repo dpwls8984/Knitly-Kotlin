@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/api/axios';
+import { ProductRegisterResponse } from '@/types/product.types';
 
 // 1. 폼 데이터 타입
 export interface DesignSalesData {
@@ -33,6 +35,25 @@ interface DesignFormProps {
   entityId: string; // 등록 시: designId, 수정 시: productId
 }
 
+const mapCategoryToEnum = (
+  category: DesignSalesData['category']
+): string => {
+  switch (category) {
+    case '상의':
+      return 'TOP';
+    case '하의':
+      return 'BOTTOM';
+    case '아우터':
+      return 'OUTER';
+    case '가방':
+      return 'BAG';
+    case '기타':
+      return 'ETC';
+    default:
+      return ''; // 혹은 오류 처리
+  }
+};
+
 // 3. 컴포넌트 함수 이름
 export default function DesignForm({
   isEditMode,
@@ -42,11 +63,8 @@ export default function DesignForm({
   const router = useRouter();
 
   // 4. 폼 상태 관리
-  // (수정) name 상태 초기값을 '' 로 변경
   const [name, setName] = useState('');
-  // (수정) registeredAt 상태 제거
-  // const [registeredAt, setRegisteredAt] = useState('');
-  const [originalDesignName, setOriginalDesignName] = useState(''); // (추가) 원본 PDF 이름 표시용
+  const [originalDesignName, setOriginalDesignName] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -58,7 +76,6 @@ export default function DesignForm({
   const [description, setDescription] = useState('');
   const [designType, setDesignType] = useState('');
   const [size, setSize] = useState('');
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -123,61 +140,107 @@ export default function DesignForm({
     setIsLimited(e.target.checked);
   };
 
-  // 9. 폼 제출 핸들러 (백엔드 연동)
+  console.log('카테고리 값:', category);
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // (추가) 이름 필드가 비어있는지 확인
     if (!name.trim()) {
       alert('상품 이름을 입력해주세요.');
+      return;
+    }
+    if (!category) {
+      alert('카테고리를 선택해주세요.');
       return;
     }
 
     setIsLoading(true);
     setError(null);
 
+    // ▼▼▼ [수정] Access Token을 localStorage에서 가져오는 로직 추가 ▼▼▼
+    const accessToken = localStorage.getItem('accessToken'); 
+        
+    // 1. 토큰 유효성 검사 (없으면 인증 실패 처리)
+    if (!accessToken) {
+        setError('로그인이 필요합니다.');
+        setIsLoading(false);
+        return;
+    }
+
+
     const formData = new FormData();
 
-    // (수정) 백엔드로 보낼 데이터에 'name' 추가
-    const salesData = {
-      name: name.trim(), // 사용자가 입력한 상품 이름
-      category,
-      price: isFree ? 0 : price,
-      isFree,
-      isLimited,
-      stock: isLimited ? stock : 0,
-      description,
-      designType,
-      size,
-    };
-    formData.append('data', JSON.stringify(salesData));
-
+    // --- 백엔드 ProductRegisterRequest DTO와 필드명 일치 ---
+    //
+    
+    // 1. DTO의 'title' 필드
+    formData.append('title', name.trim());
+    
+    // 2. DTO의 'description' 필드
+    formData.append('description', description);
+    
+    // 3. DTO의 'productCategory' 필드 (Enum 값으로 매핑)
+    formData.append('productCategory', mapCategoryToEnum(category));
+    
+    // 4. DTO의 'sizeInfo' 필드
+    formData.append('sizeInfo', size); 
+    
+    // 5. DTO의 'price' 필드
+    formData.append('price', String(isFree ? 0 : price));
+    
+    // 6. DTO의 'stockQuantity' 필드 (한정 판매일 때만 전송)
+    if (isLimited) {
+      formData.append('stockQuantity', String(stock));
+    }
+    
+    // 7. DTO의 'productImageUrls' 필드 (List<MultipartFile>)
     selectedFiles.forEach((file) => {
-      formData.append('images', file);
+      formData.append('productImageUrls', file);
     });
 
     try {
-      const url = isEditMode
-        ? `/my/products/${entityId}/modify` // (수정) PATCH
-        : `/my/products/${entityId}/sale`; // (등록) POST
-      const method = isEditMode ? 'PATCH' : 'POST';
+      // 등록 모드(false)일 때만 이 함수를 사용합니다.
+      // 수정 모드(true)일 때는 로직이 다릅니다. (지금은 등록만 구현)
+      if (isEditMode) {
+        // TODO: 수정 로직 구현 (PATCH /my/products/{productId}/modify)
+        // 수정 폼데이터는 DTO가 다르므로(ProductModifyRequest) 별도 구현 필요
+        throw new Error('수정 기능은 아직 구현되지 않았습니다.');
+      }
+      const endpoint = `http://localhost:8080/my/products/${entityId}/sale`;
 
-      const response = await fetch(url, {
-        method: method,
-        body: formData,
-        // headers: { 'Authorization': `Bearer ${accessToken}` }
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          // fetch API에서 FormData를 사용할 때 Content-Type은 명시하지 않습니다.
+          // 브라우저가 자동으로 'multipart/form-data; boundary=...'를 설정합니다.
+          'Authorization': `Bearer ${accessToken}`, // 👈 인증 헤더만 명시적으로 삽입
+        },
+        body: formData, // FormData 객체를 body에 직접 넣습니다.
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '요청 처리에 실패했습니다.');
+      if (!res.ok) {
+          if (res.status === 401) {
+              throw new Error('인증에 실패했습니다. 다시 로그인해주세요.');
+          }
+          // 백엔드에서 JSON 에러 응답을 주지 않을 수 있으므로 안전하게 처리
+          const errorText = await res.text();
+          try {
+             const errorData = JSON.parse(errorText);
+             throw new Error(errorData.message || `요청 실패 (Status: ${res.status})`);
+          } catch {
+             // JSON 파싱 실패 시 기본 메시지 사용
+             throw new Error(`요청 실패 (Status: ${res.status})`);
+          }
       }
+      
+      // 성공 시 응답을 JSON으로 파싱
+      const responseData: ProductRegisterResponse = await res.json();
 
-      alert(isEditMode ? '수정되었습니다.' : '등록되었습니다.');
-      router.push('/mypage/design');
+      alert(`상품(ID: ${responseData.productId})이 등록되었습니다.`);
+      router.push('/mypage/design'); // (가정) 등록 후 내 도안 목록으로 이동
+
     } catch (err: any) {
       console.error(err);
-      setError(err.message);
+      setError(err.message || '요청 처리에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
