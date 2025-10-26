@@ -30,6 +30,7 @@ public class ProductService {
     private final FileStorageService fileStorageService;
     private final ProductLikeRepository productLikeRepository;
 
+    @Transactional
     public ProductRegisterResponse registerProduct(User seller, Long designId, ProductRegisterRequest request) {
 
         Design design = designRepository.findById(designId)
@@ -64,6 +65,7 @@ public class ProductService {
         return ProductRegisterResponse.from(savedProduct, imageUrls);
     }
 
+    @Transactional
     public ProductModifyResponse modifyProduct(User currentUser, Long productId, ProductModifyRequest request) {
         Product product = findProductById(productId);
 
@@ -103,6 +105,7 @@ public class ProductService {
         return ProductModifyResponse.from(product, currentImageUrls);
     }
 
+    @Transactional
     public void deleteProduct(User currentUser, Long productId) {
         Product product = findProductById(productId);
 
@@ -156,6 +159,7 @@ public class ProductService {
     }
 
     // 상품 목록 조회
+    @Transactional(readOnly = true)
     public Page<ProductListResponse> getProducts(
             User user, // 컨트롤러에서 받은 User 객체
             ProductCategory category,

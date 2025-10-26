@@ -220,8 +220,7 @@ export default function DesignListPage() {
 
   // 판매 등록
   const handleRegisterSale = (id: number) => {
-    // TODO: 상품 등록 페이지로 이동 (아직 경로가 없음)
-    alert('상품 등록 페이지로 이동합니다. (구현 예정)');
+    router.push(`/mypage/design/register/${id}`);
   };
 
   // 다시 판매하기 (판매중지 -> 판매중)
