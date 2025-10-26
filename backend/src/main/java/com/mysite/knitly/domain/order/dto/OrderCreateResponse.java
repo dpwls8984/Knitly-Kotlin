@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 public record OrderCreateResponse(
         Long orderId,
+        String tossOrderId,  // 토스페이먼츠용 주문번호 추가
         LocalDateTime orderDate,
         Double totalPrice,
         List<OrderItemInfo> orderItems
@@ -18,6 +19,7 @@ public record OrderCreateResponse(
 
         return new OrderCreateResponse(
                 order.getOrderId(),
+                order.getTossOrderId(),
                 order.getCreatedAt(),
                 order.getTotalPrice(),
                 itemInfos
