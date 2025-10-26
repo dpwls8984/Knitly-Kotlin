@@ -79,6 +79,9 @@ public class Product {
     @Column
     private Double avgReviewRating; // DECIMAL(3,2)
 
+    @Column
+    private Integer reviewCount;
+
     //상품 수정하는 로직 추가
     public void update(String description, ProductCategory productCategory, String sizeInfo, Integer stockQuantity) {
         this.description = description;
@@ -140,6 +143,12 @@ public class Product {
             this.likeCount -= 1;
         }
     }
+
+    // 리뷰 개수 설정 메서드
+    public void setReviewCount(Integer reviewCount) {
+        this.reviewCount = reviewCount;
+    }
+
 }
 
 //CREATE TABLE `products` (

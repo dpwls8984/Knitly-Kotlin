@@ -27,6 +27,7 @@ interface ProductDetails {
   stockQuantity: number | null; // null이면 상시 판매
   likeCount: number;
   avgReviewRating: number | null;
+  reviewCount: number;
   productImageUrls: string[];
   isLikedByUser: boolean;
 }
@@ -415,10 +416,29 @@ const handleAddToCart = () => {
 };
 // ▲▲▲ [수정] 장바구니 버튼 핸들러 ▲▲▲
   
-  const handleBuyNow = () => {
-    // 장바구니 페이지로 이동
-    router.push('/cart');
-  };
+// 수정된 버전
+const handleBuyNow = () => {
+  if (!product) return;
+
+  // 이미 장바구니에 있는지 확인
+  const isAlreadyInCart = cartItems.some(
+    (item) => item.productId === product.productId
+  );
+
+  // 없으면 장바구니에 추가
+  if (!isAlreadyInCart) {
+    addToCart({
+      productId: product.productId,
+      title: product.title,
+      price: product.price,
+      imageUrl: product.productImageUrls?.[0] || undefined,
+    });
+  }
+
+  // 장바구니 페이지로 이동
+  router.push('/cart');
+};
+
 
   const handleReviewClick = () => {
     setActiveTab('review'); // 탭을 '리뷰'로 활성화
@@ -532,8 +552,8 @@ const handleAddToCart = () => {
               <span className="font-semibold text-gray-700 text-base"> {/* pt-0.5 제거 */}
                 {product.avgReviewRating.toFixed(1)}
               </span>
-              <span className="text-gray-500 text-sm"> {/* pt-0.5 제거 */}
-                리뷰 {product.likeCount}개 {/* 임시: likeCount 대신 리뷰 개수 API필요 */}
+              <span className="text-gray-500 text-sm">
+                리뷰 {product.reviewCount ?? 0}개
               </span>
             </button>
           )}

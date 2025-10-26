@@ -20,7 +20,8 @@ public record ProductDetailResponse(
         boolean isLikedByUser,
         //Long designId
         Double avgReviewRating,
-        List<String> productImageUrls
+        List<String> productImageUrls,
+        Integer reviewCount
 ) {
     public static ProductDetailResponse from(Product product, List<String> imageUrls, boolean isLikedByUser) {
         return new ProductDetailResponse(
@@ -36,7 +37,8 @@ public record ProductDetailResponse(
                 isLikedByUser,
                 //product.getDesign().getDesignId()
                 product.getAvgReviewRating(),
-                imageUrls
+                imageUrls,
+                product.getReviewCount() != null ? product.getReviewCount() : 0 // null 방지
         );
     }
 }
