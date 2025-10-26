@@ -7,6 +7,7 @@ import com.mysite.knitly.domain.product.product.dto.*;
 import com.mysite.knitly.domain.product.product.entity.*;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import com.mysite.knitly.global.util.FileStorageService;
@@ -29,6 +30,7 @@ public class ProductService {
     private final RedisProductService redisProductService;
     private final FileStorageService fileStorageService;
     private final ProductLikeRepository productLikeRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public ProductRegisterResponse registerProduct(User seller, Long designId, ProductRegisterRequest request) {
@@ -238,55 +240,52 @@ public class ProductService {
 
 
     // 인기순 - Redis 활용
+    /**
+     * 인기순 상품 조회 (이미지 포함)
+     */
     private Page<Product> getProductsByPopular(
             ProductCategory category,
             ProductFilterType filterType,
             Pageable pageable) {
 
-        // Redis에서 인기순 목록 가져오기
-        List<Long> popularIds = redisProductService.getTopNPopularProducts(1000);
+        // Redis에서 인기 상품 ID 목록 가져오기
+        List<Long> topIds = redisProductService.getTopNPopularProducts(100);
 
-        if (popularIds.isEmpty()) {
-            Pageable popularPageable = PageRequest.of(
-                    pageable.getPageNumber(),
-                    pageable.getPageSize(),
-                    Sort.by("purchaseCount").descending()
-            );
-            return getFilteredProducts(category, filterType, popularPageable);
+        List<Product> products;
+
+        if (topIds.isEmpty()) {
+            // Redis에 데이터가 없으면 DB에서 직접 조회 (이미지 포함)
+            Pageable top100 = PageRequest.of(0, 100, Sort.by("purchaseCount").descending());
+            products = productRepository.findAllWithImagesAndNotDeleted(top100).getContent();
+        } else {
+            // Redis에서 가져온 ID로 상품 조회 (이미지 포함)
+            List<Product> unordered = productRepository.findByProductIdInWithImagesAndNotDeleted(topIds);
+
+            // Redis의 순서대로 정렬
+            Map<Long, Product> productMap = unordered.stream()
+                    .collect(Collectors.toMap(Product::getProductId, p -> p));
+
+            products = topIds.stream()
+                    .map(productMap::get)
+                    .filter(Objects::nonNull)
+                    .toList();
         }
 
-        // Redis에서 가져온 ID로 DB 조회
-        List<Product> allProducts = productRepository.findByProductIdInAndIsDeletedFalse(popularIds);
-
-        // FREE/LIMITED가 오면 카테고리 무시
-        boolean filterFree = (filterType == ProductFilterType.FREE);
-        boolean filterLimited = (filterType == ProductFilterType.LIMITED);
-
-        // 필터 적용
-        List<Product> filtered = allProducts.stream().filter(p -> {
-            if (filterFree) return Double.compare(p.getPrice(), 0.0) == 0;
-            if (filterLimited) return p.getStockQuantity() != null;
-            if (category != null) return p.getProductCategory() == category;
-            return true;
-        }).toList();
-
-        // Redis 순서 유지하며 정렬
-        Map<Long, Product> productMap = filtered.stream()
-                .collect(Collectors.toMap(Product::getProductId, p -> p));
-
-        List<Product> sorted = popularIds.stream()
-                .map(productMap::get)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        // 필터링 적용
+        products = products.stream()
+                .filter(p -> matchesCondition(p, category, filterType))
+                .toList();
 
         // 페이징 처리
-        return convertToPage(sorted, pageable);
+        return convertToPage(products, pageable);
     }
 
+
     /**
-     * 조회 조건에 따른 상품 조회
-     * 1. 카테고리 조회: 해당 카테고리만
-     * 2. 무료 조회: 모든 카테고리의 무료 상품
+     * 조건별 상품 조회 (이미지 포함)
+     *
+     * 1. 카테고리 조회: 특정 카테고리의 상품들
+     * 2. 무료 상품 조회: 모든 카테고리의 무료 상품
      * 3. 한정판매 조회: 모든 카테고리의 한정판매 상품
      * 4. 전체 조회: 모든 상품
      */
@@ -298,21 +297,21 @@ public class ProductService {
 
         // 1. 카테고리 조회 (ALL)
         if (category != null) {
-            return productRepository.findByProductCategoryAndIsDeletedFalse(category, pageable);
+            return productRepository.findByCategoryWithImagesAndNotDeleted(category, pageable);
         }
 
         // 2. 무료 상품 조회 (카테고리 무관)
         if (filterType == ProductFilterType.FREE) {
-            return productRepository.findByPriceAndIsDeletedFalse(0.0, pageable);
+            return productRepository.findByPriceWithImagesAndNotDeleted(0.0, pageable);
         }
 
         // 3. 한정판매 조회 (카테고리 무관)
         if (filterType == ProductFilterType.LIMITED) {
-            return productRepository.findByStockQuantityIsNotNullAndIsDeletedFalse(pageable);
+            return productRepository.findLimitedWithImagesAndNotDeleted(pageable);
         }
 
         // 4. 전체 조회
-        return productRepository.findByIsDeletedFalse(pageable);
+        return productRepository.findAllWithImagesAndNotDeleted(pageable);
     }
 
     /**
@@ -323,13 +322,14 @@ public class ProductService {
      * @return 상품 목록 (대표 이미지 포함)
      */
     public Page<ProductListResponse> findProductsByUserId(Long userId, Pageable pageable) {
-
+        User user = userRepository.findById(userId).orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+        String sellerName= user.getName();
         // Repository에서 DTO로 조회
         Page<ProductWithThumbnailDto> dtoPage = productRepository.findByUserIdWithThumbnail(userId, pageable);
 
         // DTO -> Response 변환
         Page<ProductListResponse> responsePage = dtoPage.map(
-                dto -> dto.toResponse(true) // 찜한 목록이므로 isLikedByUser = true
+                dto -> dto.toResponse(true, sellerName) // 찜한 목록이므로 isLikedByUser = true
         );
 
         return responsePage;
