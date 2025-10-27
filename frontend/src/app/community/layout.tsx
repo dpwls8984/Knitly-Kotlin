@@ -1,61 +1,57 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import React from "react";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ReactNode } from 'react';
 
-const categoryLinks = [
-  { name: "전체", href: "/community" },
-  { name: "자유", href: "/community/free" },
-  { name: "질문", href: "/community/question" },
-  { name: "팁", href: "/community/tip" },
+interface CommunityLayoutProps {
+  children: ReactNode;
+}
+
+const menuItems = [
+  { label: '전체', href: '/community' },
+  { label: '자유', href: '/community/free' },
+  { label: '질문', href: '/community/question' },
+  { label: '팁', href: '/community/tip' },
 ];
 
-
-const renderLinks = (
-  links: { name: string; href: string }[],
-  currentPathname: string
-) => {
-  return links.map((link) => {
-    const isActive = currentPathname === link.href;
-
-    return (
-      <li key={link.name}>
-        <Link
-          href={link.href}
-          className={
-            isActive
-              ? "text-[#925C4C] font-bold"
-              : "text-black hover:text-[#925C4C]"
-          }
-        >
-          {link.name}
-        </Link>
-      </li>
-    );
-  });
-};
-
-export default function ProductLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function CommunityLayout({ children }: CommunityLayoutProps) {
   const pathname = usePathname();
 
-  return (
-    <div style={{ display: "flex" }}>
-      <aside style={{ width: "250px", padding: "20px" }}>
-        <nav>
-          <ul className="space-y-4">
-            {renderLinks(categoryLinks, pathname)}
-          </ul>
-        </nav>
-      </aside>
+  const isActive = (href: string) => {
+    return pathname === href;
+  };
 
-      <main style={{ flex: 1, padding: "20px" }}>
-        {children}
-      </main>
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="flex gap-8">
+        {/* 왼쪽 사이드바 */}
+        <aside className="w-48 flex-shrink-0">
+          <nav className="sticky top-8">
+            <ul className="space-y-1">
+              {menuItems.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={`block px-4 py-2 rounded-lg transition-colors ${
+                      isActive(item.href)
+                        ? 'bg-[#925C4C] text-white font-semibold'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </aside>
+
+        {/* 메인 컨텐츠 */}
+        <main className="flex-1 min-w-0">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

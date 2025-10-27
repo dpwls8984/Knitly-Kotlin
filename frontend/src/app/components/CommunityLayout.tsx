@@ -9,10 +9,10 @@ interface MyPageLayoutProps {
 }
 
 const menuItems = [
-  { label: '전체', href: '/mypage', exact: true },
-  { label: '자유', href: '/mypage/post', category: 'FREE' },
-  { label: '질문', href: '/mypage/post?category=QUESTION', category: 'QUESTION' },
-  { label: '팁', href: '/mypage/post?category=TIP', category: 'TIP' },
+  { label: '전체', href: '/community', exact: true },
+  { label: '자유', href: '/community?category=FREE', category: 'FREE' },
+  { label: '질문', href: '/community?category=QUESTION', category: 'QUESTION' },
+  { label: '팁', href: '/community?category=TIP', category: 'TIP' },
 ];
 
 export default function MyPageLayout({ children }: MyPageLayoutProps) {
