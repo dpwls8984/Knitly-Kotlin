@@ -1,5 +1,6 @@
 package com.mysite.knitly.domain.product.review.repository;
 
+import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.review.entity.Review;
 import jakarta.persistence.Entity;
 import org.springframework.data.domain.Page;
@@ -24,4 +25,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByUser_UserIdAndIsDeletedFalse(Long userId, Pageable pageable);
 
     long countByUser_UserIdAndIsDeletedFalse(Long userId);
+
+    long countByProductAndIsDeletedFalse(Product product);
+
 }

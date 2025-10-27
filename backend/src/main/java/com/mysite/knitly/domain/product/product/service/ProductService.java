@@ -6,6 +6,7 @@ import com.mysite.knitly.domain.product.like.repository.ProductLikeRepository;
 import com.mysite.knitly.domain.product.product.dto.*;
 import com.mysite.knitly.domain.product.product.entity.*;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
+import com.mysite.knitly.domain.product.review.repository.ReviewRepository;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
@@ -30,6 +31,7 @@ public class ProductService {
     private final RedisProductService redisProductService;
     private final FileStorageService fileStorageService;
     private final ProductLikeRepository productLikeRepository;
+    private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
 
     @Transactional
@@ -404,6 +406,9 @@ public class ProductService {
 
             isLiked = productLikeRepository.existsByUser_UserIdAndProduct_ProductId(userId, productId);
         }
+
+        long reviewCount = reviewRepository.countByProductAndIsDeletedFalse(product);
+        product.setReviewCount((int) reviewCount);
 
         return ProductDetailResponse.from(product, imageUrls, isLiked);
     }
