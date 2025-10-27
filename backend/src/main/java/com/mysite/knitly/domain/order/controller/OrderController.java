@@ -2,10 +2,13 @@ package com.mysite.knitly.domain.order.controller;
 
 import com.mysite.knitly.domain.order.dto.OrderCreateRequest;
 import com.mysite.knitly.domain.order.dto.OrderCreateResponse;
+import com.mysite.knitly.domain.order.service.OrderFacade;
 import com.mysite.knitly.domain.order.service.OrderService;
+import com.mysite.knitly.domain.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -15,15 +18,14 @@ import java.util.UUID;
 @RequestMapping("/orders")
 public class OrderController {
 
-    private final OrderService orderService;
-
+    private final OrderFacade orderFacade;
     @PostMapping
     public ResponseEntity<OrderCreateResponse> createOrder(
-            // TODO: JWT 인증 적용 후 @AuthenticationPrincipal로 변경
-            @PathVariable("userId") Long userId,
+            @AuthenticationPrincipal User user,
             @RequestBody @Valid OrderCreateRequest request
     ) {
-        OrderCreateResponse response = orderService.createOrder(userId, request);
+        // Facade의 메서드를 호출하도록 변경
+        OrderCreateResponse response = orderFacade.createOrderWithLock(user, request);
         return ResponseEntity.ok(response);
     }
 }

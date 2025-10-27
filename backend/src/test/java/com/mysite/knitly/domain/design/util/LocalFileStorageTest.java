@@ -15,19 +15,16 @@ public class LocalFileStorageTest {
     Path tempDir;
 
     @Test
-    @DisplayName("로컬 저장 - URL 반환 및 URL→실경로 복원 성공")
+    @DisplayName("로컬 저장 - URL 반환 및 URL → 실경로 복원 성공")
     void savePdfFile_and_resolve_ok() throws Exception {
-        // given
         LocalFileStorage storage = new LocalFileStorage();
         setField(storage, "uploadDir", tempDir.toString());
         setField(storage, "publicPrefix", "/files");
 
         byte[] pdfBytes = new byte[]{1,2,3};
 
-        // when
-        String url = storage.savePdfFile(pdfBytes);
+        String url = storage.savePdfFile(pdfBytes, "testFile");
 
-        // then
         assertThat(url).startsWith("/files/");
 
         // URL -> 실제 경로 복원

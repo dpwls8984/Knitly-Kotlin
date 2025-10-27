@@ -1,13 +1,10 @@
 package com.mysite.knitly.domain.user.entity;
 
+import com.mysite.knitly.domain.userstore.entity.UserStore;
 import com.mysite.knitly.global.jpa.BaseTimeEntity;
-import com.mysite.knitly.domain.user.entity.enums.Provider;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -32,13 +29,13 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false, length = 50)
     private String name; // 구글에서 받아온 이름
 
+    // UserStore와 1:1 양방향 관계
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private UserStore userStore;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private Provider provider; // GOOGLE
-
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
 
     // 정적 팩토리 메서드
     public static User createGoogleUser(String socialId, String email, String name) {
@@ -48,6 +45,17 @@ public class User extends BaseTimeEntity {
                 .name(name)
                 .provider(Provider.GOOGLE)
                 .build();
+    }
+
+    // UserStore 초기화 메서드
+    @PostPersist
+    public void initializeUserStore() {
+        if (this.userStore == null) {
+            this.userStore = UserStore.builder()
+                    .user(this)
+                    .storeDetail("안녕하세요! 제 스토어에 오신 것을 환영합니다.")
+                    .build();
+        }
     }
 }
 

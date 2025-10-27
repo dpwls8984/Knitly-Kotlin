@@ -34,7 +34,8 @@ public class RefreshTokenService {
                 TimeUnit.SECONDS
         );
 
-        log.info("Refresh Token saved to Redis - userId: {}", userId);
+        log.info("==> Refresh Token saved to Redis - userId: {}", userId);
+        log.info("==> Refresh Token saved to Redis - refreshToken: {}", refreshToken);
     }
 
     /**
@@ -86,12 +87,5 @@ public class RefreshTokenService {
         }
     }
 
-    /**
-     * Refresh Token 존재 여부 확인
-     */
-    public boolean existsRefreshToken(Long userId) {
-        String key = REFRESH_TOKEN_PREFIX + userId.toString();
-        Boolean exists = redisTemplate.hasKey(key);
-        return Boolean.TRUE.equals(exists);
-    }
+
 }

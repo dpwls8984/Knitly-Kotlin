@@ -1,5 +1,6 @@
 package com.mysite.knitly.utility.auth.service;
 
+import com.mysite.knitly.domain.user.service.UserService;
 import com.mysite.knitly.utility.auth.dto.TokenRefreshResponse;
 import com.mysite.knitly.utility.jwt.JwtProperties;
 import com.mysite.knitly.utility.jwt.JwtProvider;
@@ -7,6 +8,7 @@ import com.mysite.knitly.utility.redis.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -16,6 +18,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final RefreshTokenService refreshTokenService;
     private final JwtProperties jwtProperties;
+    private final UserService userService;
 
     /**
      * Refresh Token으로 Access Token 갱신
@@ -23,6 +26,7 @@ public class AuthService {
     public TokenRefreshResponse refreshAccessToken(String refreshToken) {
         // 1. Refresh Token 유효성 검증
         if (!jwtProvider.validateToken(refreshToken)) {
+            log.info("유효하지 않은 Refresh Token입니다.");
             throw new IllegalArgumentException("유효하지 않은 Refresh Token입니다.");
         }
 
@@ -59,5 +63,21 @@ public class AuthService {
     public void logout(Long userId) {
         refreshTokenService.deleteRefreshToken(userId);
         log.info("User logged out - userId: {}", userId);
+    }
+
+    /**
+     * 회원탈퇴
+     * 1. Refresh Token 삭제 (Redis)
+     * 2. User 삭제 (DB)
+     */
+    @Transactional
+    public void deleteAccount(Long userId) {
+        // 1. Redis에서 Refresh Token 삭제
+        refreshTokenService.deleteRefreshToken(userId);
+
+        // 2. DB에서 사용자 삭제
+        userService.deleteUser(userId);
+
+        log.info("Account deleted - userId: {}", userId);
     }
 }

@@ -1,8 +1,10 @@
 package com.mysite.knitly.domain.user.service;
 
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.entity.enums.Provider;
+import com.mysite.knitly.domain.user.entity.Provider;
 import com.mysite.knitly.domain.user.repository.UserRepository;
+import com.mysite.knitly.domain.userstore.entity.UserStore;
+import com.mysite.knitly.domain.userstore.repository.UserStoreRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
-
+    private final UserStoreRepository userStoreRepository;
     /**
      * Google OAuth로 로그인한 사용자 처리
      * - 신규 사용자: 회원가입 처리
@@ -37,6 +39,18 @@ public class UserService {
                 });
     }
 
+    @Transactional
+    public void ensureUserStore(User user) {
+        if (!userStoreRepository.existsByUser(user)) {
+            log.info("유저 스토어 생성: userId={}", user.getUserId());
+            userStoreRepository.save(
+                    new UserStore(user,"안녕하세요! 제 스토어에 오신 것을 환영합니다.")
+            );
+        } else {
+            log.info("기존 스토어 존재: userId={}", user.getUserId());
+        }
+    }
+
     /**
      * userId로 사용자 조회
      */
@@ -44,4 +58,15 @@ public class UserService {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
     }
+
+    /**
+     * 회원탈퇴
+     */
+    @Transactional
+    public void deleteUser(Long userId) {
+        User user = findById(userId);
+        userRepository.delete(user);
+        log.info("회원탈퇴 완료 - userId: {}, email: {}", userId, user.getEmail());
+    }
+
 }

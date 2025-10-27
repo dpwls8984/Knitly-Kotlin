@@ -31,11 +31,12 @@ public class Post extends BaseTimeEntity {
     private String content;
 
     // 다중 이미지 URL
+    @Builder.Default
     @ElementCollection
     @CollectionTable(name = "post_images", joinColumns = @JoinColumn(name = "post_id"))
     @Column(name = "url", nullable = false, length = 512)
     @OrderColumn(name = "sort_order")
-    private List<String> imageUrls;
+    private List<String> imageUrls = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "post_category", nullable = false, columnDefinition = "ENUM('FREE','QUESTION','TIP')")
@@ -69,7 +70,10 @@ public class Post extends BaseTimeEntity {
 
     // 이미지 교체
     public void replaceImages(List<String> newUrls) {
-        this.imageUrls = newUrls;
+        this.imageUrls.clear();
+        if (newUrls != null) {
+            this.imageUrls.addAll(newUrls);
+        }
     }
 
         public boolean isAuthor(User user) {

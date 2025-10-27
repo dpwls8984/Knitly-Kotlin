@@ -1,8 +1,11 @@
 package com.mysite.knitly.domain.product.review.service;
 
+import com.mysite.knitly.domain.order.entity.OrderItem;
+import com.mysite.knitly.domain.order.repository.OrderItemRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest;
+import com.mysite.knitly.domain.product.review.dto.ReviewCreateResponse;
 import com.mysite.knitly.domain.product.review.dto.ReviewDeleteRequest;
 import com.mysite.knitly.domain.product.review.dto.ReviewListResponse;
 import com.mysite.knitly.domain.product.review.entity.Review;
@@ -12,7 +15,13 @@ import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
+import com.mysite.knitly.global.util.FileNameUtils;
+import com.mysite.knitly.global.util.ImageValidator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,52 +43,65 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final OrderItemRepository orderItemRepository;
 
-    String uploadDir = "resources/static/review/";
-    String urlPrefix = "/resources/static/review/";
+    String uploadDir = System.getProperty("user.dir") + "/uploads/review/";
+    String urlPrefix = "/review/";
 
 
-    // 1️. 리뷰 등록
+    public ReviewCreateResponse getReviewFormInfo(Long orderItemId) {
+        OrderItem orderItem = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.ORDER_ITEM_NOT_FOUND)); // (ErrorCode 추가 필요)
+
+        Product product = orderItem.getProduct();
+
+        String thumbnailUrl = null;
+        if (product.getProductImages() != null && !product.getProductImages().isEmpty()) {
+            thumbnailUrl = product.getProductImages().get(0).getProductImageUrl();
+        }
+
+        return new ReviewCreateResponse(product.getTitle(), thumbnailUrl);
+    }
+
+    // 1. 리뷰 등록
     @Transactional
-    public ReviewListResponse createReview(Long productId, Long userId, ReviewCreateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+    public void createReview(Long orderItemId, User user, ReviewCreateRequest request) {
+        // 1. orderItemId로 OrderItem을 찾습니다.
+        OrderItem orderItem = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.ORDER_ITEM_NOT_FOUND));
 
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
+        // 2. OrderItem에서 Product를 가져옵니다.
+        Product product = orderItem.getProduct();
 
         Review review = Review.builder()
                 .user(user)
                 .product(product)
+                .orderItem(orderItem)
                 .rating(request.rating())
                 .content(request.content())
                 .build();
 
-        List<String> reviewImageUrls = new ArrayList<>();
         List<ReviewImage> reviewImages = new ArrayList<>();
 
         if (request.reviewImageUrls() != null && !request.reviewImageUrls().isEmpty()) {
             new File(uploadDir).mkdirs();
 
             List<MultipartFile> imageFiles = request.reviewImageUrls();
+
             for (int i = 0; i < imageFiles.size(); i++) {
                 MultipartFile file = imageFiles.get(i);
                 if (file.isEmpty()) continue;
 
                 String originalFilename = file.getOriginalFilename();
-                if (originalFilename == null || !originalFilename.matches("(?i).*\\.(jpg|jpeg|png)$")) {
-                    throw new ServiceException(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
-                }
-
                 try {
                     String filename = UUID.randomUUID() + "_" + originalFilename;
-                    Path path = Paths.get(uploadDir, filename);
+                    Path path = Path.of(uploadDir, filename);
                     Files.write(path, file.getBytes());
 
                     String url = urlPrefix + filename;
-                    reviewImageUrls.add(url);
 
                     ReviewImage reviewImage = ReviewImage.builder()
+                            .review(review)          // ✅ 반드시 review 설정
                             .reviewImageUrl(url)
                             .sortOrder(i)
                             .build();
@@ -92,19 +114,17 @@ public class ReviewService {
         }
 
         review.addReviewImages(reviewImages);
-
-        Review savedReview = reviewRepository.save(review);
-
-        return ReviewListResponse.from(savedReview, reviewImageUrls);
+        reviewRepository.save(review);
     }
+
 
     // 2. 리뷰 소프트 삭제 (본인 리뷰만)
     @Transactional
-    public void deleteReview(Long reviewId, ReviewDeleteRequest request) {
+    public void deleteReview(Long reviewId, User user) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.REVIEW_NOT_FOUND));
 
-        if (!review.getUser().getUserId().equals(request.userId())) {
+        if (!review.getUser().getUserId().equals(user.getUserId())) {
             throw new ServiceException(ErrorCode.REVIEW_NOT_AUTHORIZED);
         }
 
@@ -113,18 +133,16 @@ public class ReviewService {
 
     // 3️. 특정 상품 리뷰 목록 조회
     @Transactional(readOnly = true)
-    public List<ReviewListResponse> getReviewsByProduct(Long productId) {
-        //delete 되지 않은 상품을 조회
-        List<Review> reviews = reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId);
+    public Page<ReviewListResponse> getReviewsByProduct(Long productId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        //해당 리뷰의 이미지 조회
-        return reviews.stream()
-                .map(review -> {
-                    List<String> imageUrls = review.getReviewImages().stream()
-                            .map(ReviewImage::getReviewImageUrl)
-                            .toList();
-                    return ReviewListResponse.from(review, imageUrls);
-                })
-                .toList();
+        Page<Review> reviews = reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId, pageable);
+
+        return reviews.map(review -> {
+            List<String> imageUrls = review.getReviewImages().stream()
+                    .map(ReviewImage::getReviewImageUrl)
+                    .toList();
+            return ReviewListResponse.from(review, imageUrls);
+        });
     }
 }

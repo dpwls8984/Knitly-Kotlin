@@ -13,7 +13,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -52,7 +53,7 @@ public class Product {
     @ManyToOne(fetch = FetchType.LAZY)
     //Cascade 안하는 이유 : User 삭제시 Product도 삭제되면 안됨
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private User user; // 판매자
 
     @Column(nullable = false)
     private Integer purchaseCount; // 누적수
@@ -71,8 +72,15 @@ public class Product {
     //Cascade 안하는 이유 : Design 삭제시 Product도 삭제되면 안됨
     private Design design;
 
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ProductImage> productImages = new ArrayList<>();
+
     @Column
     private Double avgReviewRating; // DECIMAL(3,2)
+
+    @Column
+    private Integer reviewCount;
 
     //상품 수정하는 로직 추가
     public void update(String description, ProductCategory productCategory, String sizeInfo, Integer stockQuantity) {
@@ -85,6 +93,14 @@ public class Product {
     //소프트 딜리트 로직 추가
     public void softDelete() {
         this.isDeleted = true;
+    }
+
+    //재판매를 위한 메서드 (isDeleted 를 false 로 변경)
+    public void relist() {
+        if (!this.isDeleted) {
+            throw new ServiceException(ErrorCode.DESIGN_NOT_STOPPED);
+        }
+        this.isDeleted = false;
     }
 
     //재고 수량 감소 메서드 추가
@@ -103,6 +119,36 @@ public class Product {
         // 3. 재고 차감
         this.stockQuantity = restStock;
     }
+
+    // 상품 이미지 설정 메서드
+    public void addProductImages(List<ProductImage> images) {
+        this.productImages.clear();
+        if (images != null) {
+            this.productImages.addAll(images);
+            images.forEach(image -> image.setProduct(this)); // 양방향 연관관계 설정
+        }
+    }
+
+    public void increaseLikeCount() {
+        if (this.likeCount == null) {
+            this.likeCount = 0;
+        }
+        this.likeCount += 1;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount == null || this.likeCount <= 0) {
+            this.likeCount = 0;
+        } else {
+            this.likeCount -= 1;
+        }
+    }
+
+    // 리뷰 개수 설정 메서드
+    public void setReviewCount(Integer reviewCount) {
+        this.reviewCount = reviewCount;
+    }
+
 }
 
 //CREATE TABLE `products` (

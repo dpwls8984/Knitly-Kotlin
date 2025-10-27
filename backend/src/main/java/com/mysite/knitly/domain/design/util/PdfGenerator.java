@@ -25,7 +25,7 @@ public class PdfGenerator {
     private static final int GRID_SIZE = 10;
     private static final float MARGIN = 36f;    // A4 기준 상하좌우 여백 - 0.5 inch
     private static final float TITLE_SIZE = 18f; // 도안명 - 18pt
-    private static final float SYMBOL_SIZE = 11f; // 격자 셀 안 기호 크기 - 11pt
+    private static final float SYMBOL_SIZE = 14f; // 격자 셀 안 기호 크기 - 14pt (11pt에서 증가)
 
     public byte[] generate(String designName, List<List<String>> gridData){
         try (PDDocument doc = new PDDocument()) {
@@ -87,11 +87,14 @@ public class PdfGenerator {
                 cs.setNonStrokingColor(Color.BLACK);
                 for (int r = 0; r < GRID_SIZE; r++) {
                     for (int c = 0; c < GRID_SIZE; c++) {
-                        String s = gridData.get(r).get(c);
-                        if (s != null && !s.isBlank()) {
+                        String symbolType = gridData.get(r).get(c);
+                        if (symbolType != null && !symbolType.isBlank()) {
                             float cx = gridLeft + c * cellSize + cellSize / 2;
                             float cy = gridTop - r * cellSize - cellSize / 2 + 3f; // 살짝 위 보정
-                            drawTextCentered(cs, font, SYMBOL_SIZE, s, cx, cy);
+
+                            // 기호 타입에 따라 다른 심볼 출력
+                            String displaySymbol = convertSymbolToDisplay(symbolType);
+                            drawTextCentered(cs, font, SYMBOL_SIZE, displaySymbol, cx, cy);
                         }
                     }
                 }
@@ -109,8 +112,33 @@ public class PdfGenerator {
 
         } catch (Exception e) {
             log.error("PDF 생성 실패 - name={}", designName, e);
-            // 프로젝트 공통 예외가 있으면 거기에 매핑하세요 (예: new ServiceException(ErrorCode.PDF_GENERATION_FAILED, e))
             throw new ServiceException(ErrorCode.DESIGN_PDF_GENERATION_FAILED);
+        }
+    }
+
+    /**
+     * 프론트엔드에서 받은 기호 타입을 PDF에 표시할 실제 문자로 변환
+     */
+    private String convertSymbolToDisplay(String symbolType) {
+        if (symbolType == null) return "";
+
+        switch (symbolType.toLowerCase()) {
+            case "empty":
+                return "○";  // 빈 원 (U+25CB)
+            case "filled":
+                return "●";  // 채워진 원 (U+25CF)
+            case "x":
+                return "×";  // 곱하기 기호 (U+00D7)
+            case "v":
+                return "V";  // V
+            case "t":
+                return "T";  // T
+            case "plus":
+                return "+";  // +
+            case "a":
+                return "A";  // A
+            default:
+                return symbolType;  // 알 수 없는 경우 그대로 출력
         }
     }
 
@@ -143,5 +171,4 @@ public class PdfGenerator {
         cs.showText(text);
         cs.endText();
     }
-
 }

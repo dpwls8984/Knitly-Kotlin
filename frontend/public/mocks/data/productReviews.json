@@ -1,0 +1,44 @@
+[
+    {
+      "reviewId": 201,
+      "rating": 5,
+      "content": "정말 부드럽고 따뜻합니다. 겨울 내내 잘 입을 것 같아요!",
+      "createdAt": "2025-10-15T10:30:00",
+      "userName": "홍길동",
+      "reviewImageUrls": [
+        "https://placehold.co/150x150/925C4C/ffffff?text=Review+1",
+        "https://placehold.co/150x150/EAD9D5/333333?text=Review+2"
+      ]
+    },
+    {
+      "reviewId": 202,
+      "rating": 4,
+      "content": "촉감이 부드럽지만 생각보다 얇아요. 봄/가을에 좋습니다.",
+      "createdAt": "2025-10-14T14:12:00",
+      "userName": "김철수",
+      "reviewImageUrls": [
+        "https://placehold.co/150x150/BDC3C7/333333?text=Review+1"
+      ]
+    },
+    {
+      "reviewId": 203,
+      "rating": 5,
+      "content": "선물용으로 샀는데 아주 좋아했어요. 포장도 꼼꼼합니다.",
+      "createdAt": "2025-10-13T09:45:00",
+      "userName": "이영희",
+      "reviewImageUrls": []
+    },
+    {
+      "reviewId": 204,
+      "rating": 3,
+      "content": "디자인은 마음에 드는데, 배송이 조금 늦었습니다.",
+      "createdAt": "2025-10-12T17:20:00",
+      "userName": "박민수",
+      "reviewImageUrls": [
+        "https://placehold.co/150x150/34495E/ffffff?text=Review+1",
+        "https://placehold.co/150x150/F3E5AB/333333?text=Review+2",
+        "https://placehold.co/150x150/BDC3C7/333333?text=Review+3"
+      ]
+    }
+  ]
+  
