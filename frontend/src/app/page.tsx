@@ -128,31 +128,19 @@ if (isProcessingLogin) {
     );
   }
 
-    // 메인 페이지
-    return (
-        <div>
-            <h1 className="text-3xl font-bold mb-4">메인페이지</h1>
-
-            {user ? (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-                    <h2 className="text-xl font-semibold mb-2">
-                        안녕하세요, {user.name}님! 👋
-                    </h2>
-                    <p className="text-gray-600">
-                        Email: {user.email}
-                    </p>
-                </div>
-            ) : (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
-                    <p className="text-gray-600">
-                        로그인하시면 더 많은 서비스를 이용하실 수 있습니다.
-                    </p>
-                </div>
-            )}
-
-
-            <section className="mb-12">
-        <h2 className="text-2xl font-bold mb-6 text-gray-900">인기 상품 랭킹 TOP 5</h2>
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* 인기 상품 섹션 */}
+      <section className="mb-16">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">인기 상품 랭킹 TOP 5</h2>
+          <button
+            onClick={() => router.push('/product')}
+            className="text-sm text-gray-600 hover:text-[#925C4C] transition-colors"
+          >
+            더보기 →
+          </button>
+        </div>
         
         {popularProducts.length === 0 ? (
           <div className="text-center py-12 text-gray-500">

@@ -55,9 +55,6 @@ export default function ProductList({ title, category, filter, basePath }: Produ
       }
 
       const response: PageResponse<ProductListResponse> = await getProductList(params);
-
-      console.log("📦 상품 목록 응답:", response);
-      console.log("🖼️ 첫 번째 상품:", response?.content?.[0]);
       
       setProducts(response.content);
       setTotalPages(response.totalPages);
