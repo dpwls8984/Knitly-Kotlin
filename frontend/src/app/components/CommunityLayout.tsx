@@ -4,22 +4,25 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode } from 'react';
 
-interface CommunityLayoutProps {
+interface MyPageLayoutProps {
   children: ReactNode;
 }
 
 const menuItems = [
-  { label: '전체', href: '/community' },
-  { label: '자유', href: '/community/free' },
-  { label: '질문', href: '/community/question' },
-  { label: '팁', href: '/community/tip' },
+  { label: '전체', href: '/community', exact: true },
+  { label: '자유', href: '/community?category=FREE', category: 'FREE' },
+  { label: '질문', href: '/community?category=QUESTION', category: 'QUESTION' },
+  { label: '팁', href: '/community?category=TIP', category: 'TIP' },
 ];
 
-export default function CommunityLayout({ children }: CommunityLayoutProps) {
+export default function MyPageLayout({ children }: MyPageLayoutProps) {
   const pathname = usePathname();
 
-  const isActive = (href: string) => {
-    return pathname === href;
+  const isActive = (href: string, exact?: boolean) => {
+    if (exact) {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
   };
 
   return (
@@ -34,7 +37,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                   <Link
                     href={item.href}
                     className={`block px-4 py-2 rounded-lg transition-colors ${
-                      isActive(item.href)
+                      isActive(item.href, item.exact)
                         ? 'bg-[#925C4C] text-white font-semibold'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
