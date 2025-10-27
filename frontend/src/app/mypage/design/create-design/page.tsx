@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/store/authStore';
 import { createDesign } from '@/lib/api/design.api';
 import type { KnittingSymbol } from '@/lib/api/design.api';
 
@@ -95,6 +96,8 @@ function SymbolButton({ symbol, label, isSelected, onClick }: SymbolButtonProps)
 
 export default function CreateDesignPage() {
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuthStore(); // 인증 상태 가져오기
+  
   const [grid, setGrid] = useState<(KnittingSymbol | null)[][]>(
     Array(10).fill(null).map(() => Array(10).fill(null))
   );
@@ -103,6 +106,32 @@ export default function CreateDesignPage() {
   const [showNotification, setShowNotification] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // 🔥 인증 체크 - 비로그인 시 홈으로 리다이렉트
+  useEffect(() => {
+    if (isLoading) {
+      return; // 로딩 중이면 기다림
+    }
+
+    if (!isAuthenticated) {
+      alert('로그인이 필요한 서비스입니다.');
+      router.replace('/');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  // 로딩 중일 때
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#925C4C]"></div>
+      </div>
+    );
+  }
+
+  // 비인증 상태일 때 (리다이렉트 처리 중)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   // 격자 셀 클릭 핸들러
   const handleCellClick = (row: number, col: number) => {

@@ -2,25 +2,15 @@
 
 import { useRouter } from 'next/navigation';
 import { ProductListResponse } from '@/types/product.types';
-import { useState, useEffect } from 'react';
-import { addLike, removeFavorite } from '@/lib/api/like.api';
 
 interface ProductCardProps {
   product: ProductListResponse;
+  onLikeToggle: (productId: number) => void;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, onLikeToggle }: ProductCardProps) {
   const router = useRouter();
   const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-
-  const [isLiked, setIsLiked] = useState(product.isLikedByUser);
-  const [likeCount, setLikeCount] = useState(product.likeCount);
-  const [isLiking, setIsLiking] = useState(false);
-
-  useEffect(() => {
-    setIsLiked(product.isLikedByUser);
-    setLikeCount(product.likeCount);
-  }, [product.isLikedByUser, product.likeCount]);
 
   const handleCardClick = () => {
     router.push(`/product/${product.productId}`);
@@ -33,34 +23,10 @@ export default function ProductCard({ product }: ProductCardProps) {
     alert('판매자 스토어 페이지로 이동합니다. (구현 예정)');
   };
 
-  const handleLikeClick = async (e: React.MouseEvent) => {
+  const handleLikeClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isLiking) return;
-    setIsLiking(true);
-
-    const originalIsLiked = isLiked;
-    const originalLikeCount = likeCount;
-
-    setIsLiked((prev) => !prev);
-    setLikeCount((prevCount) => (originalIsLiked ? prevCount - 1 : prevCount + 1));
-    
-    try {
-      // 6. 상태에 따라 API 호출
-      if (originalIsLiked) {
-        await removeFavorite(product.productId);
-      } else {
-        await addLike(product.productId);
-      }
-    } catch (error) {
-      console.error('찜 처리 실패:', error);
-      // 7. API 호출 실패 시 UI 롤백
-      setIsLiked(originalIsLiked);
-      setLikeCount(originalLikeCount);
-      alert('찜 상태 변경에 실패했습니다.');
-    } finally {
-      setIsLiking(false); // 로딩 상태 해제
-    }
+    onLikeToggle(product.productId);
   };
 
   return (
@@ -92,8 +58,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             onClick={handleAuthorClick}
             className="text-xs text-gray-600 hover:text-[#925C4C] transition-colors block mb-2"
           >
-            {/* TODO: 작가명 정보가 백엔드에서 제공되지 않음 - 추후 수정 필요 */}
-            작가명
+            {product.sellerName}
           </button>
           {/* 🔥 가격 스타일 수정: 갈색(브랜드컬러) + 볼드 처리 */}
           <div className="text-base font-bold text-[#925C4C]">
@@ -106,11 +71,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           <button
             onClick={handleLikeClick}
             className="flex-shrink-0"
-            disabled={isLiking}
           >
             <svg
-              className={`w-5 h-5 ${isLiked ? 'text-[#925C4C]' : 'text-gray-400'}`}
-              fill={isLiked ? 'currentColor' : 'none'}
+              className="w-5 h-5 text-gray-400"
+              fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
@@ -123,7 +87,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             </svg>
           </button>
           <div className="text-xs text-gray-500">
-            {likeCount}
+            {product.likeCount}
           </div>
         </div>
       </div>

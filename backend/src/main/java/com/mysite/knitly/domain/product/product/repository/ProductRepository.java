@@ -70,4 +70,53 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             ORDER BY p.createdAt DESC
             """)
     Page<ProductWithThumbnailDto> findByUserIdWithThumbnail(@Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * 전체 상품 조회 (이미지 포함, N+1 방지)
+     */
+    @Query("SELECT DISTINCT p FROM Product p " +
+            "LEFT JOIN FETCH p.productImages " +
+            "WHERE p.isDeleted = false")
+    Page<Product> findAllWithImagesAndNotDeleted(Pageable pageable);
+
+    /**
+     * 카테고리별 조회 (이미지 포함, N+1 방지)
+     */
+    @Query("SELECT DISTINCT p FROM Product p " +
+            "LEFT JOIN FETCH p.productImages " +
+            "WHERE p.productCategory = :category AND p.isDeleted = false")
+    Page<Product> findByCategoryWithImagesAndNotDeleted(
+            @Param("category") ProductCategory category,
+            Pageable pageable
+    );
+
+    /**
+     * 무료 상품 조회 (이미지 포함, N+1 방지)
+     */
+    @Query("SELECT DISTINCT p FROM Product p " +
+            "LEFT JOIN FETCH p.productImages " +
+            "WHERE p.price = :price AND p.isDeleted = false")
+    Page<Product> findByPriceWithImagesAndNotDeleted(
+            @Param("price") Double price,
+            Pageable pageable
+    );
+
+    /**
+     * 한정판매 조회 (이미지 포함, N+1 방지)
+     */
+    @Query("SELECT DISTINCT p FROM Product p " +
+            "LEFT JOIN FETCH p.productImages " +
+            "WHERE p.stockQuantity IS NOT NULL AND p.isDeleted = false")
+    Page<Product> findLimitedWithImagesAndNotDeleted(Pageable pageable);
+
+    /**
+     * productId 리스트로 여러 개 조회 (이미지 포함, N+1 방지)
+     */
+    @Query("SELECT DISTINCT p FROM Product p " +
+            "LEFT JOIN FETCH p.productImages " +
+            "WHERE p.productId IN :productIds AND p.isDeleted = false")
+    List<Product> findByProductIdInWithImagesAndNotDeleted(
+            @Param("productIds") List<Long> productIds
+    );
+
 }
