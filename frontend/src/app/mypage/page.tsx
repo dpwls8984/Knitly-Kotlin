@@ -50,10 +50,6 @@ export default function MyPage() {
 
                 <div className="grid grid-cols-2 gap-4 mt-6">
                     <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-sm text-gray-600">User ID</p>
-                        <p className="text-lg font-semibold">{user.userId}</p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
                         <p className="text-sm text-gray-600">로그인 방식</p>
                         <p className="text-lg font-semibold">{user.provider}</p>
                     </div>

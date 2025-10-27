@@ -6,9 +6,10 @@ import { ProductListResponse } from '@/types/product.types';
 
 interface ProductCardProps {
   product: ProductListResponse;
+  onLikeToggle: (productId: number) => void;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, onLikeToggle }: ProductCardProps) {
   const router = useRouter();
 
   const handleCardClick = () => {
