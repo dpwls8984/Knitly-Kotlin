@@ -135,21 +135,6 @@ export default function HomePage() {
                 </div>
             )}
 
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h3 className="font-semibold mb-2">개발 정보:</h3>
-                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                    <li>경로: src/app/page.tsx</li>
-                    <li>레이아웃: src/app/layout.tsx</li>
-                    <li>
-                        {user ? '현재 로그인 상태' : '현재 비로그인 상태'}
-                    </li>
-                    <li>
-                        {user
-                            ? '헤더에서 "로그아웃" 버튼으로 로그아웃 가능'
-                            : '헤더에서 "로그인/회원가입" 버튼으로 로그인 모달 오픈'}
-                    </li>
-                </ul>
-            </div>
 
             <section className="mb-12">
         <h2 className="text-2xl font-bold mb-6 text-gray-900">인기 상품 랭킹 TOP 5</h2>
