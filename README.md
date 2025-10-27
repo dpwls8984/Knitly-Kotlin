@@ -29,7 +29,7 @@
 | **Infra**          | AWS EC2, Docker, Redis, Nginx                           |
 | **API**            | OAuth 2.0 (Google Login), Toss Payments API, Swagger UI |
 | **DevOps**         | GitHub Actions (CI/CD), Docker Compose                  |
-| **Test & Monitor** | JUnit5, MockMvc, Prometheus, Grafana (검토 중)             |
+| **Test & Monitor** | JUnit5, MockMvc, Prometheus, Jmeter, NGrinder         |
 | **Tooling**        | IntelliJ, Postman, DBeaver, Slack, Notion               |
 
 ---
