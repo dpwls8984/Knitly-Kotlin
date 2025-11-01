@@ -95,6 +95,12 @@ public class LocalFileStorage {
             throw new ServiceException(ErrorCode.REVIEW_IMAGE_SAVE_FAILED);
         }
 
+        final long MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024; // 3MB
+
+        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
+            throw new ServiceException(ErrorCode.REVIEW_IMAGE_SIZE_EXCEEDED);
+        }
+
         try {
             LocalDate today = LocalDate.now();
             Path base = Paths.get(uploadDir).getParent().resolve("reviews").toAbsolutePath().normalize();
