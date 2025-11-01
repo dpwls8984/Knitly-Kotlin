@@ -1,5 +1,6 @@
 package com.mysite.knitly.domain.product.review.service;
 
+import com.mysite.knitly.domain.design.util.LocalFileStorage;
 import com.mysite.knitly.domain.order.entity.OrderItem;
 import com.mysite.knitly.domain.order.repository.OrderItemRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
@@ -41,13 +42,8 @@ import java.util.UUID;
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
-    private final ProductRepository productRepository;
-    private final UserRepository userRepository;
+    private final LocalFileStorage localFileStorage;
     private final OrderItemRepository orderItemRepository;
-
-    String uploadDir = System.getProperty("user.dir") + "/uploads/review/";
-    String urlPrefix = "/review/";
-
 
     public ReviewCreateResponse getReviewFormInfo(Long orderItemId) {
         OrderItem orderItem = orderItemRepository.findById(orderItemId)
@@ -66,11 +62,9 @@ public class ReviewService {
     // 1. 리뷰 등록
     @Transactional
     public void createReview(Long orderItemId, User user, ReviewCreateRequest request) {
-        // 1. orderItemId로 OrderItem을 찾습니다.
         OrderItem orderItem = orderItemRepository.findById(orderItemId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.ORDER_ITEM_NOT_FOUND));
 
-        // 2. OrderItem에서 Product를 가져옵니다.
         Product product = orderItem.getProduct();
 
         Review review = Review.builder()
@@ -84,32 +78,20 @@ public class ReviewService {
         List<ReviewImage> reviewImages = new ArrayList<>();
 
         if (request.reviewImageUrls() != null && !request.reviewImageUrls().isEmpty()) {
-            new File(uploadDir).mkdirs();
-
             List<MultipartFile> imageFiles = request.reviewImageUrls();
 
             for (int i = 0; i < imageFiles.size(); i++) {
                 MultipartFile file = imageFiles.get(i);
                 if (file.isEmpty()) continue;
 
-                String originalFilename = file.getOriginalFilename();
-                try {
-                    String filename = UUID.randomUUID() + "_" + originalFilename;
-                    Path path = Path.of(uploadDir, filename);
-                    Files.write(path, file.getBytes());
+                String url = localFileStorage.saveReviewImage(file);
 
-                    String url = urlPrefix + filename;
-
-                    ReviewImage reviewImage = ReviewImage.builder()
-                            .review(review)          // ✅ 반드시 review 설정
-                            .reviewImageUrl(url)
-                            .sortOrder(i)
-                            .build();
-                    reviewImages.add(reviewImage);
-
-                } catch (IOException e) {
-                    throw new ServiceException(ErrorCode.REVIEW_IMAGE_SAVE_FAILED);
-                }
+                ReviewImage reviewImage = ReviewImage.builder()
+                        .review(review)
+                        .reviewImageUrl(url)
+                        .sortOrder(i)
+                        .build();
+                reviewImages.add(reviewImage);
             }
         }
 
