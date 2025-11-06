@@ -10,6 +10,7 @@ import com.mysite.knitly.domain.payment.entity.Payment;
 import com.mysite.knitly.domain.payment.entity.PaymentMethod;
 import com.mysite.knitly.domain.payment.entity.PaymentStatus;
 import com.mysite.knitly.domain.payment.repository.PaymentRepository;
+import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.service.RedisProductService;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
@@ -133,7 +134,7 @@ public class PaymentService {
         }
     }
 
-    //주문의 모든 상품에 대해 Redis 인기도 증가
+    //주문의 모든 상품에 대해 Redis 인기도, purchaseCount 증가
     private void incrementProductPopularity(Order order) {
         long startTime = System.currentTimeMillis();
 
@@ -142,18 +143,23 @@ public class PaymentService {
             int failCount = 0;
 
             for (OrderItem orderItem : order.getOrderItems()) {
-                Long productId = orderItem.getProduct().getProductId();
+                Product product = orderItem.getProduct();
+                Long productId = product.getProductId();
                 int quantity = orderItem.getQuantity();
 
                 try {
-                    // 구매한 수량만큼 인기도 증가
+                    // DB의 purchaseCount 증가 (수량만큼)
+                    product.increasePurchaseCount(quantity);
+
+                    // Redis 인기도 증가 (수량만큼)
                     for (int i = 0; i < quantity; i++) {
                         redisProductService.incrementPurchaseCount(productId);
                     }
+
                     successCount++;
 
-                    log.debug("[Payment] [Popularity] 상품 인기도 증가 완료 - productId={}, quantity={}",
-                            productId, quantity);
+                    log.debug("[Payment] [Popularity] 상품 인기도 증가 완료 - productId={}, quantity={}, newPurchaseCount={}",
+                            productId, quantity, product.getPurchaseCount());
 
                 } catch (Exception e) {
                     failCount++;
