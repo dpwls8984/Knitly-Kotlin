@@ -3,12 +3,14 @@ package com.mysite.knitly.domain.payment.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mysite.knitly.domain.order.entity.Order;
+import com.mysite.knitly.domain.order.entity.OrderItem;
 import com.mysite.knitly.domain.order.repository.OrderRepository;
 import com.mysite.knitly.domain.payment.dto.*;
 import com.mysite.knitly.domain.payment.entity.Payment;
 import com.mysite.knitly.domain.payment.entity.PaymentMethod;
 import com.mysite.knitly.domain.payment.entity.PaymentStatus;
 import com.mysite.knitly.domain.payment.repository.PaymentRepository;
+import com.mysite.knitly.domain.product.product.service.RedisProductService;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
@@ -38,6 +40,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final ObjectMapper objectMapper;
+    private final RedisProductService redisProductService;
 
     @Value("${payment.toss.secret-key}")
     private String tossSecretKey;
@@ -98,6 +101,9 @@ public class PaymentService {
             log.debug("[Payment] [Confirm] Payment 엔티티 저장 완료 - paymentId={}, orderId={}",
                     savedPayment.getPaymentId(), orderId);
 
+            // 결제 완료 시 redis 상품 인기도 증가
+            incrementProductPopularity(order);
+
             // 6. 응답 데이터 생성
             PaymentConfirmResponse response = buildPaymentConfirmResponse(savedPayment, tossResponse);
 
@@ -127,8 +133,48 @@ public class PaymentService {
         }
     }
 
-    // 결제 취소
-    // TODO : 취소 기능 삭제 예정
+    //주문의 모든 상품에 대해 Redis 인기도 증가
+    private void incrementProductPopularity(Order order) {
+        long startTime = System.currentTimeMillis();
+
+        try {
+            int successCount = 0;
+            int failCount = 0;
+
+            for (OrderItem orderItem : order.getOrderItems()) {
+                Long productId = orderItem.getProduct().getProductId();
+                int quantity = orderItem.getQuantity();
+
+                try {
+                    // 구매한 수량만큼 인기도 증가
+                    for (int i = 0; i < quantity; i++) {
+                        redisProductService.incrementPurchaseCount(productId);
+                    }
+                    successCount++;
+
+                    log.debug("[Payment] [Popularity] 상품 인기도 증가 완료 - productId={}, quantity={}",
+                            productId, quantity);
+
+                } catch (Exception e) {
+                    failCount++;
+                    log.error("[Payment] [Popularity] 상품 인기도 증가 실패 - productId={}, quantity={}",
+                            productId, quantity, e);
+                }
+            }
+
+            long duration = System.currentTimeMillis() - startTime;
+
+            log.info("[Payment] [Popularity] 인기도 증가 완료 - orderId={}, totalItems={}, successCount={}, failCount={}, duration={}ms",
+                    order.getOrderId(), order.getOrderItems().size(), successCount, failCount, duration);
+
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[Payment] [Popularity] 인기도 증가 처리 실패 - orderId={}, duration={}ms",
+                    order.getOrderId(), duration, e);
+        }
+    }
+
+    // TODO : 결제 취소 기능 삭제 예정
     @Transactional
     public PaymentCancelResponse cancelPayment(Long paymentId, PaymentCancelRequest request) {
         // 1. 결제 정보 조회
