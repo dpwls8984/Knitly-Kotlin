@@ -20,7 +20,7 @@ import java.util.UUID;
 @Component
 public class LocalFileStorage {
 
-    @Value("${file.upload-dir:backend/uploads/designs}")
+    @Value("${file.upload-dir:./uploads/designs}")
     private String uploadDir;
 
     @Value("${file.public-prefix:/files}")

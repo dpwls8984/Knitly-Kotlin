@@ -94,9 +94,9 @@ spring:
           starttls:
             enable: true
 
-# --- 파일 업로드 ---
+# --- pdf 파일 업로드 ---
 file:
-  upload-dir: uploads/designs
+  upload-dir: ./uploads/designs
   public-prefix: /files
 
 # --- Springdoc ---
