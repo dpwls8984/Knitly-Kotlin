@@ -94,9 +94,9 @@ spring:
           starttls:
             enable: true
 
-# --- 파일 업로드 ---
+# --- pdf 파일 업로드 ---
 file:
-  upload-dir: uploads/designs
+  upload-dir: ./uploads/designs
   public-prefix: /files
 
 # --- Springdoc ---
@@ -106,14 +106,10 @@ springdoc:
 # --- Logging ---
 logging:
   level:
-    org.hibernate.orm.jdbc.bind: TRACE
-    org.hibernate.orm.jdbc.extract: TRACE
-    org.springframework.transaction.interceptor: TRACE
-    com.rest1: DEBUG
-
+    com.mysite.knitly: DEBUG
     org.springframework.security: DEBUG
     org.springframework.security.oauth2: TRACE
-    org.springframework.web: DEBUG
+    org.springframework.web: INFO
 
 # --- Custom JWT 설정 ---
 custom:

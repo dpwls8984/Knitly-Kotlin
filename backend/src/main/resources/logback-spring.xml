@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+    <!-- 1) 기본 콘솔: 색상만 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%boldWhite(%d{yyyy-MM-dd HH:mm:ss.SSS}) [%thread] %highlight(%-5level) %cyan(%logger{36}) - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 2) Design 전용 콘솔: MDC(userId, designId) 포함 -->
+    <appender name="CONSOLE_DESIGN" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%boldWhite(%d{yyyy-MM-dd HH:mm:ss.SSS}) [%thread] %highlight(%-5level) %cyan(%logger{36})
+                [userId=%X{userId}] [designId=%X{designId}] - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+    <!-- 4) Design 패키지에만 전용 콘솔을 붙임 -->
+    <!-- additivity="false"로 상위(root)로 전파 막아 중복 로그 방지 -->
+    <logger name="com.mysite.knitly.domain.design" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE_DESIGN"/>
+    </logger>
+</configuration>

@@ -149,6 +149,21 @@ public class Product {
         this.reviewCount = reviewCount;
     }
 
+    // 구매 횟수 증가
+    public void increasePurchaseCount() {
+        if (this.purchaseCount == null) {
+            this.purchaseCount = 0;
+        }
+        this.purchaseCount += 1;
+    }
+
+    // 구매 횟수 증가 (수량 지정)
+    public void increasePurchaseCount(int quantity) {
+        if (this.purchaseCount == null) {
+            this.purchaseCount = 0;
+        }
+        this.purchaseCount += quantity;
+    }
 }
 
 //CREATE TABLE `products` (

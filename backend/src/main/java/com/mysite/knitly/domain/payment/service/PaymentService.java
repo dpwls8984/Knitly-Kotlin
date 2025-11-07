@@ -3,12 +3,15 @@ package com.mysite.knitly.domain.payment.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mysite.knitly.domain.order.entity.Order;
+import com.mysite.knitly.domain.order.entity.OrderItem;
 import com.mysite.knitly.domain.order.repository.OrderRepository;
 import com.mysite.knitly.domain.payment.dto.*;
 import com.mysite.knitly.domain.payment.entity.Payment;
 import com.mysite.knitly.domain.payment.entity.PaymentMethod;
 import com.mysite.knitly.domain.payment.entity.PaymentStatus;
 import com.mysite.knitly.domain.payment.repository.PaymentRepository;
+import com.mysite.knitly.domain.product.product.entity.Product;
+import com.mysite.knitly.domain.product.product.service.RedisProductService;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
@@ -38,6 +41,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final ObjectMapper objectMapper;
+    private final RedisProductService redisProductService;
 
     @Value("${payment.toss.secret-key}")
     private String tossSecretKey;
@@ -48,47 +52,135 @@ public class PaymentService {
     // 결제 승인
     @Transactional
     public PaymentConfirmResponse confirmPayment(PaymentConfirmRequest request) {
-        // 1. 주문 정보 조회 및 검증 (tossOrderId로 조회)
-        Order order = orderRepository.findByTossOrderId(request.orderId())
-                .orElseThrow(() -> new ServiceException(ErrorCode.ORDER_NOT_FOUND));
+        long startTime = System.currentTimeMillis();
+        String orderId = request.orderId();
+        String paymentKey = request.paymentKey();
+        Long amount = request.amount();
 
-        // 2. 주문 금액 검증
-        long orderAmount = order.getTotalPrice().longValue();
-        if (orderAmount != request.amount()) {
-            throw new ServiceException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
-        }
+        log.info("[Payment] [Confirm] 결제 승인 시작 - orderId={}, paymentKey={}, amount={}",
+                orderId, paymentKey, amount);
 
-        // 3. 중복 결제 방지
-        if (paymentRepository.findByOrder_OrderId(order.getOrderId()).isPresent()) {
-            throw new ServiceException(ErrorCode.PAYMENT_ALREADY_EXISTS);
-        }
-
-        // 4. 토스페이먼츠 결제 승인 API 호출
         try {
+            // 1. 주문 정보 조회 및 검증
+            Order order = orderRepository.findByTossOrderId(orderId)
+                    .orElseThrow(() -> {
+                        log.warn("[Payment] [Confirm] 주문을 찾을 수 없음 - orderId={}", orderId);
+                        return new ServiceException(ErrorCode.ORDER_NOT_FOUND);
+                    });
+
+            Long userId = order.getUser().getUserId();
+            log.debug("[Payment] [Confirm] 주문 정보 조회 완료 - orderId={}, userId={}, orderAmount={}",
+                    orderId, userId, order.getTotalPrice());
+
+            // 2. 주문 금액 검증
+            long orderAmount = order.getTotalPrice().longValue();
+            if (orderAmount != amount) {
+                log.warn("[Payment] [Confirm] 결제 금액 불일치 - orderId={}, orderAmount={}, requestAmount={}",
+                        orderId, orderAmount, amount);
+                throw new ServiceException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+            }
+
+            // 3. 중복 결제 방지
+            if (paymentRepository.findByOrder_OrderId(order.getOrderId()).isPresent()) {
+                log.warn("[Payment] [Confirm] 중복 결제 시도 - orderId={}, orderInternalId={}",
+                        orderId, order.getOrderId());
+                throw new ServiceException(ErrorCode.PAYMENT_ALREADY_EXISTS);
+            }
+
+            // 4. 토스페이먼츠 결제 승인 API 호출
+            long apiStartTime = System.currentTimeMillis();
             JsonNode tossResponse = callTossPaymentConfirmApi(request);
+            long apiDuration = System.currentTimeMillis() - apiStartTime;
+
+            log.info("[Payment] [Confirm] 토스 API 호출 완료 - orderId={}, paymentKey={}, apiDuration={}ms",
+                    orderId, paymentKey, apiDuration);
 
             // 5. Payment 엔티티 생성 및 저장
             Payment payment = createPaymentFromTossResponse(order, tossResponse);
             Payment savedPayment = paymentRepository.save(payment);
 
+            log.debug("[Payment] [Confirm] Payment 엔티티 저장 완료 - paymentId={}, orderId={}",
+                    savedPayment.getPaymentId(), orderId);
+
+            // 결제 완료 시 redis 상품 인기도 증가
+            incrementProductPopularity(order);
+
             // 6. 응답 데이터 생성
             PaymentConfirmResponse response = buildPaymentConfirmResponse(savedPayment, tossResponse);
 
-            log.info("결제 승인 성공 - orderId: {}, paymentKey: {}, amount: {}",
-                    request.orderId(), response.paymentKey(), response.totalAmount());
+            long totalDuration = System.currentTimeMillis() - startTime;
+            log.info("[Payment] [Confirm] 결제 승인 완료 - orderId={}, paymentKey={}, paymentId={}, amount={}, totalDuration={}ms",
+                    orderId, paymentKey, savedPayment.getPaymentId(), amount, totalDuration);
 
             return response;
 
+        } catch (ServiceException e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[Payment] [Confirm] 결제 승인 실패 (ServiceException) - orderId={}, paymentKey={}, error={}, duration={}ms",
+                    orderId, paymentKey, e.getErrorCode(), duration);
+            throw e;
+
         } catch (IOException e) {
-            log.error("토스페이먼츠 API 호출 실패", e);
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[Payment] [Confirm] 토스 API 호출 실패 (IOException) - orderId={}, paymentKey={}, duration={}ms",
+                    orderId, paymentKey, duration, e);
             throw new ServiceException(ErrorCode.PAYMENT_API_CALL_FAILED);
+
         } catch (Exception e) {
-            log.error("결제 승인 처리 중 오류 발생", e);
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[Payment] [Confirm] 결제 승인 실패 (UnexpectedException) - orderId={}, paymentKey={}, duration={}ms",
+                    orderId, paymentKey, duration, e);
             throw new ServiceException(ErrorCode.PAYMENT_CONFIRM_FAILED);
         }
     }
 
-    // 결제 취소
+    //주문의 모든 상품에 대해 Redis 인기도, purchaseCount 증가
+    private void incrementProductPopularity(Order order) {
+        long startTime = System.currentTimeMillis();
+
+        try {
+            int successCount = 0;
+            int failCount = 0;
+
+            for (OrderItem orderItem : order.getOrderItems()) {
+                Product product = orderItem.getProduct();
+                Long productId = product.getProductId();
+                int quantity = orderItem.getQuantity();
+
+                try {
+                    // DB의 purchaseCount 증가 (수량만큼)
+                    product.increasePurchaseCount(quantity);
+
+                    // Redis 인기도 증가 (수량만큼)
+                    for (int i = 0; i < quantity; i++) {
+                        redisProductService.incrementPurchaseCount(productId);
+                    }
+
+                    successCount++;
+
+                    log.debug("[Payment] [Popularity] 상품 인기도 증가 완료 - productId={}, quantity={}, newPurchaseCount={}",
+                            productId, quantity, product.getPurchaseCount());
+
+                } catch (Exception e) {
+                    failCount++;
+                    log.error("[Payment] [Popularity] 상품 인기도 증가 실패 - productId={}, quantity={}",
+                            productId, quantity, e);
+                }
+            }
+
+            long duration = System.currentTimeMillis() - startTime;
+
+            log.info("[Payment] [Popularity] 인기도 증가 완료 - orderId={}, totalItems={}, successCount={}, failCount={}, duration={}ms",
+                    order.getOrderId(), order.getOrderItems().size(), successCount, failCount, duration);
+
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[Payment] [Popularity] 인기도 증가 처리 실패 - orderId={}, duration={}ms",
+                    order.getOrderId(), duration, e);
+        }
+    }
+
+    // TODO : 결제 취소 기능 삭제 예정
     @Transactional
     public PaymentCancelResponse cancelPayment(Long paymentId, PaymentCancelRequest request) {
         // 1. 결제 정보 조회
@@ -131,6 +223,9 @@ public class PaymentService {
 
     // 토스페이먼츠 결제 승인 API 호출
     private JsonNode callTossPaymentConfirmApi(PaymentConfirmRequest request) throws IOException {
+        log.debug("[Payment] [TossAPI] 결제 승인 API 호출 - orderId={}, paymentKey={}",
+                request.orderId(), request.paymentKey());
+
         String authorization = createBasicAuthHeader(tossSecretKey);
         String requestBody = objectMapper.writeValueAsString(request);
 
@@ -145,10 +240,11 @@ public class PaymentService {
             os.write(requestBody.getBytes(StandardCharsets.UTF_8));
         }
 
-        return handleTossApiResponse(connection);
+        return handleTossApiResponse(connection, request.orderId(), request.paymentKey());
     }
 
     // 토스페이먼츠 결제 취소 API 호출
+    // TODO : 취소 기능 삭제 예정
     private JsonNode callTossPaymentCancelApi(String paymentKey, String cancelReason) throws IOException {
         String authorization = createBasicAuthHeader(tossSecretKey);
 
@@ -167,13 +263,15 @@ public class PaymentService {
             os.write(requestBodyJson.getBytes(StandardCharsets.UTF_8));
         }
 
-        return handleTossApiResponse(connection);
+        return handleTossApiResponse(connection, "CANCEL", paymentKey);
     }
 
     // 토스 API 응답 처리
-    private JsonNode handleTossApiResponse(HttpURLConnection connection) throws IOException {
+    private JsonNode handleTossApiResponse(HttpURLConnection connection, String orderId, String paymentKey) throws IOException {
         int responseCode = connection.getResponseCode();
         boolean isSuccess = responseCode == 200;
+        log.debug("[Payment] [TossAPI] 응답 수신 - orderId={}, paymentKey={}, responseCode={}",
+                orderId, paymentKey, responseCode);
 
         try (InputStream is = isSuccess ? connection.getInputStream() : connection.getErrorStream()) {
             JsonNode responseJson = objectMapper.readTree(is);
@@ -181,10 +279,13 @@ public class PaymentService {
             if (!isSuccess) {
                 String errorCode = responseJson.has("code") ? responseJson.get("code").asText() : "UNKNOWN";
                 String errorMessage = responseJson.has("message") ? responseJson.get("message").asText() : "API 호출 실패";
-                log.error("토스페이먼츠 API 실패 - code: {}, message: {}", errorCode, errorMessage);
+                log.error("[Payment] [TossAPI] API 실패 - orderId={}, paymentKey={}, responseCode={}, errorCode={}, errorMessage={}",
+                        orderId, paymentKey, responseCode, errorCode, errorMessage);
                 throw new ServiceException(ErrorCode.PAYMENT_API_CALL_FAILED);
             }
 
+            log.debug("[Payment] [TossAPI] API 성공 - orderId={}, paymentKey={}",
+                    orderId, paymentKey);
             return responseJson;
         }
     }
