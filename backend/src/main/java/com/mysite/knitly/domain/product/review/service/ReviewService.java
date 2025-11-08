@@ -47,6 +47,7 @@ public class ReviewService {
     private final LocalFileStorage localFileStorage;
     private final OrderItemRepository orderItemRepository;
 
+    // 리뷰 작성 시 필요한 정보
     public ReviewCreateResponse getReviewFormInfo(Long orderItemId) {
         log.info("[Review] [Form] 리뷰 작성 폼 조회 시작 - orderItemId={}", orderItemId);
 
