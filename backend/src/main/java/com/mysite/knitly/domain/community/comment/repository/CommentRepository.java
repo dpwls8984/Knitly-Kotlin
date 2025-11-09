@@ -50,4 +50,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             "ORDER BY MIN(c.createdAt) ASC")
 
     List<Long> findAuthorOrderForPost(@Param("postId") Long postId);
+
+    @EntityGraph(attributePaths = "author")
+    List<Comment> findByPostIdAndDeletedFalseOrderByCreatedAtAsc(Long postId);
 }

@@ -9,38 +9,32 @@ import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.entity.ProductCategory;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.product.product.service.RedisProductService;
-import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 
-import java.time.LocalDateTime;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class HomeSectionServiceTest {
 
-    @Mock
-    private RedisProductService redisProductService;
-    @InjectMocks
-    private HomeSectionService homeSectionService;
-    @Mock
-    private ProductRepository productRepository;
-    @Mock
-    private HomeQueryRepository homeQueryRepository;
+    @Mock private RedisProductService redisProductService;
+    @Mock private ProductRepository productRepository;
+    @Mock private HomeQueryRepository homeQueryRepository;
+
+    @InjectMocks private HomeSectionService homeSectionService;
 
     private Product product1; // id=1
     private Product product2; // id=2
@@ -86,35 +80,44 @@ class HomeSectionServiceTest {
     }
 
     @Test
-    @DisplayName("인기 Top5 조회 - Redis 데이터 있음")
+    @DisplayName("인기 Top5 조회 - Redis 데이터 있음(순서 보존)")
     void getTop5Products_WithRedis() {
         List<Long> top5Ids = Arrays.asList(2L, 3L, 1L);
         given(redisProductService.getTopNPopularProducts(5)).willReturn(top5Ids);
         given(productRepository.findByProductIdInAndIsDeletedFalse(top5Ids))
                 .willReturn(Arrays.asList(product2, product3, product1));
 
-        List<ProductListResponse> result = homeSectionService.getPopularTop5();
+        List<ProductListResponse> result = homeSectionService.getPopularTop5(null);
 
         assertThat(result).hasSize(3);
         assertThat(result).extracting(ProductListResponse::productId)
-                .containsExactly(2L, 3L, 1L); // edis ZSET 순서 보존 검증
+                .containsExactly(2L, 3L, 1L); // redis ZSET 순서 보존 검증
         verify(redisProductService).getTopNPopularProducts(5);
         verify(productRepository).findByProductIdInAndIsDeletedFalse(top5Ids);
     }
 
     @Test
-    @DisplayName("인기 Top5 조회 - Redis 데이터 없음 (DB 조회)")
+    @DisplayName("인기 Top5 조회 - Redis 데이터 없음(DB 조회로 대체)")
     void getTop5Products_WithoutRedis() {
         given(redisProductService.getTopNPopularProducts(5)).willReturn(List.of());
         Page<Product> top5Page = new PageImpl<>(Arrays.asList(product2, product3, product1));
         given(productRepository.findByIsDeletedFalse(any(Pageable.class))).willReturn(top5Page);
 
-        List<ProductListResponse> result = homeSectionService.getPopularTop5();
+        List<ProductListResponse> result = homeSectionService.getPopularTop5(null);
 
         assertThat(result).hasSize(3);
         assertThat(result).extracting(ProductListResponse::productId)
                 .containsExactly(2L, 3L, 1L);
-        verify(productRepository).findByIsDeletedFalse(PageRequest.of(0, 5, Sort.by("purchaseCount").descending()));
+
+        // 내부 구현이 바뀌어도 핵심만 검증: page=0, size=5, purchaseCount DESC
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(productRepository).findByIsDeletedFalse(captor.capture());
+        Pageable captured = captor.getValue();
+        assertThat(captured.getPageNumber()).isEqualTo(0);
+        assertThat(captured.getPageSize()).isEqualTo(5);
+        Sort.Order order = captured.getSort().getOrderFor("purchaseCount");
+        assertThat(order).isNotNull();
+        assertThat(order.getDirection()).isEqualTo(Sort.Direction.DESC);
     }
 
     @Test
@@ -133,6 +136,7 @@ class HomeSectionServiceTest {
         assertThat(result.get(1).productTitle()).isEqualTo("울 머플러");
         verify(homeQueryRepository).findLatestReviews(3);
     }
+
     @Test
     @DisplayName("최신 커뮤니티 글 3개 조회 - Repository 결과 반환")
     void getLatestPosts_ReturnsTop3() {
@@ -149,8 +153,9 @@ class HomeSectionServiceTest {
         assertThat(result.get(2).category()).isEqualTo("TIP");
         verify(homeQueryRepository).findLatestPosts(3);
     }
+
     @Test
-    @DisplayName("홈 요약 조회 - 인기 Top5 + 최신 리뷰 3 + 최신 글 3을 모아서 반환")
+    @DisplayName("홈 요약 조회 - 인기 Top5 + 최신 리뷰3 + 최신 글3")
     void getHomeSummary_AggregatesAllSections() {
         // popular
         List<Long> ids = Arrays.asList(2L, 3L, 1L);
@@ -170,14 +175,13 @@ class HomeSectionServiceTest {
         var p3 = new LatestPostItem(203L, "셋째 글", "TIP", null, LocalDateTime.now());
         given(homeQueryRepository.findLatestPosts(3)).willReturn(List.of(p1, p2, p3));
 
-        HomeSummaryResponse response = homeSectionService.getHomeSummary();
+        HomeSummaryResponse response = homeSectionService.getHomeSummary(null);
 
         assertThat(response.popularProducts()).hasSize(3);
         assertThat(response.latestReviews()).hasSize(3);
         assertThat(response.latestPosts()).hasSize(3);
         assertThat(response.popularProducts()).extracting(ProductListResponse::productId)
                 .containsExactly(2L, 3L, 1L);
-
         assertThat(response.latestReviews().get(0).rating()).isEqualTo(5);
         assertThat(response.latestPosts().get(1).category()).isEqualTo("QUESTION");
     }

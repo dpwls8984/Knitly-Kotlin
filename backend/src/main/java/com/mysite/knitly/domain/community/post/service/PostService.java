@@ -10,7 +10,6 @@ import com.mysite.knitly.domain.community.post.repository.PostRepository;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
-import com.mysite.knitly.global.util.Anonymizer;
 import com.mysite.knitly.global.util.ImageValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,8 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 // 상세 기능:  mine(현재 사용자 = 작성자)
@@ -52,15 +51,14 @@ public class PostService {
                     : (cleaned.length() > 10 ? cleaned.substring(0, 10) + "..." : cleaned);
             long commentCount = countMap.getOrDefault(p.getId(), 0L);
 
-            String thumbnail = (p.getImageUrls() == null || p.getImageUrls().isEmpty())
-                    ? null : p.getImageUrls().get(0);
+            String thumbnail = p.getThumbnail();
 
             return new PostListItemResponse(
                     p.getId(),
                     p.getCategory(),
                     p.getTitle(),
                     ex,
-                    Anonymizer.yarn(p.getAuthor().getUserId()),
+                    "익명의 털실", // 모든 게시글·댓글 작성자는 익명 처리
                     p.getCreatedAt(),
                     commentCount,
                     thumbnail
@@ -71,6 +69,11 @@ public class PostService {
     public PostResponse getPost(Long id, User currentUserOrNull) {
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
+
+        //  soft-delete 된 글은 404로 차단
+        if (p.isDeleted()) {
+            throw new ServiceException(ErrorCode.POST_NOT_FOUND);
+        }
 
         long commentCount = postRepository.countCommentsByPostId(id);
 
@@ -83,7 +86,7 @@ public class PostService {
                 p.getContent(),
                 p.getImageUrls(),
                 p.getAuthor().getUserId(),
-                Anonymizer.yarn(p.getAuthor().getUserId()),
+                "익명의 털실", // 모든 게시글·댓글 작성자는 익명 처리
                 p.getCreatedAt(),
                 p.getUpdatedAt(),
                 commentCount,

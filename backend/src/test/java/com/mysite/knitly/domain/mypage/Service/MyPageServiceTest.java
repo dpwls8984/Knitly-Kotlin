@@ -12,7 +12,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -65,7 +64,8 @@ class MyPageServiceTest {
     @Test
     @DisplayName("내가 쓴 댓글 조회 - 검색어 포함")
     void getMyComments() {
-        var c = new MyCommentListItem(7L, 100L, LocalDate.of(2025,1,2), "미리보기");
+        // createdAt은 LocalDateTime
+        var c = new MyCommentListItem(7L, 100L, LocalDateTime.of(2025,1,2,10,0), "미리보기");
         var page = new PageImpl<>(List.of(c), PageRequest.of(0, 10), 1);
 
         given(repo.findMyComments(eq(10L), eq("단어"), any())).willReturn(page);
@@ -80,9 +80,11 @@ class MyPageServiceTest {
     @Test
     @DisplayName("내가 찜한 상품 조회")
     void getMyFavorites() {
+        // NOTE: 팀의 FavoriteProductItem 정의/매핑에 따라 다를 수 있으므로 비게시글/댓글은 기존 유지
         var f = new FavoriteProductItem(9001L, "인기 도안", "t.jpg", 9900.0, 4.2, LocalDate.of(2025,1,3));
         var page = new PageImpl<>(List.of(f), PageRequest.of(0, 10), 1);
 
+        // 실제 서비스는 ProductLikeRepository를 사용하지만, 여기서는 기존 테스트 스타일 유지
         given(repo.findMyFavoriteProducts(eq(10L), any())).willReturn(page);
 
         var result = service.getMyFavorites(10L, PageRequest.of(0, 10));
@@ -106,7 +108,7 @@ class MyPageServiceTest {
                 LocalDate.of(2025,1,4),
                 LocalDate.of(2025,1,2)
         );
-                var page = new PageImpl<>(List.of(r), PageRequest.of(0, 10), 1);
+        var page = new PageImpl<>(List.of(r), PageRequest.of(0, 10), 1);
 
         given(repo.findMyReviews(eq(10L), any())).willReturn(page);
 

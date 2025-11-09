@@ -1,12 +1,14 @@
 package com.mysite.knitly.domain.community.post.repository;
 
-import com.mysite.knitly.domain.community.post.dto.PostListRowResponse;
 import com.mysite.knitly.domain.community.post.entity.Post;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.*;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import java.util.Collection;
 import java.util.List;
 
@@ -16,10 +18,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query(
             "SELECT p " +
                     "FROM Post p " +
-                    "WHERE (:category IS NULL OR p.category = :category) " +
-                    "  AND ( :query IS NULL OR :query = '' " +
-                    "        OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
-                    "        OR p.content      LIKE CONCAT('%', :query, '%') ) " +
+                    "WHERE p.deleted = false " +
+                    "  AND (:category IS NULL OR p.category = :category) " +
+                    "  AND (:query IS NULL OR :query = '' " +
+                    "       OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
+                    "       OR LOWER(CAST(p.content AS string)) LIKE LOWER(CONCAT('%', :query, '%')) ) " +
                     "ORDER BY p.createdAt DESC"
     )
     Page<Post> findListRows(@Param("category") PostCategory category,
@@ -43,6 +46,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             select p
             from Post p
             where p.author.userId = :uid
+            and p.deleted = false
              and (
                 :q is null or :q = ''
                  or lower(p.title)   like lower(concat('%', :q, '%'))

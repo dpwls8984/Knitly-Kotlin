@@ -13,14 +13,13 @@ import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,33 +30,56 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
 
-    // 댓글 목록
+    // 댓글 목록 - 전체 조회 후 서버에서 트리 구성(루트만 페이징)
     public Page<CommentTreeResponse> getComments(Long postId, String sort, int page, int size, User currentUser) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
+        if (post.isDeleted()) {
+            throw new ServiceException(ErrorCode.POST_NOT_FOUND);
+        }
 
+        // 1) 해당 게시글의 모든 댓글을 한 번에 조회(등록순 정렬)
+        List<Comment> all = commentRepository.findByPostIdAndDeletedFalseOrderByCreatedAtAsc(postId);
+
+        // 2) parentId -> children 매핑
+        Map<Long, List<Comment>> byParent = new HashMap<>();
+        List<Comment> roots = all.stream()
+                .filter(c -> c.getParent() == null)
+                .collect(Collectors.toList());
+
+        for (Comment c : all) {
+            Long pid = (c.getParent() == null) ? null : c.getParent().getId();
+            if (pid == null) continue;
+            byParent.computeIfAbsent(pid, k -> new ArrayList<>()).add(c);
+        }
+
+        // children 정렬(등록순 기본)
+        byParent.values().forEach(list -> list.sort(Comparator.comparing(Comment::getCreatedAt)));
+
+        // 루트 정렬
+        roots.sort(Comparator.comparing(Comment::getCreatedAt));
+        if ("desc".equalsIgnoreCase(sort)) {
+            Collections.reverse(roots);
+            byParent.values().forEach(Collections::reverse);
+        }
+
+        // 3) 익명 넘버링 맵(게시글 작성자 제외)
+        Map<Long, Integer> authorNoMap = buildAuthorNoMap(postId, post.getAuthor().getUserId());
+
+        // 4) 루트 레벨만 페이징
         Pageable pageable = PageRequest.of(page, size);
+        int from = Math.min(pageable.getPageNumber() * pageable.getPageSize(), roots.size());
+        int to = Math.min(from + pageable.getPageSize(), roots.size());
+        List<Comment> rootSlice = (from < to) ? roots.subList(from, to) : Collections.emptyList();
 
-        Page<Comment> roots = ("desc".equalsIgnoreCase(sort))
-                ? commentRepository.findByPostAndParentIsNullAndDeletedFalseOrderByCreatedAtDesc(post, pageable)
-                : commentRepository.findByPostAndParentIsNullAndDeletedFalseOrderByCreatedAtAsc(post, pageable);
+        // 5) 재귀 변환
+        List<CommentTreeResponse> content = rootSlice.stream()
+                .map(r -> toTreeRecursive(r, currentUser, authorNoMap, byParent))
+                .collect(Collectors.toList());
 
-        Map<Long, Integer> authorNoMap = buildAuthorNoMap(postId);
-        // N+1 제거
-        List<Long> parentIds = roots.getContent().stream()
-                .map(Comment::getId)
-                .toList();
-        Map<Long, List<Comment>> childrenMap = parentIds.isEmpty()
-                ? Map.of()
-                : commentRepository.findByParentIdInAndDeletedFalseOrderByCreatedAtAsc(parentIds)
-                .stream()
-                .collect(Collectors.groupingBy(c -> c.getParent().getId()));
-
-        return roots.map(root ->
-                toTreeResponseWithGroupedChildren(root, currentUser, authorNoMap, childrenMap)
-        );
-
+        return new PageImpl<>(content, pageable, roots.size());
     }
+
 
     // 댓글 개수
     public long count(Long postId) {
@@ -100,7 +122,7 @@ public class CommentService {
                         .build()
         );
 
-        Map<Long, Integer> authorNoMap = buildAuthorNoMap(req.postId());
+        Map<Long, Integer> authorNoMap = buildAuthorNoMap(req.postId(), post.getAuthor().getUserId());
         return toFlatResponse(saved, currentUser, authorNoMap);
     }
 
@@ -146,12 +168,14 @@ public class CommentService {
         c.softDelete();
     }
 
-    // 작성자 첫 댓글 시간 기준으로
-    private Map<Long, Integer> buildAuthorNoMap(Long postId) {
+    // 게시글 작성자는 번호 매핑에서 제외 (번호 없이 "익명의 털실")
+    private Map<Long, Integer> buildAuthorNoMap(Long postId, Long postAuthorId) {
         List<Long> order = commentRepository.findAuthorOrderForPost(postId);
         Map<Long, Integer> map = new HashMap<>();
         int n = 1;
         for (Long uid : order) {
+            if (uid == null) continue;
+            if (uid.equals(postAuthorId)) continue; // 게시글 작성자 제외
             map.put(uid, n++);
         }
         return map;
@@ -174,36 +198,31 @@ public class CommentService {
                 mine
         );
     }
-    // 트리 응답 변환
-    private CommentTreeResponse toTreeResponseWithGroupedChildren(
-            Comment root,
+    // 재귀 트리 변환 (임의 깊이)
+    private CommentTreeResponse toTreeRecursive(
+            Comment node,
             User currentUser,
             Map<Long, Integer> authorNoMap,
-            Map<Long, List<Comment>> childrenMap
+            Map<Long, List<Comment>> byParent
     ) {
-        List<Comment> children = childrenMap.getOrDefault(root.getId(), List.of());
+        List<Comment> children = byParent.getOrDefault(node.getId(), Collections.emptyList());
+
+        List<CommentTreeResponse> childDtos = children.stream()
+                .map(ch -> toTreeRecursive(ch, currentUser, authorNoMap, byParent))
+                .collect(Collectors.toList());
+
         return new CommentTreeResponse(
-                root.getId(),
-                root.getContent(),
-                root.getAuthor() == null ? null : root.getAuthor().getUserId(),
-                displayName(root, authorNoMap),
-                root.getCreatedAt(),
-                isMine(root, currentUser),
-                root.getParent() == null ? null : root.getParent().getId(),
-                children.stream()
-                        .map(ch -> new CommentTreeResponse(
-                                ch.getId(),
-                                ch.getContent(),
-                                ch.getAuthor() == null ? null : ch.getAuthor().getUserId(),
-                                displayName(ch, authorNoMap),
-                                ch.getCreatedAt(),
-                                isMine(ch, currentUser),
-                                ch.getParent() == null ? null : ch.getParent().getId(),
-                                List.of()
-                        ))
-                        .collect(Collectors.toList())
+                node.getId(),
+                node.getContent(),
+                node.getAuthor() == null ? null : node.getAuthor().getUserId(),
+                displayName(node, authorNoMap),
+                node.getCreatedAt(),
+                isMine(node, currentUser),
+                node.getParent() == null ? null : node.getParent().getId(),
+                childDtos
         );
     }
+
 
     private boolean isMine(Comment c, User currentUser) {
         return c.isAuthor(currentUser);

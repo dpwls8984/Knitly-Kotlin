@@ -22,7 +22,13 @@ public class JwtProvider {
      * SecretKey 생성
      */
     private SecretKey getSigningKey() {
-        byte[] keyBytes = jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8);
+        String raw = jwtProperties.getSecretKey();
+
+        // BASE64처럼 보이면 디코드, 아니면 그대로 UTF-8 사용 (역호환)
+        boolean looksBase64 = raw.matches("^[A-Za-z0-9+/=]+$") && raw.length() % 4 == 0;
+        byte[] keyBytes = looksBase64
+                ? io.jsonwebtoken.io.Decoders.BASE64.decode(raw)
+                : raw.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
