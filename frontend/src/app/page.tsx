@@ -1,3 +1,4 @@
+// path: frontend/src/app/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -8,7 +9,6 @@ import ProductCard from '@/components/product/ProductCard';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { User } from '@/types/auth.types';
-
 
 export default function HomePage() {
   const router = useRouter();
@@ -42,73 +42,65 @@ export default function HomePage() {
   };
 
   const handleLikeToggle = async (productId: number) => {
-    // TODO: 찜하기 API 연동
     console.log('찜하기:', productId);
   };
 
-  // 카테고리 한글 변환
   const getCategoryKorean = (category: string) => {
     const categoryMap: { [key: string]: string } = {
-      'QUESTION': '질문',
-      'SHARE': '공유',
-      'FREE': '자유',
-      'REVIEW': '후기',
+      QUESTION: '질문',
+      SHARE: '공유',
+      FREE: '자유',
+      REVIEW: '후기',
+      TIP: 'TIP',
     };
     return categoryMap[category] || category;
   };
-// OAuth2 로그인 성공 처리
-useEffect(() => {
-  const accessToken = searchParams.get('accessToken');
-  const userId = searchParams.get('userId');
-  const email = searchParams.get('email');
-  const name = searchParams.get('name');
-  const loginError = searchParams.get('loginError');
 
-  if (loginError) {
+  // OAuth2 로그인 성공 처리
+  useEffect(() => {
+    const accessToken = searchParams.get('accessToken');
+    const userId = searchParams.get('userId');
+    const email = searchParams.get('email');
+    const name = searchParams.get('name');
+    const loginError = searchParams.get('loginError');
+
+    if (loginError) {
       alert('로그인에 실패했습니다. 다시 시도해주세요.');
-      router.replace('/'); // URL 파라미터 제거
+      router.replace('/');
       return;
-  }
+    }
 
-  // 로그인 성공 처리
-  if (accessToken && userId && email && name) {
+    if (accessToken && userId && email && name) {
       setIsProcessingLogin(true);
 
       const userData: User = {
-          userId,
-          email: decodeURIComponent(email),
-          name: decodeURIComponent(name),
-          provider: 'GOOGLE',
+        userId,
+        email: decodeURIComponent(email),
+        name: decodeURIComponent(name),
+        provider: 'GOOGLE',
       };
 
-      // 토큰 및 사용자 정보 저장
       login(accessToken, userData);
-
-      // URL에서 파라미터 제거 (깔끔하게)
       router.replace('/');
 
-      // 로그인 성공 알림
       setTimeout(() => {
-          setIsProcessingLogin(false);
-          alert(`환영합니다, ${userData.name}님!`);
+        setIsProcessingLogin(false);
+        alert(`환영합니다, ${userData.name}님!`);
       }, 300);
-  }
-}, [searchParams, router, login]);
+    }
+  }, [searchParams, router, login]);
 
-// 로그인 처리 중 로딩
-if (isProcessingLogin) {
-  return (
+  if (isProcessingLogin) {
+    return (
       <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#925C4C] mx-auto mb-4"></div>
-              <h2 className="text-xl font-semibold text-gray-700">
-                  로그인 처리 중...
-              </h2>
-          </div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#925C4C] mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-700">로그인 처리 중...</h2>
+        </div>
       </div>
-  );
-}
-  // 로딩 중
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -117,7 +109,6 @@ if (isProcessingLogin) {
     );
   }
 
-  // 에러 발생
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -141,7 +132,7 @@ if (isProcessingLogin) {
             더보기 →
           </button>
         </div>
-        
+
         {popularProducts.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <p>인기 상품이 없습니다.</p>
@@ -150,18 +141,12 @@ if (isProcessingLogin) {
           <div className="grid grid-cols-5 gap-4">
             {popularProducts.map((product, index) => (
               <div key={product.productId} className="relative">
-                {/* 랭킹 배지 */}
                 <div className="absolute top-2 left-2 z-10">
                   <span className="bg-[#925C4C] text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
                     #{index + 1}
                   </span>
                 </div>
-                
-                {/* 기존 ProductCard 컴포넌트 재사용 */}
-                <ProductCard 
-                  product={product} 
-                  onLikeToggle={handleLikeToggle}
-                />
+                <ProductCard product={product} onLikeToggle={handleLikeToggle} />
               </div>
             ))}
           </div>
@@ -173,7 +158,7 @@ if (isProcessingLogin) {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">최신 리뷰</h2>
         </div>
-        
+
         {latestReviews.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <p>최신 리뷰가 없습니다.</p>
@@ -185,7 +170,6 @@ if (isProcessingLogin) {
                 key={review.reviewId}
                 className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
               >
-                {/* 별점 */}
                 <div className="flex items-center mb-3">
                   <div className="flex text-yellow-400">
                     {[...Array(5)].map((_, i) => (
@@ -201,16 +185,10 @@ if (isProcessingLogin) {
                   <span className="ml-2 text-sm text-gray-600">{review.rating}.0</span>
                 </div>
 
-                {/* 리뷰 내용 */}
-                <p className="text-gray-700 mb-3 line-clamp-3">
-                  {review.content}
-                </p>
+                <p className="text-gray-700 mb-3 line-clamp-3">{review.content}</p>
 
-                {/* 상품 정보 */}
                 <div className="pt-3 border-t border-gray-100">
-                  <p className="text-sm text-gray-600 line-clamp-1">
-                    {review.productTitle}
-                  </p>
+                  <p className="text-sm text-gray-600 line-clamp-1">{review.productTitle}</p>
                   <p className="text-xs text-gray-400 mt-1">
                     {new Date(review.createdDate).toLocaleDateString('ko-KR')}
                   </p>
@@ -225,14 +203,15 @@ if (isProcessingLogin) {
       <section className="mb-16">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">커뮤니티 최신 글</h2>
+          {/* 더보기 → 커뮤니티 전체 목록으로 이동 */}
           <button
-            onClick={() => router.push('/community/posts')}
+            onClick={() => router.push('/community')}
             className="text-sm text-gray-600 hover:text-[#925C4C] transition-colors"
           >
             더보기 →
           </button>
         </div>
-        
+
         {latestPosts.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <p>최신 글이 없습니다.</p>
@@ -240,23 +219,29 @@ if (isProcessingLogin) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {latestPosts.map((post) => (
+              // 카드 전체 클릭 → 해당 게시글 상세로 이동
               <div
                 key={post.postId}
-                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                role="button"
+                tabIndex={0}
+                onClick={() => router.push(`/community/posts/${post.postId}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    router.push(`/community/posts/${post.postId}`);
+                  }
+                }}
+                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#925C4C]"
               >
-                {/* 카테고리 배지 */}
                 <div className="mb-3">
                   <span className="inline-block bg-[#925C4C] text-white text-xs font-medium px-3 py-1 rounded-full">
                     {getCategoryKorean(post.category)}
                   </span>
                 </div>
 
-                {/* 제목 */}
                 <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
                   {post.title}
                 </h3>
 
-                {/* 작성일 */}
                 <p className="text-sm text-gray-500">
                   {new Date(post.createdAt).toLocaleDateString('ko-KR')}
                 </p>
