@@ -12,6 +12,7 @@ import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -32,9 +34,12 @@ public class CommentService {
 
     // 댓글 목록 - 전체 조회 후 서버에서 트리 구성(루트만 페이징)
     public Page<CommentTreeResponse> getComments(Long postId, String sort, int page, int size, User currentUser) {
+        log.info("[CommentService] 댓글 목록 조회 요청 - postId={}, sort={}, page={}, size={}", postId, sort, page, size);
+
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
         if (post.isDeleted()) {
+            log.warn("[CommentService] 삭제된 게시글의 댓글 조회 시도 - postId={}", postId);
             throw new ServiceException(ErrorCode.POST_NOT_FOUND);
         }
 
@@ -77,32 +82,37 @@ public class CommentService {
                 .map(r -> toTreeRecursive(r, currentUser, authorNoMap, byParent))
                 .collect(Collectors.toList());
 
+        log.info("[CommentService] 댓글 목록 조회 완료 - postId={}, roots={}, returned={}", postId, roots.size(), content.size());
         return new PageImpl<>(content, pageable, roots.size());
     }
 
-
     // 댓글 개수
     public long count(Long postId) {
-        return commentRepository.countByPostIdAndDeletedFalse(postId);
+        long cnt = commentRepository.countByPostIdAndDeletedFalse(postId);
+        log.info("[CommentService] 댓글 개수 조회 - postId={}, count={}", postId, cnt);
+        return cnt;
     }
 
     // 댓글 작성
     @Transactional
     public CommentResponse create(CommentCreateRequest req, User currentUser) {
+        log.info("[CommentService] 댓글 작성 요청 - postId={}, parentId={}", req.postId(), req.parentId());
+
         if (currentUser == null) {
+            log.warn("[CommentService] 댓글 작성 실패 - 비인증 사용자");
             throw new ServiceException(ErrorCode.COMMENT_UNAUTHORIZED);
         }
         Post post = postRepository.findById(req.postId())
                 .orElseThrow(() -> new ServiceException(ErrorCode.POST_NOT_FOUND));
-        // 인증 사용자 그대로 사용
-        User author = currentUser;
 
-        // parentId가 있으면 동일 게시글 소속인지 검증
+        // parentId 검증
         Comment parent = null;
         if (req.parentId() != null) {
             parent = commentRepository.findById(req.parentId())
                     .orElseThrow(() -> new ServiceException(ErrorCode.COMMENT_NOT_FOUND));
             if (!parent.getPost().getId().equals(req.postId())) {
+                log.warn("[CommentService] 댓글 작성 실패 - 서로 다른 게시글(parent/postId 불일치) parentId={}, postId={}",
+                        req.parentId(), req.postId());
                 throw new ServiceException(ErrorCode.BAD_REQUEST);
             }
         }
@@ -110,62 +120,80 @@ public class CommentService {
         // content trim & 공백만 입력 금지
         String trimmed = req.content() == null ? null : req.content().trim();
         if (trimmed == null || trimmed.isBlank()) {
+            log.warn("[CommentService] 댓글 작성 실패 - 공백 또는 null 내용");
             throw new ServiceException(ErrorCode.BAD_REQUEST);
         }
 
         Comment saved = commentRepository.save(
                 Comment.builder()
                         .post(post)
-                        .author(author)
+                        .author(currentUser) // 인증 사용자 그대로 사용
                         .content(trimmed)
                         .parent(parent)
                         .build()
         );
 
         Map<Long, Integer> authorNoMap = buildAuthorNoMap(req.postId(), post.getAuthor().getUserId());
-        return toFlatResponse(saved, currentUser, authorNoMap);
+        CommentResponse resp = toFlatResponse(saved, currentUser, authorNoMap);
+
+        log.info("[CommentService] 댓글 작성 완료 - postId={}, commentId={}", req.postId(), saved.getId());
+        return resp;
     }
 
     // 댓글 수정
     @Transactional
     public void update(Long commentId, CommentUpdateRequest req, User currentUser) {
+        log.info("[CommentService] 댓글 수정 요청 - commentId={}", commentId);
+
         if (currentUser == null) {
+            log.warn("[CommentService] 댓글 수정 실패 - 비인증 사용자");
             throw new ServiceException(ErrorCode.COMMENT_UNAUTHORIZED);
         }
         Comment c = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (c.isDeleted()) {
+            log.warn("[CommentService] 댓글 수정 실패 - 이미 삭제된 댓글 commentId={}", commentId);
             throw new ServiceException(ErrorCode.COMMENT_ALREADY_DELETED);
         }
         if (!c.isAuthor(currentUser)) {
+            log.warn("[CommentService] 댓글 수정 실패 - 권한 없음 userId={}, authorId={}",
+                    currentUser.getUserId(), c.getAuthor().getUserId());
             throw new ServiceException(ErrorCode.COMMENT_UPDATE_FORBIDDEN);
         }
 
-        // content trim & 공백만 입력 금지
         String trimmed = req.content() == null ? null : req.content().trim();
         if (trimmed == null || trimmed.isBlank()) {
+            log.warn("[CommentService] 댓글 수정 실패 - 공백 또는 null 내용 commentId={}", commentId);
             throw new ServiceException(ErrorCode.BAD_REQUEST);
         }
         c.update(trimmed);
+        log.info("[CommentService] 댓글 수정 완료 - commentId={}", commentId);
     }
 
     // 댓글 삭제
     @Transactional
     public void delete(Long commentId, User currentUser) {
+        log.info("[CommentService] 댓글 삭제 요청 - commentId={}", commentId);
+
         if (currentUser == null) {
+            log.warn("[CommentService] 댓글 삭제 실패 - 비인증 사용자");
             throw new ServiceException(ErrorCode.COMMENT_UNAUTHORIZED);
         }
         Comment c = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (c.isDeleted()) {
+            log.warn("[CommentService] 댓글 삭제 실패 - 이미 삭제된 댓글 commentId={}", commentId);
             throw new ServiceException(ErrorCode.COMMENT_ALREADY_DELETED);
         }
         if (!c.isAuthor(currentUser)) {
+            log.warn("[CommentService] 댓글 삭제 실패 - 권한 없음 userId={}, authorId={}",
+                    currentUser.getUserId(), c.getAuthor().getUserId());
             throw new ServiceException(ErrorCode.COMMENT_DELETE_FORBIDDEN);
         }
         c.softDelete();
+        log.info("[CommentService] 댓글 삭제 완료 - commentId={}", commentId);
     }
 
     // 게시글 작성자는 번호 매핑에서 제외 (번호 없이 "익명의 털실")
@@ -186,7 +214,6 @@ public class CommentService {
         Long uid = (c.getAuthor() == null) ? null : c.getAuthor().getUserId();
         int no = (uid != null && authorNoMap.containsKey(uid)) ? authorNoMap.get(uid) : 0;
         String display = (no > 0) ? "익명의 털실 " + no : "익명의 털실";
-
         boolean mine = c.isAuthor(currentUser);
 
         return new CommentResponse(
@@ -198,6 +225,7 @@ public class CommentService {
                 mine
         );
     }
+
     // 재귀 트리 변환 (임의 깊이)
     private CommentTreeResponse toTreeRecursive(
             Comment node,
@@ -222,7 +250,6 @@ public class CommentService {
                 childDtos
         );
     }
-
 
     private boolean isMine(Comment c, User currentUser) {
         return c.isAuthor(currentUser);

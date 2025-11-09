@@ -11,6 +11,7 @@ import com.mysite.knitly.domain.community.post.service.PostService;
 import com.mysite.knitly.domain.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/community/posts")
 @RequiredArgsConstructor
@@ -40,12 +42,14 @@ public class PostController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        log.info("[PostController] 게시글 목록 조회 요청 - category={}, query='{}', page={}, size={}", category, query, page, size);
         return ResponseEntity.ok(postService.getPostList(category, query, page, size));
     }
 
     // 게시글 상세 조회
     @GetMapping("/{postId}")
     public ResponseEntity<PostResponse> getPost(@PathVariable("postId") Long postId) {
+        log.info("[PostController] 게시글 상세 조회 요청 - postId={}", postId);
         User me = currentUserResolver.getCurrentUserOrNull();
         return ResponseEntity.ok(postService.getPost(postId, me));
     }
@@ -74,6 +78,7 @@ public class PostController {
 
         // 저장
         PostResponse res = postService.create(req, me);
+        log.info("[PostController] 게시글 작성 요청 완료 - category={}, title='{}'", category, title);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
@@ -89,6 +94,7 @@ public class PostController {
             @RequestPart("data") @Valid PostUpdateRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) throws IOException {
+        log.info("[PostController] 게시글 수정 요청 - postId={}, category={}, title='{}'", postId, request.category(), request.title());
         User me = currentUserResolver.getCurrentUserOrNull();
 
         // 1) 새로 업로드된 파일을 저장해 URL 목록 확보
@@ -107,7 +113,9 @@ public class PostController {
                 merged
         );
 
-        return ResponseEntity.ok(postService.update(postId, mergedReq, me));
+        PostResponse res = postService.update(postId, mergedReq, me);
+        log.info("[PostController] 게시글 수정 완료 - postId={}", postId);
+        return ResponseEntity.ok(res);
     }
 
 
@@ -115,6 +123,7 @@ public class PostController {
     @DeleteMapping("/{postId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(@PathVariable Long postId) {
+        log.info("[PostController] 게시글 삭제 요청 - postId={}", postId);
         User me = currentUserResolver.getCurrentUserOrNull();
         postService.delete(postId, me);
         return ResponseEntity.noContent().build();
