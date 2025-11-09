@@ -166,7 +166,7 @@ export default function PostDetailPage() {
   };
   useEffect(() => {
     loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postIdNum, sortOrder]);
 
   if (loading) return <div className="max-w-4xl mx-auto p-6">로딩 중…</div>;
@@ -282,15 +282,28 @@ export default function PostDetailPage() {
         return;
       }
 
-      if (newFiles.length > 0 || JSON.stringify(finalKeep.sort()) !== JSON.stringify((post.imageUrls ?? []).slice().sort())) {
-        await updatePostWithImages(postIdNum, {
+      if (
+        newFiles.length > 0 ||
+        JSON.stringify(finalKeep.sort()) !== JSON.stringify((post.imageUrls ?? []).slice().sort())
+      ) {
+        await updatePostWithImages(
+          postIdNum,
+          {
+            title: editTitle,
+            content: editContent,
+            category: post.category,
+            imageUrls: finalKeep,
+          },
+          newFiles
+        );
+      } else {
+        // ✅ 텍스트만 수정 시에도 백엔드 검증 필드 동봉
+        await updatePost(postIdNum, {
           title: editTitle,
           content: editContent,
           category: post.category,
           imageUrls: finalKeep,
-        }, newFiles);
-      } else {
-        await updatePost(postIdNum, { title: editTitle, content: editContent });
+        });
       }
 
       setIsEditingPost(false);
@@ -583,7 +596,7 @@ function CommentNode({
             onChange={(e) => setEditText(e.target.value)}
             className="flex-1 px-3 py-2 border rounded-lg"
           />
-            <button className="px-3 py-2 bg-[#925C4C] text-white rounded-lg hover:bg-[#7a4a3d]" onClick={commitEdit}>
+          <button className="px-3 py-2 bg-[#925C4C] text-white rounded-lg hover:bg-[#7a4a3d]" onClick={commitEdit}>
             저장
           </button>
         </div>

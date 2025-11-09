@@ -54,7 +54,13 @@ public class SecurityConfig {
         ));
 
         // 허용할 헤더
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "Origin"
+        ));
 
         // 🔥 쿠키 포함 허용 (매우 중요!)
         configuration.setAllowCredentials(true);
@@ -96,6 +102,7 @@ public class SecurityConfig {
 
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 프리플라이트 허용
                         // 커뮤니티 게시글 목록/상세 조회는 로그인 없이 허용
                         .requestMatchers(HttpMethod.GET, "/community/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/community/comments/**").permitAll()

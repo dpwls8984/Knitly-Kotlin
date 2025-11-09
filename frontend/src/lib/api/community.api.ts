@@ -1,3 +1,4 @@
+// ========== path: frontend/src/lib/api/community.api.ts ==========
 import api from '@/lib/api/axios';
 import type {
   PostListResponse,
@@ -83,17 +84,28 @@ export async function deleteComment(commentId: number): Promise<void> {
   await api.delete(`/community/comments/${commentId}`, { withCredentials: true });
 }
 
-// 게시글 수정/삭제
-/** JSON 기반 간단 수정(텍스트만) */
+// ===================== 여기부터 수정된 부분 =====================
+/** JSON 기반 간단 수정(텍스트만) → 항상 멀티파트 PUT로 전송(파일 0개) */
 export async function updatePost(
   postId: number,
   data: { title?: string; content?: string; category?: PostCategory; imageUrls?: string[] },
 ) {
-  const res = await api.patch(`/community/posts/${postId}`, data, {
+  const form = new FormData();
+  form.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  // images 파트는 비워둠(0개) → 백엔드 @RequestPart("data")만 처리
+
+  const res = await api.put(`/community/posts/${postId}`, form, {
     withCredentials: true,
+    transformRequest: [
+      (d, headers) => {
+        if (headers) delete (headers as any)['Content-Type']; // boundary 자동 설정
+        return d;
+      },
+    ],
   });
   return (res as any).data ?? res;
 }
+// ===================== 수정 끝 =====================
 
 /** 멀티파트 기반 수정(텍스트 + 이미지 동반) */
 export async function updatePostWithImages(
