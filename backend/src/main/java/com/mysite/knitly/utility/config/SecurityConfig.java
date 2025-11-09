@@ -16,8 +16,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Arrays;
 
@@ -35,17 +33,20 @@ public class SecurityConfig {
     private final JsonAuthEntryPoint jsonAuthEntryPoint;
     private final JsonAccessDeniedHandler jsonAccessDeniedHandler;
 
-    // 환경 변수에서 허용할 CORS 출처를 주입받음
-    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:3000}")
-    private String corsAllowedOrigins;
-
+    /**
+     * CORS 설정
+     * 프론트엔드(localhost:3000)와 백엔드(localhost:8080) 간 통신 허용
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 환경 변수(CORS_ALLOWED_ORIGINS)에서 콤마(,)로 구분된 출처 목록을 불러와 등록
-        configuration.setAllowedOrigins(Arrays.asList(corsAllowedOrigins.split(",")));
-        System.out.println("[CORS 설정] 허용 출처: " + Arrays.toString(corsAllowedOrigins.split(",")));
+        // 🔥 허용할 출처 (프론트엔드 URL)
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000",     // 개발 환경
+                "http://localhost:3001",     // 개발 환경 (추가 포트)
+                "https://www.myapp.com"      // 프로덕션 환경 (추후 변경)
+        ));
 
         // 허용할 HTTP 메서드
         configuration.setAllowedMethods(Arrays.asList(
@@ -87,9 +88,6 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                // SecurityContext 자동 저장
-                .securityContext(context -> context.requireExplicitSave(false))
-
                 // 401/403 을 JSON 응답으로 고정
                 .exceptionHandling(eh -> eh
                         .authenticationEntryPoint(jsonAuthEntryPoint)      // 401
@@ -98,18 +96,12 @@ public class SecurityConfig {
 
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll() // 정적 이미지 접근 허용
                         // 커뮤니티 게시글 목록/상세 조회는 로그인 없이 허용
                         .requestMatchers(HttpMethod.GET, "/community/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/community/comments/**").permitAll()
                         // 댓글 조회(게시글 하위 경로) 공개: 목록 & count 모두 포함
                         .requestMatchers(HttpMethod.GET, "/community/posts/*/comments").permitAll()
                         .requestMatchers(HttpMethod.GET, "/community/posts/*/comments/**").permitAll()
-                        // 정적 리소스, 이미지 폴더 위치
-                        .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-                        // 더미 이미지 보이게
-                        .requestMatchers(HttpMethod.GET, "/post/**").permitAll()
 
                         // 커뮤니티 "쓰기/수정/삭제"는 인증 필요
                         .requestMatchers(HttpMethod.POST,   "/community/**").authenticated()
@@ -125,6 +117,9 @@ public class SecurityConfig {
 
                         // 인증 불필요
                         .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/refresh", "/auth/test").permitAll()
+
+                        // 커뮤니티 이미지(uploads) 공개 허용
+                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
                         // JWT 인증 필요
                         .requestMatchers("/users/**").authenticated()
@@ -153,6 +148,4 @@ public class SecurityConfig {
 
         return http.build();
     }
-
-
 }
