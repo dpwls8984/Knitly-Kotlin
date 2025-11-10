@@ -15,6 +15,20 @@ spring:
   sql:
     init:
       mode: never
+frontend:
+  url: http://dummy-test-frontend.com
+
+custom:
+  jwt:
+    # application.yml을 참고하여 가짜 시크릿 키 제공
+    secretKey: "dGVzdC1zZWNyZXQta2V5LXRlc3Qtc2VjcmV0LWtleQo="
+
+# --- 3. Actuator 상태 점검 설정 ---
+management:
+  health:
+    # (핵심!) 테스트 시 불필요한 메일 서버 상태 점검 비활성화
+    mail:
+      enabled: false
 
 logging:
   level:

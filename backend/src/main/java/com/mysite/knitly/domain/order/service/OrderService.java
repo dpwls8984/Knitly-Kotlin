@@ -25,7 +25,7 @@ public class OrderService {
     // Facade에서만 호출될 핵심 비즈니스 로직
     @Transactional
     public Order createOrder(User user, List<Long> productIds) {
-// 1. 요청된 상품 ID 리스트로 모든 Product 엔티티를 조회
+    // 1. 요청된 상품 ID 리스트로 모든 Product 엔티티를 조회
         List<Product> products = productRepository.findAllById(productIds);
         if (products.size() != productIds.size()) {
             throw new EntityNotFoundException("일부 상품을 찾을 수 없습니다.");
