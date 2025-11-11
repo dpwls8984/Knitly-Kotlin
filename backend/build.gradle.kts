@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.implementation
+
 plugins {
     java
     id("org.springframework.boot") version "3.5.6"
@@ -58,6 +60,9 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.11")
 
     implementation("com.fasterxml.jackson.core:jackson-databind")
+
+    implementation ("org.springframework.retry:spring-retry")
+    implementation ("org.springframework:spring-aspects")
 
 }
 

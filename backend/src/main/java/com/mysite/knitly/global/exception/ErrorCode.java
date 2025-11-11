@@ -106,6 +106,10 @@ public enum ErrorCode {
     PAYMENT_CANCEL_API_FAILED("8007", HttpStatus.INTERNAL_SERVER_ERROR, "결제 취소 API 호출에 실패했습니다."),
     PAYMENT_CANCEL_FAILED("8008", HttpStatus.INTERNAL_SERVER_ERROR, "결제 취소에 실패했습니다."),
     PAYMENT_UNAUTHORIZED_ACCESS("8009", HttpStatus.FORBIDDEN, "결제 정보에 접근할 권한이 없습니다."),
+    PAYMENT_TIMEOUT("8010", HttpStatus.REQUEST_TIMEOUT, "결제 처리 시간이 초과되었습니다."),
+    PAYMENT_WEBHOOK_PROCESSING_FAILED("8011", HttpStatus.INTERNAL_SERVER_ERROR, "웹훅 처리 중 오류가 발생했습니다."),
+    INVALID_PAYMENT_STATUS("8012", HttpStatus.BAD_REQUEST, "유효하지 않은 결제 상태입니다."),
+
     // System 9000
 
     LOCK_ACQUISITION_FAILED("9001", HttpStatus.INTERNAL_SERVER_ERROR, "락 획득에 실패했습니다. 잠시 후 다시 시도해주세요.");

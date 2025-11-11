@@ -1,7 +1,7 @@
 package com.mysite.knitly.domain.payment.entity;
 
 public enum PaymentStatus {
-    // 결제 준비(승인 전), 결제 진행 중(인증 후 승인 API 호출 전), 입금 대기 중(가상계좌), 결제 완료, 결제 취소, 결제 승인 실패
+    // 결제 준비(승인 전), 결제 승인 요청 중, 입금 대기 중(가상계좌), 결제 완료, 결제 취소, 결제 실패
     READY, IN_PROGRESS, WAITING_FOR_DEPOSIT, DONE, CANCELED, FAILED;
 
     // 토스페이먼츠 API 응답의 status 값으로부터 enum 변환
@@ -29,7 +29,7 @@ public enum PaymentStatus {
 
     // 결제를 취소할 수 있는 상태인지 확인
     public boolean isCancelable() {
-        return this == DONE;
+        return this == DONE || this == READY;
     }
 
     // 결제가 진행 중인 상태인지 확인

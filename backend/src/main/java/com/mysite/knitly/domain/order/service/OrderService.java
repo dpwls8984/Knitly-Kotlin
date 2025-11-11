@@ -3,6 +3,10 @@ package com.mysite.knitly.domain.order.service;
 import com.mysite.knitly.domain.order.entity.Order;
 import com.mysite.knitly.domain.order.entity.OrderItem;
 import com.mysite.knitly.domain.order.repository.OrderRepository;
+import com.mysite.knitly.domain.payment.entity.Payment;
+import com.mysite.knitly.domain.payment.entity.PaymentMethod;
+import com.mysite.knitly.domain.payment.entity.PaymentStatus;
+import com.mysite.knitly.domain.payment.repository.PaymentRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
@@ -21,6 +25,7 @@ public class OrderService {
 
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
 
     // Facade에서만 호출될 핵심 비즈니스 로직
     @Transactional
@@ -47,6 +52,20 @@ public class OrderService {
         Order order = Order.create(user, orderItems);
 
         // 4. Order 저장 (OrderItem은 CascadeType.ALL에 의해 함께 저장됨)
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        //5. Payment를 READY 상태로 생성 - Order 생성 이후에 실행되어야 함
+        Payment readyPayment = Payment.builder()
+                .tossOrderId(savedOrder.getTossOrderId())
+                .order(savedOrder)
+                .buyer(user)
+                .totalAmount(savedOrder.getTotalPrice().longValue())
+                .paymentMethod(PaymentMethod.CARD)  // 초기값 (나중에 실제 결제 수단으로 업데이트됨)
+                .paymentStatus(PaymentStatus.READY)  // READY 상태
+                .build();
+
+        paymentRepository.save(readyPayment);
+
+        return savedOrder;
     }
 }
