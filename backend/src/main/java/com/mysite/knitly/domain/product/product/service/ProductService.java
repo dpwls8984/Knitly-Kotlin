@@ -123,7 +123,7 @@ public class ProductService {
         product.addProductImages(mergedImages);
 
 // 7. 삭제할 이미지 파일 실제 삭제 (S3, 로컬 등)
-        deletedImageUrls.forEach(localFileStorage::deleteFile);
+        deletedImageUrls.forEach(localFileStorage::deleteProductImage);
 
 
         List<String> currentImageUrls = product.getProductImages().stream()

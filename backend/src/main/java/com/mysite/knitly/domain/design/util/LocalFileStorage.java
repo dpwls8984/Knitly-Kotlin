@@ -21,6 +21,9 @@ import java.util.UUID;
 @Component
 public class LocalFileStorage {
 
+    private final String backendBaseUrl = "http://localhost:8080";
+    private final String productsUrlPrefix = "/products/";
+
     @Value("${file.upload-dir:uploads/designs}")
     private String uploadDir;
 
@@ -130,7 +133,9 @@ public class LocalFileStorage {
                     savedName
             );
 
-            String url = "/products/" + relativePath;
+            //String url = "/products/" + relativePath;
+
+            String url = backendBaseUrl + "/products/" + relativePath;
 
             log.info("[FileStorage] [Save] Product 이미지 저장 완료 - path={}", filePath);
             return url;
@@ -138,6 +143,49 @@ public class LocalFileStorage {
         } catch (IOException e) {
             log.error("Product 이미지 저장 실패", e);
             throw new ServiceException(ErrorCode.FILE_STORAGE_FAILED);
+        }
+    }
+
+    public void deleteProductImage(String fileUrl) {
+        if (fileUrl == null || fileUrl.isEmpty()) {
+            log.warn("삭제할 Product 이미지 URL이 비어있습니다.");
+            return;
+        }
+
+        try {
+            // 1. URL에서 상대 경로(relative path) 추출
+            // 예: "http://localhost:8080/products/2025/11/11/img.jpg"
+            String relativePath;
+            if (fileUrl.startsWith(backendBaseUrl + productsUrlPrefix)) {
+                // "http://localhost:8080/products/" 부분을 제거
+                relativePath = fileUrl.substring((backendBaseUrl + productsUrlPrefix).length());
+            } else if (fileUrl.startsWith(productsUrlPrefix)) {
+                // (예외 처리) Base URL이 없는 경우 (예: /products/...)
+                relativePath = fileUrl.substring(productsUrlPrefix.length());
+            } else {
+                log.warn("예상치 못한 Product 이미지 URL 형식입니다: {}", fileUrl);
+                return;
+            }
+            // 최종 relativePath = "2025/11/11/img.jpg"
+
+            // 2. 물리적 기본(base) 경로 생성 (saveProductImage와 동일한 로직)
+            Path base = Paths.get(uploadDir).getParent().resolve("products").toAbsolutePath().normalize();
+
+            // 3. 최종 파일 경로 조합
+            // 예: (.../uploads/products) + (2025/11/11/img.jpg)
+            Path filePath = base.resolve(relativePath).normalize();
+
+            // 4. 파일 삭제 (try-catch로 IOException 처리)
+            if (Files.exists(filePath)) {
+                Files.delete(filePath);
+                log.info("[Product Img Delete] 파일 삭제 완료: {}", filePath);
+            } else {
+                log.warn("[Product Img Delete] 삭제할 파일이 존재하지 않음: {}", filePath);
+            }
+        } catch (IOException e) {
+            log.error("[Product Img Delete] 파일 삭제 실패: {}", fileUrl, e);
+            // 예외를 밖으로 던지지 않고 로그만 남겨서, 기본 트랜잭션(상품 수정)이
+            // 롤백되는 것을 방지합니다.
         }
     }
 
