@@ -2,6 +2,7 @@ package com.mysite.knitly.domain.product.product.service;
 
 import com.mysite.knitly.domain.design.entity.Design;
 import com.mysite.knitly.domain.design.repository.DesignRepository;
+import com.mysite.knitly.domain.design.util.LocalFileStorage;
 import com.mysite.knitly.domain.product.like.repository.ProductLikeRepository;
 import com.mysite.knitly.domain.product.product.dto.*;
 import com.mysite.knitly.domain.product.product.entity.*;
@@ -11,7 +12,6 @@ import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
-import com.mysite.knitly.global.util.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final DesignRepository designRepository;
     private final RedisProductService redisProductService;
-    private final FileStorageService fileStorageService;
+    private final LocalFileStorage localFileStorage;
     private final ProductLikeRepository productLikeRepository;
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
@@ -123,7 +123,7 @@ public class ProductService {
         product.addProductImages(mergedImages);
 
 // 7. 삭제할 이미지 파일 실제 삭제 (S3, 로컬 등)
-        deletedImageUrls.forEach(fileStorageService::deleteFile);
+        deletedImageUrls.forEach(localFileStorage::deleteFile);
 
 
         List<String> currentImageUrls = product.getProductImages().stream()
@@ -170,8 +170,7 @@ public class ProductService {
         for (MultipartFile file : imageFiles) {
             if (file.isEmpty()) continue;
 
-            // FileStorageService에게 "product" 도메인의 파일 저장을 위임하고 URL만 받음
-            String url = fileStorageService.storeFile(file, "product");
+            String url = localFileStorage.saveProductImage(file);
 
             ProductImage productImage = ProductImage.builder()
                     .productImageUrl(url)

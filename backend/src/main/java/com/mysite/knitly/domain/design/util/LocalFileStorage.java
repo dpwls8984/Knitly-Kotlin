@@ -5,6 +5,7 @@ import com.mysite.knitly.global.exception.ServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -79,13 +80,64 @@ public class LocalFileStorage {
         return Paths.get(uploadDir).toAbsolutePath().normalize().resolve(rel).normalize();
     }
 
-    public void deleteFile(String fileUrl) throws IOException {
-        Path filePath = toAbsolutePathFromUrl(fileUrl);
-        if (Files.exists(filePath)) {
-            Files.delete(filePath);
-            log.info("파일 삭제 완료: {}", filePath);
-        } else {
-            log.warn("삭제할 파일이 존재하지 않음: {}", filePath);
+    public void deleteFile(String fileUrl) {
+        try {
+            Path filePath = toAbsolutePathFromUrl(fileUrl);
+            if (Files.exists(filePath)) {
+                Files.delete(filePath);
+                log.info("파일 삭제 완료: {}", filePath);
+            } else {
+                log.warn("삭제할 파일이 존재하지 않음: {}", filePath);
+            }
+        } catch (IOException e) {
+            log.error("파일 삭제 실패: {}", fileUrl, e);
+            throw new ServiceException(ErrorCode.FILE_DELETION_FAILED);
+        }
+    }
+
+    public String saveProductImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ServiceException(ErrorCode.FILE_STORAGE_FAILED);
+        }
+
+        final long MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024; // 3MB
+
+        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
+            throw new ServiceException(ErrorCode.PRODUCT_IMAGE_SIZE_EXCEEDED);
+        }
+
+        try {
+            LocalDate today = LocalDate.now();
+            Path base = Paths.get(uploadDir).getParent().resolve("products").toAbsolutePath().normalize();
+            Path dir = base.resolve(Paths.get(
+                    String.valueOf(today.getYear()),
+                    String.format("%02d", today.getMonthValue()),
+                    String.format("%02d", today.getDayOfMonth())
+            ));
+            Files.createDirectories(dir);
+
+            String originalName = file.getOriginalFilename();
+            String uuid8 = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String savedName = uuid8 + "_" + originalName;
+
+            Path filePath = dir.resolve(savedName);
+            Files.write(filePath, file.getBytes(), StandardOpenOption.CREATE_NEW);
+
+            String relativePath = String.join("/",
+                    String.valueOf(today.getYear()),
+                    String.format("%02d", today.getMonthValue()),
+                    String.format("%02d", today.getDayOfMonth()),
+                    savedName
+            );
+
+            String url = "/products/" + relativePath;
+
+            log.info("[FileStorage] [Save] Product 이미지 저장 완료 - path={}", filePath);
+            return url;
+
+        } catch (IOException e) {
+            log.error("Product 이미지 저장 실패", e);
+            throw new ServiceException(ErrorCode.FILE_STORAGE_FAILED);
         }
     }
 
