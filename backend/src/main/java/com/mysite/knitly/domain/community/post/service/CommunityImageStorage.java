@@ -10,9 +10,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Component
@@ -27,6 +28,8 @@ public class CommunityImageStorage {
 
     @Value("${file.community.public-prefix:/uploads/communitys}")
     private String publicPrefix;
+
+    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
 
     // uploadDir이 상대경로면 ${user.dir} 기준으로 보정
     private Path resolveBaseDir() {
@@ -55,10 +58,13 @@ public class CommunityImageStorage {
             if (file == null || file.isEmpty()) continue;
             validateFile(file);
 
+            // [수정됨] UUID 대신 userId_타임스탬프_원본명 형식으로 변경
             String ext = getExtension(file.getOriginalFilename());
-            String newName = UUID.randomUUID() + ext;
-            Path target = targetDir.resolve(newName);
+            String baseName = stripExtension(file.getOriginalFilename());
+            String ts = LocalDateTime.now().format(TS);
+            String newName = "guest_" + ts + "_" + sanitizeBaseName(baseName, 40) + ext;
 
+            Path target = targetDir.resolve(newName);
             file.transferTo(target.toFile());
 
             String relativeUrl = publicPrefix +
@@ -88,5 +94,24 @@ public class CommunityImageStorage {
         if (filename == null) return "";
         int dot = filename.lastIndexOf('.');
         return (dot >= 0) ? filename.substring(dot) : "";
+    }
+
+    // 확장자 제거 메서드
+    private String stripExtension(String filename) {
+        if (filename == null) return "file";
+        int dot = filename.lastIndexOf('.');
+        return (dot >= 0) ? filename.substring(0, dot) : filename;
+    }
+
+    // 파일명 안전화 (공백·특수문자 제거, 길이 제한)
+    private String sanitizeBaseName(String base, int maxLen) {
+        if (base == null || base.isBlank()) return "file";
+        String cleaned = base
+                .replaceAll("[\\s]+", "_")
+                .replaceAll("[^0-9A-Za-z가-힣._-]", "_");
+        if (cleaned.length() > maxLen) {
+            cleaned = cleaned.substring(0, maxLen);
+        }
+        return cleaned;
     }
 }
