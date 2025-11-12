@@ -16,26 +16,20 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findByPost(Post post);
 
     // 정렬（등록순,최신순)
-    @EntityGraph(attributePaths = "author")
     Page<Comment> findByPostAndDeletedFalseOrderByCreatedAtAsc(Post post, Pageable pageable);
-    @EntityGraph(attributePaths = "author")
     Page<Comment> findByPostAndDeletedFalseOrderByCreatedAtDesc(Post post, Pageable pageable);
 
     // 댓글 수
     long countByPostIdAndDeletedFalse(Long postId);
 
     // 루트 댓글
-    @EntityGraph(attributePaths = "author")
     Page<Comment> findByPostAndParentIsNullAndDeletedFalseOrderByCreatedAtAsc(Post post, Pageable pageable);
-    @EntityGraph(attributePaths = "author")
     Page<Comment> findByPostAndParentIsNullAndDeletedFalseOrderByCreatedAtDesc(Post post, Pageable pageable);
 
     // 자식 대댓글
-    @EntityGraph(attributePaths = "author")
     List<Comment> findByParentIdAndDeletedFalseOrderByCreatedAtAsc(Long parentId);
 
     // 자식 대댓글 배치 조회 (N+1 제거)
-    @EntityGraph(attributePaths = "author")
     List<Comment> findByParentIdInAndDeletedFalseOrderByCreatedAtAsc(Collection<Long> parentIds);
 
     // 마이페이지 댓글 조회 시
@@ -51,6 +45,5 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     List<Long> findAuthorOrderForPost(@Param("postId") Long postId);
 
-    @EntityGraph(attributePaths = "author")
     List<Comment> findByPostIdAndDeletedFalseOrderByCreatedAtAsc(Long postId);
 }
