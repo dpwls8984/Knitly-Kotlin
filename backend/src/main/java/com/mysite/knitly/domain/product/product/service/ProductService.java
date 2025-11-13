@@ -182,7 +182,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(User currentUser, Long productId) {
+        public void deleteProduct(User currentUser, Long productId) {
         log.info("[Product] [Delete] 상품 삭제 시작 - userId={}, productId={}",
                 currentUser.getUserId(), productId);
 

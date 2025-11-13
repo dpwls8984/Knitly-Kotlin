@@ -78,7 +78,7 @@ class EmailNotificationConsumerTest {
     @DisplayName("receiveOrderCompletionMessage: 성공 시, JavaMailSender.send가 1회 호출됨")
     void testReceive_Success() throws Exception {
 
-        when(orderRepository.findOrderWithDetailsById(1L)).thenReturn(Optional.of(mockOrder));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(mockOrder));
 
         when(fileStorageService.loadFileAsBytes(anyString())).thenReturn(new byte[]{1, 2, 3});
 
@@ -104,7 +104,7 @@ class EmailNotificationConsumerTest {
     @DisplayName("receiveOrderCompletionMessage: Order 조회 실패 시, 예외를 던져 DLQ로 보냄")
     void testReceive_OrderNotFound_ShouldThrowException() {
         log.info("[Test] [Given] OrderRepository가 Order를 찾지 못하도록 모킹");
-        when(orderRepository.findOrderWithDetailsById(1L)).thenReturn(Optional.empty());
+        when(orderRepository.findById(1L)).thenReturn(Optional.empty());
 
         log.info("[Test] [When] receiveOrderCompletionMessage 메서드 호출");
 

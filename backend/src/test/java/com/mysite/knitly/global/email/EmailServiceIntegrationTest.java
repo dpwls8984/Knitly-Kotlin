@@ -185,7 +185,7 @@ class EmailServiceIntegrationTest {
         System.out.println("### DEBUG PASSWORD: " + (injectedPassword != null ? injectedPassword.substring(0, 4) + "..." : "null"));
         System.out.println("==================================================");
 
-        Order testOrder = orderRepository.findOrderWithDetailsById(testOrderId)
+        Order testOrder = orderRepository.findById(testOrderId)
                 .orElseThrow(() -> new RuntimeException("테스트용 주문(ID: " + testOrderId + ")을 찾을 수 없습니다."));
 
         EmailNotificationDto testDto = new EmailNotificationDto(
