@@ -39,7 +39,7 @@ public class Design {
     private DesignState designState;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     private DesignType designType;
 
     @Column(nullable = false, length = 30)
