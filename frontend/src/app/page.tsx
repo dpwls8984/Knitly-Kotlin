@@ -8,6 +8,7 @@ import ProductCard from '@/components/product/ProductCard';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { User } from '@/types/auth.types';
+import { addLike, removeFavorite } from '@/lib/api/like.api';
 
 
 export default function HomePage() {
@@ -42,9 +43,48 @@ export default function HomePage() {
   };
 
   const handleLikeToggle = async (productId: number) => {
-    // TODO: 찜하기 API 연동
-    console.log('찜하기:', productId);
-  };
+    const product = popularProducts.find(p => p.productId === productId);
+    if (!product) return;
+
+    const { user } = useAuthStore.getState();
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      router.push('/login');
+      return;
+    }
+
+    const currentIsLiked = product.isLikedByUser;
+
+    // 2. 낙관적 업데이트 (UI 먼저 변경)
+    // 
+    // `popularProducts` state를 업데이트합니다.
+    setPopularProducts(prev => prev.map(p => 
+      p.productId === productId 
+        ? { 
+            ...p, 
+            // 찜 상태와 카운트를 모두 토글
+            isLikedByUser: !currentIsLiked, 
+            likeCount: currentIsLiked ? p.likeCount - 1 : p.likeCount + 1
+          }
+        : p
+    ));
+
+    try {
+      // 3. 상태에 따라 다른 API 호출
+      if (currentIsLiked) {
+        await removeFavorite(productId); // 찜 취소
+      } else {
+        await addLike(productId); // 찜 등록
+      }
+    } catch (error) {
+      console.error('찜 토글 실패:', error);
+      // 4. 실패 시 롤백 (원래 product 상태로 복구)
+      setPopularProducts(prev => prev.map(p => 
+        p.productId === productId ? product : p
+      ));
+      alert('찜 상태 변경에 실패했습니다.');
+    }
+  };
 
   // 카테고리 한글 변환
   const getCategoryKorean = (category: string) => {
