@@ -36,7 +36,7 @@ public class Order {
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
-    private Double totalPrice;
+    private Double totalPrice = 0.0;
 
     // 토스페이먼츠 orderId (영문 대소문자, 숫자, -, _ 만 허용, 6자 이상 64자 이하)
     @Column(nullable = false, unique = true, length = 64)
@@ -78,6 +78,8 @@ public class Order {
     public void addOrderItem(OrderItem orderItem) {
         orderItems.add(orderItem);
         orderItem.setOrder(this); // 양방향 관계 설정
+        if (this.totalPrice == null) this.totalPrice = 0.0;
+        this.totalPrice += orderItem.getOrderPrice() * orderItem.getQuantity();
     }
 
     /**
