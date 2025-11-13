@@ -54,7 +54,7 @@ public class SecurityConfig {
         ));
 
         // 허용할 헤더
-        // 프론트에서 Authorization: Bearer 헤더를 보내기 때문에, CORS 허용 헤더에 Authorization 등을 명시적으로 추가
+        // 현재는 모든 헤더 허용
         configuration.setAllowedHeaders(Arrays.asList("*"));
 
         // 쿠키 포함 허용 (매우 중요)
@@ -123,7 +123,7 @@ public class SecurityConfig {
                         // 인증 불필요
                         .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/refresh", "/auth/test").permitAll()
 
-                        // 업로드한 리뷰 이미지 조회 (팀원 경로 유지)
+                        // 업로드한 리뷰 이미지 조회
                         .requestMatchers("/reviews/**").permitAll()
 
                         // 커뮤니티/리뷰 등 업로드 이미지 파일이 /uploads/** 경로로 제공될 경우 공개 허용

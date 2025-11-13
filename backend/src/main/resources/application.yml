@@ -21,7 +21,7 @@ spring:
         highlight_sql: true
         use_sql_comments: true
         dialect: org.hibernate.dialect.MySQL8Dialect
-        default_batch_fetch_size: 100
+        default_batch_fetch_size: 100   # ← 네가 추가한 배치 페치 설정 (유지)
     show-sql: true
 
   # --- Web / MVC ---
@@ -97,7 +97,7 @@ spring:
 
 # --- 파일 업로드 ---
 file:
-  upload-dir: uploads/designs
+  upload-dir: ./uploads/designs   # 팀원 설정 형태 유지 (상대 경로)
   public-prefix: /files
 
 # --- Springdoc ---
@@ -107,18 +107,21 @@ springdoc:
 # --- Logging ---
 logging:
   level:
+    # 네가 추가한 디버깅용 로그 설정들 (유지)
     org.hibernate.orm.jdbc.bind: TRACE
     org.hibernate.orm.jdbc.extract: TRACE
     org.springframework.transaction.interceptor: TRACE
     com.rest1: DEBUG
+    # 팀 전체 애플리케이션 로그
+    com.mysite.knitly: DEBUG
     org.springframework.security: DEBUG
     org.springframework.security.oauth2: TRACE
-    org.springframework.web: DEBUG
+    org.springframework.web: INFO
 
 # --- Custom JWT 설정 ---
 custom:
   jwt:
-    accessTokenExpireSeconds: 1800   # 30분
+    accessTokenExpireSeconds: 1800    # 30분
     refreshTokenExpireSeconds: 604800 # 7일
     secretKey: ${JWT_SECRET_KEY}
 
