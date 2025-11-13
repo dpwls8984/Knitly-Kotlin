@@ -1,24 +1,31 @@
 package com.mysite.knitly.domain.product.product.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mysite.knitly.domain.design.entity.Design;
 import com.mysite.knitly.domain.design.repository.DesignRepository;
+import com.mysite.knitly.domain.design.util.LocalFileStorage;
 import com.mysite.knitly.domain.product.like.repository.ProductLikeRepository;
 import com.mysite.knitly.domain.product.product.dto.*;
 import com.mysite.knitly.domain.product.product.entity.*;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
+import com.mysite.knitly.domain.product.review.repository.ReviewRepository;
 import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
-import com.mysite.knitly.global.util.FileStorageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -27,9 +34,16 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final DesignRepository designRepository;
     private final RedisProductService redisProductService;
-    private final FileStorageService fileStorageService;
+    private final LocalFileStorage localFileStorage;
     private final ProductLikeRepository productLikeRepository;
+    private final ReviewRepository reviewRepository;
+    private final UserRepository userRepository;
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
 
+    private static final String CACHE_KEY_PREFIX = "product:detail:";
+
+    @Transactional
     public ProductRegisterResponse registerProduct(User seller, Long designId, ProductRegisterRequest request) {
 
         Design design = designRepository.findById(designId)
@@ -64,6 +78,7 @@ public class ProductService {
         return ProductRegisterResponse.from(savedProduct, imageUrls);
     }
 
+    @Transactional
     public ProductModifyResponse modifyProduct(User currentUser, Long productId, ProductModifyRequest request) {
         Product product = findProductById(productId);
 
@@ -82,19 +97,43 @@ public class ProductService {
                 request.stockQuantity()
         );
 
-        // 1. 삭제할 기존 이미지 파일들의 URL을 미리 확보
+        // 1. 기존 이미지 URL 전체
         List<String> oldImageUrls = product.getProductImages().stream()
                 .map(ProductImage::getProductImageUrl)
                 .collect(Collectors.toList());
 
-        // 2. 새로운 이미지 파일들을 저장하고 ProductImage 엔티티 리스트를 생성
+        // 2. 유지할 기존 이미지 URL 목록 (프론트에서 전달된 값)
+        List<String> existingImageUrls = request.existingImageUrls() != null
+                ? request.existingImageUrls()
+                : new ArrayList<>();
+
+        // 3. 삭제할 이미지 = oldImageUrls - existingImageUrls
+        List<String> deletedImageUrls = oldImageUrls.stream()
+                .filter(url -> !existingImageUrls.contains(url))
+                .collect(Collectors.toList());
+
+        // 4. 새로운 이미지 파일을 저장
         List<ProductImage> newProductImages = saveProductImages(request.productImageUrls());
 
-        // 3. Product 엔티티의 이미지 리스트를 교체 (orphanRemoval=true에 의해 기존 DB 레코드는 자동 삭제됨), 엔티티에 반영
-        product.addProductImages(newProductImages);
+        // 5. 유지할 기존 이미지 + 새 이미지 합치기
+        List<ProductImage> mergedImages = new ArrayList<>();
 
-        // 4. 기존 이미지 파일들을 파일 시스템에서 삭제
-        oldImageUrls.forEach(fileStorageService::deleteFile);
+        // 기존 이미지 중 유지 대상만 다시 추가
+        for (ProductImage oldImg : product.getProductImages()) {
+            if (existingImageUrls.contains(oldImg.getProductImageUrl())) {
+                mergedImages.add(oldImg);
+            }
+        }
+
+        // 새 이미지 추가
+        mergedImages.addAll(newProductImages);
+
+        // 6. 엔티티 반영 (기존 이미지 중 유지 대상은 그대로, 삭제 대상은 orphanRemoval로 DB에서 제거)
+        product.addProductImages(mergedImages);
+
+        // 7. 삭제할 이미지 파일 실제 삭제 (S3, 로컬 등)
+        deletedImageUrls.forEach(localFileStorage::deleteProductImage);
+
 
         List<String> currentImageUrls = product.getProductImages().stream()
                 .map(ProductImage::getProductImageUrl)
@@ -103,6 +142,7 @@ public class ProductService {
         return ProductModifyResponse.from(product, currentImageUrls);
     }
 
+    @Transactional
     public void deleteProduct(User currentUser, Long productId) {
         Product product = findProductById(productId);
 
@@ -139,8 +179,7 @@ public class ProductService {
         for (MultipartFile file : imageFiles) {
             if (file.isEmpty()) continue;
 
-            // FileStorageService에게 "product" 도메인의 파일 저장을 위임하고 URL만 받음
-            String url = fileStorageService.storeFile(file, "product");
+            String url = localFileStorage.saveProductImage(file);
 
             ProductImage productImage = ProductImage.builder()
                     .productImageUrl(url)
@@ -155,38 +194,72 @@ public class ProductService {
                 .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
     }
 
+
     // 상품 목록 조회
+    @Transactional(readOnly = true)
     public Page<ProductListResponse> getProducts(
-            User user, // 컨트롤러에서 받은 User 객체
+            User user,
             ProductCategory category,
             ProductFilterType filterType,
             ProductSortType sortType,
             Pageable pageable) {
 
-        ProductFilterType effectiveFilter = (filterType == null) ? ProductFilterType.ALL : filterType;
+        long startTime = System.currentTimeMillis();
+        Long userId = user != null ? user.getUserId() : null;
 
-        ProductCategory effectiveCategory =
-                (effectiveFilter == ProductFilterType.ALL) ? category : null;
+        log.info("[Product] [List] 상품 목록 조회 시작 - userId={}, category={}, filter={}, sort={}, page={}, size={}",
+                userId, category, filterType, sortType, pageable.getPageNumber(), pageable.getPageSize());
 
-        Page<Product> productPage;
+        try{
+            ProductFilterType effectiveFilter = (filterType == null) ? ProductFilterType.ALL : filterType;
+            ProductCategory effectiveCategory =
+                    (effectiveFilter == ProductFilterType.ALL) ? category : null;
 
-        if (sortType == ProductSortType.POPULAR) {
-            productPage = getProductsByPopular(effectiveCategory, effectiveFilter, pageable);
-        } else {
-            Pageable sortedPageable = createPageable(pageable, sortType);
-            productPage = getFilteredProducts(effectiveCategory, effectiveFilter, sortedPageable);
+            Page<Product> productPage;
+            long dbStartTime = System.currentTimeMillis();
+
+            if (sortType == ProductSortType.POPULAR) {
+                log.debug("[Product] [List] 인기순 조회 시작 - effectiveCategory={}, effectiveFilter={}",
+                        effectiveCategory, effectiveFilter);
+                productPage = getProductsByPopular(effectiveCategory, effectiveFilter, pageable);
+            } else {
+                log.debug("[Product] [List] 일반 조회 시작 - effectiveCategory={}, effectiveFilter={}, sort={}",
+                        effectiveCategory, effectiveFilter, sortType);
+                Pageable sortedPageable = createPageable(pageable, sortType);
+                productPage = getFilteredProducts(effectiveCategory, effectiveFilter, sortedPageable);
+            }
+
+            long dbDuration = System.currentTimeMillis() - dbStartTime;
+            log.debug("[Product] [List] DB 조회 완료 - resultCount={}, dbDuration={}ms",
+                    productPage.getTotalElements(), dbDuration);
+
+            // '좋아요' 누른 상품 ID 목록을 한 번에 조회
+            long likeStartTime = System.currentTimeMillis();
+            Set<Long> likedProductIds = getLikedProductIds(user, productPage.getContent());
+            long likeDuration = System.currentTimeMillis() - likeStartTime;
+
+            log.debug("[Product] [List] 좋아요 정보 조회 완료 - likedCount={}, likeDuration={}ms",
+                    likedProductIds.size(), likeDuration);
+
+            // DTO 변환
+            Page response = productPage.map(product ->
+                    ProductListResponse.from(
+                            product,
+                            likedProductIds.contains(product.getProductId())
+                    )
+            );
+
+            long totalDuration = System.currentTimeMillis() - startTime;
+            log.info("[Product] [List] 상품 목록 조회 완료 - userId={}, totalCount={}, returnedCount={}, totalDuration={}ms",
+                    userId, response.getTotalElements(), response.getNumberOfElements(), totalDuration);
+
+            return response;
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[Product] [List] 상품 목록 조회 실패 - userId={}, category={}, duration={}ms",
+                    userId, category, duration, e);
+            throw e;
         }
-
-        // '좋아요' 누른 상품 ID 목록을 한 번에 조회
-        Set<Long> likedProductIds = getLikedProductIds(user, productPage.getContent());
-
-        // DTO의 from(Product, boolean) 메서드를 사용하여 변환
-        return productPage.map(product ->
-                ProductListResponse.from(
-                        product,
-                        likedProductIds.contains(product.getProductId())
-                )
-        );
     }
 
     private Set<Long> getLikedProductIds(User user, List<Product> products) {
@@ -206,59 +279,96 @@ public class ProductService {
                 user.getUserId(), // user.userId 필드에 접근
                 productIds
         );
+
     }
 
 
-    // 인기순 - Redis 활용
+    // 인기순 상품 조회 - Redis 활용
     private Page<Product> getProductsByPopular(
             ProductCategory category,
             ProductFilterType filterType,
             Pageable pageable) {
 
-        // Redis에서 인기순 목록 가져오기
-        List<Long> popularIds = redisProductService.getTopNPopularProducts(1000);
+        long startTime = System.currentTimeMillis();
+        log.debug("[Product] [Popular] 인기순 조회 시작 - category={}, filter={}",
+                category, filterType);
 
-        if (popularIds.isEmpty()) {
-            Pageable popularPageable = PageRequest.of(
-                    pageable.getPageNumber(),
-                    pageable.getPageSize(),
-                    Sort.by("purchaseCount").descending()
-            );
-            return getFilteredProducts(category, filterType, popularPageable);
+        try{
+            // Redis에서 인기 상품 ID 목록 가져오기
+            long redisStartTime = System.currentTimeMillis();
+            List<Long> topIds = redisProductService.getTopNPopularProducts(100);
+            long redisDuration = System.currentTimeMillis() - redisStartTime;
+            log.debug("[Product] [Popular] Redis 조회 완료 - count={}, redisDuration={}ms",
+                    topIds.size(), redisDuration);
+
+            List<Product> products;
+
+            if (topIds.isEmpty()) {
+                // Redis에 데이터가 없으면 DB에서 직접 조회 (이미지 포함)
+                log.warn("[Product] [Popular] Redis 데이터 없음, DB에서 직접 조회");
+
+                long dbStartTime = System.currentTimeMillis();
+                Pageable top100 = PageRequest.of(0, 100, Sort.by("purchaseCount").descending());
+                products = productRepository.findAllWithImagesAndNotDeleted(top100).getContent();
+                long dbDuration = System.currentTimeMillis() - dbStartTime;
+
+                log.debug("[Product] [Popular] DB 직접 조회 완료 - count={}, dbDuration={}ms",
+                        products.size(), dbDuration);
+            } else {
+                // Redis에서 가져온 ID로 상품 조회 (이미지 포함)
+                long dbStartTime = System.currentTimeMillis();
+                List<Product> unordered = productRepository.findByProductIdInWithImagesAndNotDeleted(topIds);
+                long dbDuration = System.currentTimeMillis() - dbStartTime;
+
+                log.debug("[Product] [Popular] DB 상품 정보 조회 완료 - requestedCount={}, foundCount={}, dbDuration={}ms",
+                        topIds.size(), unordered.size(), dbDuration);
+
+                // Redis의 순서대로 정렬
+                Map<Long, Product> productMap = unordered.stream()
+                        .collect(Collectors.toMap(Product::getProductId, p -> p));
+
+                products = topIds.stream()
+                        .map(productMap::get)
+                        .filter(Objects::nonNull)
+                        .toList();
+
+                log.debug("[Product] [Popular] Redis 순서 정렬 완료 - finalCount={}", products.size());
+            }
+
+            // 필터링 적용
+            long filterStartTime = System.currentTimeMillis();
+            int beforeFilterCount = products.size();
+            products = products.stream()
+                    .filter(p -> matchesCondition(p, category, filterType))
+                    .toList();
+            long filterDuration = System.currentTimeMillis() - filterStartTime;
+
+            log.debug("[Product] [Popular] 필터링 완료 - beforeCount={}, afterCount={}, filterDuration={}ms",
+                    beforeFilterCount, products.size(), filterDuration);
+
+
+            Page result = convertToPage(products, pageable);
+
+            long totalDuration = System.currentTimeMillis() - startTime;
+            log.info("[Product] [Popular] 인기순 조회 완료 - totalCount={}, pageSize={}, totalDuration={}ms",
+                    result.getTotalElements(), result.getNumberOfElements(), totalDuration);
+
+            return result;
+
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[Product] [Popular] 인기순 조회 실패 - category={}, duration={}ms",
+                    category, duration, e);
+            throw e;
         }
-
-        // Redis에서 가져온 ID로 DB 조회
-        List<Product> allProducts = productRepository.findByProductIdInAndIsDeletedFalse(popularIds);
-
-        // FREE/LIMITED가 오면 카테고리 무시
-        boolean filterFree = (filterType == ProductFilterType.FREE);
-        boolean filterLimited = (filterType == ProductFilterType.LIMITED);
-
-        // 필터 적용
-        List<Product> filtered = allProducts.stream().filter(p -> {
-            if (filterFree) return Double.compare(p.getPrice(), 0.0) == 0;
-            if (filterLimited) return p.getStockQuantity() != null;
-            if (category != null) return p.getProductCategory() == category;
-            return true;
-        }).toList();
-
-        // Redis 순서 유지하며 정렬
-        Map<Long, Product> productMap = filtered.stream()
-                .collect(Collectors.toMap(Product::getProductId, p -> p));
-
-        List<Product> sorted = popularIds.stream()
-                .map(productMap::get)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-
-        // 페이징 처리
-        return convertToPage(sorted, pageable);
     }
 
+
     /**
-     * 조회 조건에 따른 상품 조회
-     * 1. 카테고리 조회: 해당 카테고리만
-     * 2. 무료 조회: 모든 카테고리의 무료 상품
+     * 조건별 상품 조회 (이미지 포함)
+     *
+     * 1. 카테고리 조회: 특정 카테고리의 상품들
+     * 2. 무료 상품 조회: 모든 카테고리의 무료 상품
      * 3. 한정판매 조회: 모든 카테고리의 한정판매 상품
      * 4. 전체 조회: 모든 상품
      */
@@ -268,23 +378,45 @@ public class ProductService {
             Pageable pageable
     ) {
 
-        // 1. 카테고리 조회 (ALL)
-        if (category != null) {
-            return productRepository.findByProductCategoryAndIsDeletedFalse(category, pageable);
-        }
+        long startTime = System.currentTimeMillis();
+        log.debug("[Product] [Filter] 조건별 조회 시작 - category={}, filter={}",
+                category, filterType);
 
-        // 2. 무료 상품 조회 (카테고리 무관)
-        if (filterType == ProductFilterType.FREE) {
-            return productRepository.findByPriceAndIsDeletedFalse(0.0, pageable);
-        }
+        try{
+            Page<Product> result;
+            // 1. 카테고리 조회 (ALL)
+            if (category != null) {
+                result = productRepository.findByCategoryWithImagesAndNotDeleted(category, pageable);
+                log.debug("[Product] [Filter] 카테고리 조회 - category={}, count={}",
+                        category, result.getTotalElements());
+            }
+            // 2. 무료 상품 조회
+            else if (filterType == ProductFilterType.FREE) {
+                result = productRepository.findByPriceWithImagesAndNotDeleted(0.0, pageable);
+                log.debug("[Product] [Filter] 무료 상품 조회 - count={}", result.getTotalElements());
+            }
+            // 3. 한정판매 조회
+            else if (filterType == ProductFilterType.LIMITED) {
+                result = productRepository.findLimitedWithImagesAndNotDeleted(pageable);
+                log.debug("[Product] [Filter] 한정판매 조회 - count={}", result.getTotalElements());
+            }
+            // 4. 전체 조회
+            else {
+                result = productRepository.findAllWithImagesAndNotDeleted(pageable);
+                log.debug("[Product] [Filter] 전체 조회 - count={}", result.getTotalElements());
+            }
 
-        // 3. 한정판매 조회 (카테고리 무관)
-        if (filterType == ProductFilterType.LIMITED) {
-            return productRepository.findByStockQuantityIsNotNullAndIsDeletedFalse(pageable);
-        }
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("[Product] [Filter] 조건별 조회 완료 - category={}, filter={}, count={}, duration={}ms",
+                    category, filterType, result.getTotalElements(), duration);
 
-        // 4. 전체 조회
-        return productRepository.findByIsDeletedFalse(pageable);
+            return result;
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[Product] [Filter] 조건별 조회 실패 - category={}, filter={}, duration={}ms",
+                    category, filterType, duration, e);
+            throw e;
+        }
     }
 
     /**
@@ -295,13 +427,14 @@ public class ProductService {
      * @return 상품 목록 (대표 이미지 포함)
      */
     public Page<ProductListResponse> findProductsByUserId(Long userId, Pageable pageable) {
-
+        User user = userRepository.findById(userId).orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+        String sellerName= user.getName();
         // Repository에서 DTO로 조회
         Page<ProductWithThumbnailDto> dtoPage = productRepository.findByUserIdWithThumbnail(userId, pageable);
 
         // DTO -> Response 변환
         Page<ProductListResponse> responsePage = dtoPage.map(
-                dto -> dto.toResponse(true) // 찜한 목록이므로 isLikedByUser = true
+                dto -> dto.toResponse(true, sellerName) // 찜한 목록이므로 isLikedByUser = true
         );
 
         return responsePage;
@@ -355,10 +488,22 @@ public class ProductService {
     }
 
     // 상품 상세 조회 로직 추가
-    @Transactional(readOnly = true) // 데이터를 읽기만 하므로 readOnly=true로 성능 최적화
+    @Transactional(readOnly = true)
     public ProductDetailResponse getProductDetail(User user, Long productId) {
-        // N+1 방지를 위해 User, Design 등 연관 정보를 함께 가져오는 것이 좋음
-        Product product = productRepository.findProductDetailById(productId) // 예시 메서드
+        String cacheKey = CACHE_KEY_PREFIX + productId;
+
+        try {
+            String cachedData = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedData != null) {
+                log.info("[Service] [Cache] 캐시 히트 - key={}", cacheKey);
+                return objectMapper.readValue(cachedData, ProductDetailResponse.class);
+            }
+        } catch (Exception e) {
+            log.error("[Service] [Cache] 캐시 읽기 실패 - key={}, error={}", cacheKey, e.getMessage(), e);
+        }
+
+        log.info("[Service] [DB] 캐시 미스(Miss) - DB 조회 - key={}", cacheKey);
+        Product product = productRepository.findProductDetailById(productId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
 
         // 판매 중지된 상품은 조회 불가
@@ -377,6 +522,19 @@ public class ProductService {
             isLiked = productLikeRepository.existsByUser_UserIdAndProduct_ProductId(userId, productId);
         }
 
-        return ProductDetailResponse.from(product, imageUrls, isLiked);
+        long reviewCount = reviewRepository.countByProductAndIsDeletedFalse(product);
+        product.setReviewCount((int) reviewCount);
+
+        ProductDetailResponse response = ProductDetailResponse.from(product, imageUrls, isLiked);
+
+        try {
+            String jsonData = objectMapper.writeValueAsString(response);
+            redisTemplate.opsForValue().set(cacheKey, jsonData, Duration.ofHours(1));
+            log.info("[Service] [Cache] 캐시 쓰기(Write) 완료 - key={}", cacheKey);
+        } catch (Exception e) {
+            log.error("[Service] [Cache] 캐시 쓰기 실패 - key={}, error={}", cacheKey, e.getMessage(), e);
+        }
+
+        return response;
     }
 }

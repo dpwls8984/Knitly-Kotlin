@@ -13,6 +13,7 @@ export interface ProductListResponse {
     avgReviewRating: number | null;
     createdAt: string;
     thumbnailUrl: string | null;
+    sellerName: string; // 🔥 판매자 이름 추가
     isFree: boolean;
     isLimited: boolean;
     isSoldOut: boolean;

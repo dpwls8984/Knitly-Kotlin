@@ -128,7 +128,18 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
 
                         // 업로드한 리뷰 이미지 조회
-                        .requestMatchers("/review/**").permitAll()
+                        .requestMatchers("/reviews/**").permitAll()
+
+                        .requestMatchers(
+                                "/resources/**",          // 정적 리소스
+                                "/static/**",
+                                "/files/**"               // 파일 접근
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/public/**",
+                                "/home/**",              // 홈 화면
+                                "/products/**"           // 상품 목록 (읽기는 public)
+                        ).permitAll()
 
                         // 나머지 모두 인증 필요
                         .anyRequest().authenticated()

@@ -23,21 +23,19 @@ import java.util.List;
 public class ReviewController {
     private final ReviewService reviewService;
 
-    // 1. 리뷰 작성 폼용 상품 정보 조회
-    @GetMapping("products/{productId}/review")
-    public ResponseEntity<ReviewCreateResponse> getReviewInfo(@PathVariable Long productId) {
-        ReviewCreateResponse response = reviewService.getReviewFormInfo(productId);
+    @GetMapping("/reviews/form")
+    public ResponseEntity<ReviewCreateResponse> getReviewInfo(@RequestParam Long orderItemId) {
+        ReviewCreateResponse response = reviewService.getReviewFormInfo(orderItemId);
         return ResponseEntity.ok(response);
     }
 
-    // 1. 리뷰 등록
-    @PostMapping("products/{productId}/reviews")
+    @PostMapping("/reviews")
     public ResponseEntity<Void> createReview(
             @AuthenticationPrincipal User user,
-            @PathVariable Long productId,
+            @RequestParam Long orderItemId,
             @Valid @ModelAttribute ReviewCreateRequest request
     ) {
-        reviewService.createReview(productId, user, request);
+        reviewService.createReview(orderItemId, user, request);
         return ResponseEntity.ok().build();
     }
 

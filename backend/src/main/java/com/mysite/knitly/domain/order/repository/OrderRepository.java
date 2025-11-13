@@ -17,4 +17,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "JOIN FETCH p.design d " +
             "WHERE o.orderId = :orderId")
     Optional<Order> findOrderWithDetailsById(@Param("orderId") Long orderId);
+
+    // tossOrderId로 주문 조회 (결제 승인 시 사용)
+    Optional<Order> findByTossOrderId(String tossOrderId);
 }

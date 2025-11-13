@@ -77,6 +77,9 @@ public class Product {
     @Column
     private Double avgReviewRating; // DECIMAL(3,2)
 
+    @Column
+    private Integer reviewCount;
+
     //상품 수정하는 로직 추가
     public void update(String description, ProductCategory productCategory, String sizeInfo, Integer stockQuantity) {
         this.description = description;
@@ -137,6 +140,27 @@ public class Product {
         } else {
             this.likeCount -= 1;
         }
+    }
+
+    // 리뷰 개수 설정 메서드
+    public void setReviewCount(Integer reviewCount) {
+        this.reviewCount = reviewCount;
+    }
+
+    // 구매 횟수 증가
+    public void increasePurchaseCount() {
+        if (this.purchaseCount == null) {
+            this.purchaseCount = 0;
+        }
+        this.purchaseCount += 1;
+    }
+
+    // 구매 횟수 증가 (수량 지정)
+    public void increasePurchaseCount(int quantity) {
+        if (this.purchaseCount == null) {
+            this.purchaseCount = 0;
+        }
+        this.purchaseCount += quantity;
     }
 }
 

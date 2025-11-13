@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/api/axios';
+import { ProductRegisterResponse, ProductModifyResponse } from '@/types/product.types';
 
 // 1. 폼 데이터 타입
 export interface DesignSalesData {
@@ -33,6 +35,25 @@ interface DesignFormProps {
   entityId: string; // 등록 시: designId, 수정 시: productId
 }
 
+const mapCategoryToEnum = (
+  category: DesignSalesData['category']
+): string => {
+  switch (category) {
+    case '상의':
+      return 'TOP';
+    case '하의':
+      return 'BOTTOM';
+    case '아우터':
+      return 'OUTER';
+    case '가방':
+      return 'BAG';
+    case '기타':
+      return 'ETC';
+    default:
+      return ''; // 혹은 오류 처리
+  }
+};
+
 // 3. 컴포넌트 함수 이름
 export default function DesignForm({
   isEditMode,
@@ -42,23 +63,19 @@ export default function DesignForm({
   const router = useRouter();
 
   // 4. 폼 상태 관리
-  // (수정) name 상태 초기값을 '' 로 변경
   const [name, setName] = useState('');
-  // (수정) registeredAt 상태 제거
-  // const [registeredAt, setRegisteredAt] = useState('');
-  const [originalDesignName, setOriginalDesignName] = useState(''); // (추가) 원본 PDF 이름 표시용
+  const [originalDesignName, setOriginalDesignName] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [category, setCategory] = useState<DesignSalesData['category']>('');
-  const [price, setPrice] = useState(0);
+  const [price, setPrice] = useState<number | string>('');
   const [isFree, setIsFree] = useState(false);
   const [isLimited, setIsLimited] = useState(false);
-  const [stock, setStock] = useState(0);
+  const [stock, setStock] = useState<number | string>('');
   const [description, setDescription] = useState('');
   const [designType, setDesignType] = useState('');
   const [size, setSize] = useState('');
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,6 +128,13 @@ export default function DesignForm({
     }
   };
 
+  const handleRemoveExistingImage = (index: number) => {
+    const updated = [...existingImages];
+    updated.splice(index, 1);
+    setExistingImages(updated);
+  };
+  
+
   // 7. '무료' 체크박스 핸들러
   const handleFreeCheck = (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
@@ -120,64 +144,134 @@ export default function DesignForm({
 
   // 8. '한정' 체크박스 핸들러
   const handleLimitedCheck = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsLimited(e.target.checked);
+    const checked = e.target.checked;
+    setIsLimited(checked);
+    if (checked) {
+      setStock(''); // 한정 체크 시 재고 입력칸을 빈칸으로 초기화
+    } else {
+      setStock(''); // 한정 해제 시 재고값 초기화 (0으로 고정 X)
+    }
   };
 
-  // 9. 폼 제출 핸들러 (백엔드 연동)
+  console.log('카테고리 값:', category);
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // (추가) 이름 필드가 비어있는지 확인
-    if (!name.trim()) {
+    if (!name.trim() && isEditMode) {
       alert('상품 이름을 입력해주세요.');
+      return;
+    }
+    if (!category) {
+      alert('카테고리를 선택해주세요.');
       return;
     }
 
     setIsLoading(true);
     setError(null);
 
+    // ▼▼▼ [수정] Access Token을 localStorage에서 가져오는 로직 추가 ▼▼▼
+    const accessToken = localStorage.getItem('accessToken'); 
+        
+    // 1. 토큰 유효성 검사 (없으면 인증 실패 처리)
+    if (!accessToken) {
+        setError('로그인이 필요합니다.');
+        setIsLoading(false);
+        return;
+    }
+
+
     const formData = new FormData();
+    let endpoint = '';
+    let method = '';
+    
+    // --- 백엔드 ProductRegisterRequest DTO와 필드명 일치 ---
 
-    // (수정) 백엔드로 보낼 데이터에 'name' 추가
-    const salesData = {
-      name: name.trim(), // 사용자가 입력한 상품 이름
-      category,
-      price: isFree ? 0 : price,
-      isFree,
-      isLimited,
-      stock: isLimited ? stock : 0,
-      description,
-      designType,
-      size,
-    };
-    formData.append('data', JSON.stringify(salesData));
-
+    // 1. DTO의 'title' 필드
+    formData.append('title', name.trim());
+    
+    // 2. DTO의 'description' 필드
+    formData.append('description', description);
+    
+    // 3. DTO의 'productCategory' 필드 (Enum 값으로 매핑)
+    formData.append('productCategory', mapCategoryToEnum(category));
+    
+    // 4. DTO의 'sizeInfo' 필드
+    formData.append('sizeInfo', size); 
+    
+    // 5. DTO의 'price' 필드
+    formData.append('price', String(isFree ? 0 : price));
+    
+    // 6. DTO의 'stockQuantity' 필드 (한정 판매일 때만 전송)
+    if (isLimited) {
+      formData.append('stockQuantity', String(stock));
+    }
+    
+    // 7. DTO의 'productImageUrls' 필드 (List<MultipartFile>)
     selectedFiles.forEach((file) => {
-      formData.append('images', file);
+      formData.append('productImageUrls', file);
     });
 
     try {
-      const url = isEditMode
-        ? `/my/products/${entityId}/modify` // (수정) PATCH
-        : `/my/products/${entityId}/sale`; // (등록) POST
-      const method = isEditMode ? 'PATCH' : 'POST';
+      if (isEditMode) {
+        const endpoint = `http://localhost:8080/my/products/${entityId}/modify`;
 
-      const response = await fetch(url, {
-        method: method,
-        body: formData,
-        // headers: { 'Authorization': `Bearer ${accessToken}` }
+        existingImages.forEach((url) => {
+          formData.append('existingImageUrls', url);
+        });
+
+        const res = await fetch(endpoint, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: formData, // DTO: ProductModifyRequest
+        });
+      
+        if (!res.ok) throw new Error('상품 수정 실패');
+        const responseData: ProductModifyResponse = await res.json();
+        alert(`상품(ID: ${responseData.productId}) 수정이 완료되었습니다.`);
+        router.push('/mypage/design');
+        return;
+      }
+      
+
+
+      const endpoint = `http://localhost:8080/my/products/${entityId}/sale`;
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          // fetch API에서 FormData를 사용할 때 Content-Type은 명시하지 않습니다.
+          // 브라우저가 자동으로 'multipart/form-data; boundary=...'를 설정합니다.
+          'Authorization': `Bearer ${accessToken}`, // 👈 인증 헤더만 명시적으로 삽입
+        },
+        body: formData, // FormData 객체를 body에 직접 넣습니다.
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '요청 처리에 실패했습니다.');
+      if (!res.ok) {
+          if (res.status === 401) {
+              throw new Error('인증에 실패했습니다. 다시 로그인해주세요.');
+          }
+          // 백엔드에서 JSON 에러 응답을 주지 않을 수 있으므로 안전하게 처리
+          const errorText = await res.text();
+          try {
+             const errorData = JSON.parse(errorText);
+             throw new Error(errorData.message || `요청 실패 (Status: ${res.status})`);
+          } catch {
+             // JSON 파싱 실패 시 기본 메시지 사용
+             throw new Error(`요청 실패 (Status: ${res.status})`);
+          }
       }
+      
+      // 성공 시 응답을 JSON으로 파싱
+      const responseData: ProductRegisterResponse = await res.json();
 
-      alert(isEditMode ? '수정되었습니다.' : '등록되었습니다.');
-      router.push('/mypage/design');
+      alert(`상품(ID: ${responseData.productId})이 등록되었습니다.`);
+      router.push('/mypage/design'); // (가정) 등록 후 내 도안 목록으로 이동
+
     } catch (err: any) {
       console.error(err);
-      setError(err.message);
+      setError(err.message || '요청 처리에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -207,9 +301,6 @@ export default function DesignForm({
         )}
       </FormRow>
 
-      {/* (수정) 등록일 필드 제거 */}
-      {/* <FormRow label="등록일"> ... </FormRow> */}
-
       {/* 샘플 이미지 등록 */}
       <FormRow label="샘플 이미지">
         <input
@@ -222,25 +313,44 @@ export default function DesignForm({
         <p className="text-sm text-gray-500 mt-1">
           최대 10개, png/jpg/jpeg 형식만 가능합니다.
         </p>
+
+        {/* ✅ 기존 이미지 미리보기 + 삭제 버튼 */}
         <div className="flex flex-wrap gap-2 mt-2">
-          {existingImages.map((imgUrl, index) => (
-            <img
-              key={`exist-${index}`}
-              src={imgUrl}
-              alt="기존 이미지"
-              className="w-24 h-24 object-cover rounded"
-            />
-          ))}
+        {existingImages?.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {existingImages.map((imgUrl, index) => (
+              <div key={`exist-${index}`} className="relative">
+                <img
+                  src={imgUrl}
+                  alt="기존 이미지"
+                  className="w-24 h-24 object-cover rounded"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveExistingImage(index)}
+                  className="absolute top-0 right-0 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-opacity-70"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+
+          {/* ✅ 새로 첨부한 이미지 */}
           {imagePreviews.map((previewUrl, index) => (
-            <img
-              key={`new-${index}`}
-              src={previewUrl}
-              alt="새 이미지"
-              className="w-24 h-24 object-cover rounded"
-            />
+            <div key={`new-${index}`} className="relative">
+              <img
+                src={previewUrl}
+                alt="새 이미지"
+                className="w-24 h-24 object-cover rounded"
+              />
+            </div>
           ))}
         </div>
       </FormRow>
+
 
       {/* 카테고리 (수정: '가방' 추가) */}
       <FormRow label="카테고리">
@@ -261,39 +371,53 @@ export default function DesignForm({
         </select>
       </FormRow>
 
+
       {/* 가격 */}
       <FormRow label="가격">
         <div className="flex items-center gap-4">
           <input
             type="number"
-            value={price}
-            onChange={(e) => setPrice(Number(e.target.value))}
-            disabled={isEditMode || isFree} // 수정 모드이거나, 무료 체크 시 비활성화
-            required={!isFree} // 무료가 아닐 시 필수
-            min="0" // 가격은 0 이상
+            value={isFree ? '' : price === 0 ? '' : price}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '') setPrice('');
+              else setPrice(Number(value));
+            }}
+            placeholder="가격을 입력하세요"
+            required={!isFree}
+            min="0"
+            disabled={isFree || isEditMode} // ✅ 수정 모드/무료일 때 모두 비활성화
             className={
-              isEditMode || isFree
-                ? 'w-full p-2 border border-gray-200 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed'
-                : 'w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#925C4C] focus:border-transparent transition-colors'
+              isFree || isEditMode
+                ? 'w-32 p-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed'
+                : 'w-32 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#925C4C] focus:border-transparent transition-colors'
             }
           />
-          <label className="flex items-center gap-2 flex-shrink-0">
+          <label className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={isFree}
-              onChange={handleFreeCheck}
-              disabled={isEditMode} // 수정 모드 시 가격 관련 수정 불가
+              onChange={(e) => setIsFree(e.target.checked)}
+              disabled={isEditMode} // ✅ 수정 모드에서는 무료 체크박스도 비활성화
               className="w-5 h-5 text-[#925C4C] rounded border-gray-300 focus:ring-[#925C4C]"
             />
             무료
           </label>
         </div>
-        {isEditMode && (
+
+        {/* 안내 문구 처리 */}
+        {isEditMode ? (
           <p className="text-sm text-gray-500 mt-1">
             등록된 상품의 가격은 수정할 수 없습니다.
           </p>
-        )}
+        ) : isFree ? (
+          <p className="text-sm text-gray-500 mt-1">
+            무료 상품은 가격을 입력할 수 없습니다.
+          </p>
+        ) : null}
       </FormRow>
+
+
 
       {/* 한정 여부 */}
       <FormRow label="한정 여부">
@@ -307,19 +431,25 @@ export default function DesignForm({
             />
             한정
           </label>
+
           {isLimited && (
             <input
               type="number"
-              value={stock}
-              onChange={(e) => setStock(Number(e.target.value))}
+              value={stock === 0 ? '' : stock} // 0일 경우 빈 문자열로 표시
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '') setStock(''); // 사용자가 모두 지우면 빈 문자열로 유지
+                else setStock(Number(value));   // 숫자 입력 시 변환
+              }}
               placeholder="재고 입력"
-              required={isLimited} // 한정일 시 필수
-              min="0" // 재고는 0 이상
+              required={isLimited}
+              min="0"
               className="w-32 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#925C4C] focus:border-transparent transition-colors"
             />
           )}
         </div>
       </FormRow>
+
 
       {/* 도안 설명 */}
       <FormRow label="도안 설명">
