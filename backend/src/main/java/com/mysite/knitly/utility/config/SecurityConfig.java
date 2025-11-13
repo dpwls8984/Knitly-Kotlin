@@ -54,7 +54,6 @@ public class SecurityConfig {
         ));
 
         // 허용할 헤더
-        // 현재는 모든 헤더 허용
         configuration.setAllowedHeaders(Arrays.asList("*"));
 
         // 쿠키 포함 허용 (매우 중요)
@@ -97,8 +96,7 @@ public class SecurityConfig {
 
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        // 프리플라이트(OPTIONS) 요청은 전역 허용
-                        // 새 글 작성 등 인증이 필요한 요청 전에 오는 OPTIONS 요청이 막히지 않도록 추가
+                        // 프리플라이트(OPTIONS) 요청 허용
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // 커뮤니티 게시글 목록/상세 조회는 로그인 없이 허용
@@ -126,8 +124,7 @@ public class SecurityConfig {
                         // 업로드한 리뷰 이미지 조회
                         .requestMatchers("/reviews/**").permitAll()
 
-                        // 커뮤니티/리뷰 등 업로드 이미지 파일이 /uploads/** 경로로 제공될 경우 공개 허용
-                        // 프론트에서 게시글/댓글 이미지 등을 로그인 없이 조회할 수 있도록 추가
+                        // 업로드 파일 조회 (예: 커뮤니티/리뷰 이미지)
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
                         .requestMatchers(

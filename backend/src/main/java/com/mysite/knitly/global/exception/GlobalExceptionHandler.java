@@ -14,10 +14,9 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@Slf4j   // 팀원 코드에서 쓰던 로그 추가
+@Slf4j
 public class GlobalExceptionHandler {
 
-    // ServiceException은 팀원 코드 그대로 + 로그 유지
     @ExceptionHandler(ServiceException.class)
     public ResponseEntity<ErrorResponse> handleServiceException(ServiceException e) {
         ErrorCode errorCode = e.getErrorCode();
@@ -27,7 +26,6 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.errorResponse(errorCode));
     }
 
-    // Bean Validation(@Valid) 실패
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
         BindingResult bindingResult = e.getBindingResult();
@@ -36,11 +34,10 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.validationError(bindingResult));
     }
 
+    // 커뮤니티 관련 핸들러 보강
     // 1) @RequestParam 누락 (multipart 포함)
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException e) {
-        // 필요한 경우 로그만 가볍게 남김
-        log.warn("[MissingServletRequestParameterException] name={}, message={}", e.getParameterName(), e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.errorResponse(ErrorCode.BAD_REQUEST));
@@ -49,17 +46,14 @@ public class GlobalExceptionHandler {
     // 2) 타입 불일치 (예: category=NOT_ENUM, page=abc)
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
-        log.warn("[MethodArgumentTypeMismatchException] name={}, value={}, message={}",
-                e.getName(), e.getValue(), e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.errorResponse(ErrorCode.BAD_REQUEST));
     }
 
-    // 3) 잘못된 파라미터(직접 던진 IllegalArgumentException)
+    // 잘못된 파라미터
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e) {
-        log.warn("[IllegalArgumentException] message={}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.errorResponse(ErrorCode.BAD_REQUEST));
