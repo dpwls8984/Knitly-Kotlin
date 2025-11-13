@@ -21,10 +21,9 @@ import java.util.UUID;
 @Component
 public class LocalFileStorage {
 
+    @Value("${file.upload-dir:./uploads/designs}")
     private final String backendBaseUrl = "http://localhost:8080";
     private final String productsUrlPrefix = "/products/";
-
-    @Value("${file.upload-dir:uploads/designs}")
     private String uploadDir;
 
     @Value("${file.public-prefix:/files}")
@@ -65,7 +64,7 @@ public class LocalFileStorage {
             String url = (publicPrefix.endsWith("/") ? publicPrefix.substring(0, publicPrefix.length()-1) : publicPrefix)
                     + "/" + relativePath;
 
-            log.info("PDF 저장 완료: {}", filePath);
+            log.info("[FileStorage] [Save] PDF 저장 완료 - fileName={}, size={}bytes, path={}",savedName, fileData.length, filePath);
 
             return url; // DB에는 접근 가능한 URL만 저장
         } catch (IOException e) {
@@ -76,27 +75,27 @@ public class LocalFileStorage {
 
     // PDF URL에서 절대 경로 변환
     public Path toAbsolutePathFromUrl(String pdfUrl) {
+        log.debug("[FileStorage] [PathConvert] URL을 경로로 변환 - url={}", pdfUrl);
+
         String prefix = publicPrefix.endsWith("/") ? publicPrefix : publicPrefix + "/";
         String rel = pdfUrl.startsWith(prefix) ? pdfUrl.substring(prefix.length()) :
                 (pdfUrl.startsWith(publicPrefix) ? pdfUrl.substring(publicPrefix.length()) : pdfUrl);
         if (rel.startsWith("/")) rel = rel.substring(1);
-        return Paths.get(uploadDir).toAbsolutePath().normalize().resolve(rel).normalize();
-    }
 
-    public void deleteFile(String fileUrl) {
-        try {
-            Path filePath = toAbsolutePathFromUrl(fileUrl);
-            if (Files.exists(filePath)) {
-                Files.delete(filePath);
-                log.info("파일 삭제 완료: {}", filePath);
-            } else {
-                log.warn("삭제할 파일이 존재하지 않음: {}", filePath);
-            }
-        } catch (IOException e) {
-            log.error("파일 삭제 실패: {}", fileUrl, e);
-            throw new ServiceException(ErrorCode.FILE_DELETION_FAILED);
-        }
-    }
+        Path absolutePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(rel).normalize();
+        log.debug("[FileStorage] [PathConvert] 변환 완료 - url={}, path={}", pdfUrl, absolutePath);
+
+        return absolutePath;    }
+
+    public void deleteFile(String fileUrl) throws IOException {
+        log.info("[FileStorage] [Delete] 파일 삭제 시작 - url={}", fileUrl);
+
+        Path filePath = toAbsolutePathFromUrl(fileUrl);
+        if (Files.exists(filePath)) {
+            Files.delete(filePath);
+            log.info("[FileStorage] [Delete] 파일 삭제 완료 - url={}, path={}", fileUrl, filePath);
+        } else {
+            log.warn("[FileStorage] [Delete] 삭제할 파일이 존재하지 않음 - url={}, path={}", fileUrl, filePath);
 
     public String saveProductImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
