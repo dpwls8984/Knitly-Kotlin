@@ -130,6 +130,9 @@ public class SecurityConfig {
                         // 업로드한 리뷰 이미지 조회
                         .requestMatchers("/reviews/**").permitAll()
 
+                        // 여기에 반드시 추가해야 함 (uploads 이미지 경로 허용)
+                        .requestMatchers("/uploads/**").permitAll()
+
                         .requestMatchers(
                                 "/resources/**",          // 정적 리소스
                                 "/static/**",
