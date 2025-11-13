@@ -89,12 +89,11 @@ public enum ErrorCode {
     IMAGE_FORMAT_NOT_SUPPORTED("7501", HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG만 가능합니다."),
     REVIEW_IMAGE_SAVE_FAILED("7502", HttpStatus.INTERNAL_SERVER_ERROR, "리뷰 이미지 저장에 실패했습니다."),
     PRODUCT_IMAGE_SAVE_FAILED("7503", HttpStatus.INTERNAL_SERVER_ERROR, "상품 이미지 저장에 실패했습니다."),
-
-
-    // File 7000
+    PRODUCT_IMAGE_SIZE_EXCEEDED("7504", HttpStatus.BAD_REQUEST, "상품 이미지 크기는 3MB를 초과할 수 없습니다."),
 
     // File 7000
     FILE_STORAGE_FAILED("7601", HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장에 실패했습니다."),
+    FILE_DELETION_FAILED("7602", HttpStatus.INTERNAL_SERVER_ERROR, "파일 삭제에 실패했습니다."),
 
     // Payment 8000
     PAYMENT_NOT_FOUND("8001", HttpStatus.NOT_FOUND, "결제 정보를 찾을 수 없습니다."),
