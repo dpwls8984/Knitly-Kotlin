@@ -55,13 +55,7 @@ public class SecurityConfig {
 
         // 허용할 헤더
         // 프론트에서 Authorization: Bearer 헤더를 보내기 때문에, CORS 허용 헤더에 Authorization 등을 명시적으로 추가
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "X-Requested-With",
-                "Accept",
-                "Origin"
-        ));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
 
         // 쿠키 포함 허용 (매우 중요)
         configuration.setAllowCredentials(true);
