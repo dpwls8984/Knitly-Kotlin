@@ -210,10 +210,4 @@ public class UserController {
         log.info("getProductsWithUserId response: {}", response);
         return ResponseEntity.ok(response);
     }
-
-    /**
-     * 유저 이름을 이용해
-     */
-
-
 }
