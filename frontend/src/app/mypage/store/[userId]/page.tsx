@@ -304,12 +304,14 @@ function ProductCard({ product, isMyStore }: ProductCardProps) {
 
     const handleEdit = () => {
         // 🔥 상품 수정 페이지로 이동
-        router.push(`/mypage/product/edit/${product.productId}`);
+        router.push(`/mypage/design/modify/${product.productId}`);
+
     };
 
     const handleViewDetail = () => {
         // 상품 상세 페이지로 이동
         router.push(`/product/${product.productId}`);
+
     };
 
     return (

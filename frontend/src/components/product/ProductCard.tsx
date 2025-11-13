@@ -30,7 +30,8 @@ export default function ProductCard({ product }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     // TODO: 판매자 스토어 페이지로 이동 (아직 구현 전)
-    alert('판매자 스토어 페이지로 이동합니다. (구현 예정)');
+    //alert('판매자 스토어 페이지로 이동합니다. (구현 예정)');
+
   };
 
   const handleLikeClick = async (e: React.MouseEvent) => {
@@ -72,7 +73,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="aspect-square bg-gray-100 flex items-center justify-center">
         {product.thumbnailUrl ? (
           <img 
-            src={`${API_URL}${product.thumbnailUrl}`}
+            src={`${product.thumbnailUrl}`}
             alt={product.title}
             className="w-full h-full object-cover"
           />

@@ -117,7 +117,35 @@ export default function HomePage() {
     return (
         <div>
             <h1 className="text-3xl font-bold mb-4">메인페이지</h1>
+            <section className="mb-12">
+                <h2 className="text-2xl font-bold mb-6 text-gray-900">인기 상품 랭킹 TOP 5</h2>
 
+                {popularProducts.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <p>인기 상품이 없습니다.</p>
+                  </div>
+                ) : (
+                    <div className="grid grid-cols-5 gap-4">
+                    {popularProducts.map((product, index) => (
+                      <div key={product.productId} className="relative">
+                        {/* 랭킹 배지 */}
+                        <div className="absolute top-2 left-2 z-10">
+                          <span className="bg-[#925C4C] text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
+                            #{index + 1}
+                          </span>
+                        </div>
+
+                        {/* 기존 ProductCard 컴포넌트 재사용 */}
+                        <ProductCard
+                          product={product}
+                          onLikeToggle={handleLikeToggle}
+                        />
+                      </div>
+                    ))}
+
+                    </div>
+                )}
+            </section>
 
             <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <h3 className="font-semibold mb-2">개발 정보:</h3>
@@ -134,35 +162,6 @@ export default function HomePage() {
                     </li>
                 </ul>
             </div>
-
-            <section className="mb-12">
-        <h2 className="text-2xl font-bold mb-6 text-gray-900">인기 상품 랭킹 TOP 5</h2>
-        
-        {popularProducts.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <p>인기 상품이 없습니다.</p>
-          </div>
-        ) : (
-            <div className="grid grid-cols-5 gap-4">
-            {popularProducts.map((product, index) => (
-              <div key={product.productId} className="relative">
-                {/* 랭킹 배지 */}
-                <div className="absolute top-2 left-2 z-10">
-                  <span className="bg-[#925C4C] text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
-                    #{index + 1}
-                  </span>
-                </div>
-                
-                {/* 기존 ProductCard 컴포넌트 재사용 */}
-                <ProductCard 
-                  product={product} 
-                  onLikeToggle={handleLikeToggle}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
 
         </div>
     );
