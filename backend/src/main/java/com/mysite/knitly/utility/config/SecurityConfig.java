@@ -121,23 +121,6 @@ public class SecurityConfig {
                         // 인증 불필요
                         .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/refresh", "/auth/test").permitAll()
 
-                        // 업로드한 리뷰 이미지 조회
-                        .requestMatchers("/reviews/**").permitAll()
-
-                        // 업로드 파일 조회 (예: 커뮤니티/리뷰 이미지)
-                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
-
-                        .requestMatchers(
-                                "/resources/**",          // 정적 리소스
-                                "/static/**",
-                                "/files/**"               // 파일 접근
-                        ).permitAll()
-                        .requestMatchers(
-                                "/api/public/**",
-                                "/home/**",              // 홈 화면
-                                "/products/**"           // 상품 목록 (읽기는 public)
-                        ).permitAll()
-
                         // JWT 인증 필요
                         .requestMatchers("/users/**").authenticated()
 
