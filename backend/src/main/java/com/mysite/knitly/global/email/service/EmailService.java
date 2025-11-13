@@ -34,7 +34,7 @@ public class EmailService {
     public void sendOrderConfirmationEmail(EmailNotificationDto emailDto) {
         log.info("[EmailService] [Send] 이메일 발송 처리 시작 - to={}", emailDto.userEmail());
 
-        Order order = orderRepository.findOrderWithDetailsById(emailDto.orderId())
+        Order order = orderRepository.findById(emailDto.orderId())
                 .orElseThrow(() -> {
                     log.error("[EmailService] [Send] DB에서 Order 엔티티 조회 실패. orderId={}", emailDto.orderId());
                     return new IllegalArgumentException("Order not found: " + emailDto.orderId());
@@ -55,7 +55,7 @@ public class EmailService {
                     ? switch (payment.getPaymentMethod()) {
                 case CARD -> "카드 결제";
                 case VIRTUAL_ACCOUNT -> "가상계좌";
-                case EASY_PAY -> "간편결제";
+                case EASY_PAY -> " 간편결제";
             }
                     : "결제수단 정보 없음";
 

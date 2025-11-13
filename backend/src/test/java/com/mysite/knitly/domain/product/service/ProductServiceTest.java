@@ -280,7 +280,7 @@ class ProductServiceTest {
         MockMultipartFile newImage = new MockMultipartFile("images", "new.jpg", "image/jpeg", "new_content".getBytes());
         ProductModifyRequest request = new ProductModifyRequest("수정된 설명", ProductCategory.BOTTOM, "L", List.of(newImage), 20);
 
-        given(productRepository.findByIdWithUser(1L)).willReturn(Optional.of(existingProduct));
+        given(productRepository.findById(1L)).willReturn(Optional.of(existingProduct));
         given(fileStorageService.storeFile(any(MockMultipartFile.class), eq("product"))).willReturn("/static/product/new-image.jpg");
 
         // when
@@ -300,7 +300,7 @@ class ProductServiceTest {
         Product targetProduct = Product.builder().productId(1L).user(seller).isDeleted(false).build();
         ProductModifyRequest request = new ProductModifyRequest("해킹", ProductCategory.ETC, "S", List.of(), 0);
 
-        given(productRepository.findByIdWithUser(1L)).willReturn(Optional.of(targetProduct));
+        given(productRepository.findById(1L)).willReturn(Optional.of(targetProduct));
 
         // when & then
         ServiceException exception = assertThrows(ServiceException.class, () -> {
@@ -317,7 +317,7 @@ class ProductServiceTest {
         designToStop.startSale(); // ON_SALE 상태로 변경
         Product productToDelete = spy(Product.builder().productId(1L).user(seller).design(designToStop).isDeleted(false).build());
 
-        given(productRepository.findByIdWithUser(1L)).willReturn(Optional.of(productToDelete));
+        given(productRepository.findById(1L)).willReturn(Optional.of(productToDelete));
 
         // when
         productService.deleteProduct(seller, 1L);
@@ -336,7 +336,7 @@ class ProductServiceTest {
         designToRelist.stopSale(); // STOPPED 상태로 변경
         Product productToRelist = spy(Product.builder().productId(1L).user(seller).design(designToRelist).isDeleted(true).build());
 
-        given(productRepository.findByIdWithUser(1L)).willReturn(Optional.of(productToRelist));
+        given(productRepository.findById(1L)).willReturn(Optional.of(productToRelist));
 
         // when
         productService.relistProduct(seller, 1L);
@@ -352,7 +352,7 @@ class ProductServiceTest {
         // given
         Product productOnSale = Product.builder().productId(1L).user(seller).isDeleted(false).build();
 
-        given(productRepository.findByIdWithUser(1L)).willReturn(Optional.of(productOnSale));
+        given(productRepository.findById(1L)).willReturn(Optional.of(productOnSale));
 
         // when & then
         // Product.relist() 내부에서 던지는 예외를 검증
