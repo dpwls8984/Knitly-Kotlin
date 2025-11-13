@@ -1,41 +1,54 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getPosts } from '@/lib/api/community.api';
-import { PostListItem, CATEGORY_LABELS } from '@/types/community.types';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getPosts } from "@/lib/api/community.api";
+import { PostListItem, CATEGORY_LABELS } from "@/types/community.types";
+import { useAuthStore } from "@/lib/store/authStore";
+
+// 이미지 절대주소 보정
+const ASSET_ORIGIN = process.env.NEXT_PUBLIC_ASSET_ORIGIN || "";
+const abs = (u?: string) =>
+  !u
+    ? ""
+    : /^https?:\/\//i.test(u)
+    ? u
+    : `${ASSET_ORIGIN}${u.startsWith("/") ? "" : "/"}${u}`;
+
+const stripPrefix = (t: string) => t.replace(/^\[[^\]]+\]\s*/, "");
+const badge = (cat: PostListItem["category"]) => CATEGORY_LABELS[cat];
 
 export default function CommunityPage() {
   const router = useRouter();
-  
+  const { isAuthenticated } = useAuthStore();
+
   const [posts, setPosts] = useState<PostListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // 페이지네이션
+
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isLastPage, setIsLastPage] = useState(false);
-  
-  // 검색
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchInput, setSearchInput] = useState('');
 
-  // 게시글 목록 조회 (전체)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+
   const fetchPosts = async (page: number = 0, query?: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
       const response = await getPosts(null, query, page, 10);
-      
+
       setPosts(response.content);
       setCurrentPage(response.page);
       setTotalPages(response.totalPages);
       setIsLastPage(response.last);
     } catch (err: any) {
-      console.error('게시글 목록 조회 실패:', err);
-      setError(err.response?.data?.message || '게시글 목록을 불러오는데 실패했습니다.');
+      console.error("게시글 목록 조회 실패:", err);
+      setError(
+        err?.response?.data?.message || "게시글 목록을 불러오는데 실패했습니다."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -45,33 +58,32 @@ export default function CommunityPage() {
     fetchPosts(0, searchQuery);
   }, [searchQuery]);
 
-  // 검색 처리
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(0);
     setSearchQuery(searchInput);
   };
 
-  // 페이지 변경
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     fetchPosts(page, searchQuery);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // 게시글 상세로 이동
   const handlePostClick = (postId: number) => {
     router.push(`/community/posts/${postId}`);
   };
 
-  // 글쓰기 버튼
   const handleWriteClick = () => {
-    router.push('/community/posts/write');
+    if (!isAuthenticated) {
+      alert("로그인이 필요한 서비스입니다.");
+      return;
+    }
+    router.push("/community/write");
   };
 
   return (
     <div className="bg-white rounded-lg shadow-sm">
-      {/* 헤더 */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold text-gray-900">커뮤니티</h1>
@@ -83,7 +95,6 @@ export default function CommunityPage() {
           </button>
         </div>
 
-        {/* 검색 */}
         <form onSubmit={handleSearch} className="flex gap-2">
           <input
             type="text"
@@ -101,7 +112,6 @@ export default function CommunityPage() {
         </form>
       </div>
 
-      {/* 게시글 목록 */}
       <div className="p-6">
         {isLoading && posts.length === 0 ? (
           <div className="flex justify-center items-center py-12">
@@ -124,66 +134,72 @@ export default function CommunityPage() {
         ) : (
           <>
             <div className="space-y-4">
-              {posts.map((post) => (
-                <div
-                  key={post.id}
-                  onClick={() => handlePostClick(post.id)}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-[#925C4C] cursor-pointer transition-colors"
-                >
-                  <div className="flex gap-4">
-                    {/* 썸네일 */}
-                    <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
-                      {post.thumbnailUrl ? (
-                        <img
-                          src={post.thumbnailUrl}
-                          alt={post.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          이미지
-                        </div>
-                      )}
-                    </div>
+              {posts.map((post) => {
+                const thumb: string | undefined =
+                  (post as any).thumbnailUrl ??
+                  (post as any).thumbnail ??
+                  undefined;
 
-                    {/* 내용 */}
-                    <div className="flex-1 min-w-0">
-                      {/* 카테고리 */}
-                      <div className="mb-2">
-                        <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                          {CATEGORY_LABELS[post.category]}
-                        </span>
+                return (
+                  <div
+                    key={post.id}
+                    onClick={() => handlePostClick(post.id)}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-[#925C4C] cursor-pointer transition-colors"
+                  >
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
+                        {thumb ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={abs(thumb)}
+                            alt={post.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            이미지
+                          </div>
+                        )}
                       </div>
 
-                      {/* 제목 */}
-                      <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">
-                        {post.title}
-                      </h3>
+                      <div className="flex-1 min-w-0">
+                        <div className="mb-2">
+                          <span className="inline-block bg-[#925C4C] text-white text-xs font-medium px-3 py-1 rounded-full">
+                            {badge(post.category)}
+                          </span>
+                        </div>
 
-                      {/* 내용 미리보기 */}
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                        {post.excerpt}
-                      </p>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">
+                          {stripPrefix(post.title)}
+                        </h3>
 
-                      {/* 메타 정보 */}
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>작성자 {post.authorDisplay}</span>
-                        <span>{new Date(post.createdAt).toLocaleDateString('ko-KR', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}</span>
-                        <span>댓글수 {post.commentCount}</span>
+                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                          {post.excerpt}
+                        </p>
+
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <span>작성자 {post.authorDisplay}</span>
+                          <span>
+                            {new Date(post.createdAt).toLocaleDateString(
+                              "ko-KR",
+                              {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
+                          </span>
+                          <span>댓글수 {post.commentCount}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* 페이지네이션 */}
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-2 mt-8">
                 <button
@@ -195,17 +211,20 @@ export default function CommunityPage() {
                 </button>
 
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const startPage = Math.max(0, Math.min(currentPage - 2, totalPages - 5));
+                  const startPage = Math.max(
+                    0,
+                    Math.min(currentPage - 2, totalPages - 5)
+                  );
                   const page = startPage + i;
-                  
+
                   return (
                     <button
                       key={page}
                       onClick={() => handlePageChange(page)}
                       className={`px-3 py-1 rounded ${
                         currentPage === page
-                          ? 'bg-[#925C4C] text-white'
-                          : 'border border-gray-300 hover:bg-gray-50'
+                          ? "bg-[#925C4C] text-white"
+                          : "border border-gray-300 hover:bg-gray-50"
                       }`}
                     >
                       {page + 1}

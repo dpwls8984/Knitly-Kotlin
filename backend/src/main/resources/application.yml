@@ -14,13 +14,14 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
         highlight_sql: true
         use_sql_comments: true
         dialect: org.hibernate.dialect.MySQL8Dialect
+        default_batch_fetch_size: 100
     show-sql: true
 
   # --- Web / MVC ---
@@ -69,7 +70,6 @@ spring:
     port: 5672
     username: guest
     password: guest
-
     listener:
       simple:
         acknowledge-mode: auto
@@ -82,6 +82,7 @@ spring:
           max-interval: 10000
       template:
         mandatory: true
+
   mail:
     host: smtp.gmail.com
     port: 587
@@ -106,6 +107,10 @@ springdoc:
 # --- Logging ---
 logging:
   level:
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.orm.jdbc.extract: TRACE
+    org.springframework.transaction.interceptor: TRACE
+    com.rest1: DEBUG
     com.mysite.knitly: DEBUG
     org.springframework.security: DEBUG
     org.springframework.security.oauth2: TRACE
@@ -115,7 +120,7 @@ logging:
 custom:
   jwt:
     # Refresh Token 만료 시간 추가
-    accessTokenExpireSeconds: 60 #1800 #{30 * 60} 30분
+    accessTokenExpireSeconds: 1800 #{30 * 60} 30분
     refreshTokenExpireSeconds: 604800 #{7 * 24 * 60 * 60} 7일
     secretKey: ${JWT_SECRET_KEY}  # 환경 변수로 관리
 
@@ -123,6 +128,7 @@ custom:
 frontend:
   url: ${FRONT_URL} # 개발 환경
   # url: https://www.myapp.com  # 프로덕션 환경
+
 # --- toss 연동 ---
 payment:
   toss:

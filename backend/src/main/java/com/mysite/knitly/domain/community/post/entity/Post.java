@@ -38,6 +38,26 @@ public class Post extends BaseTimeEntity {
     @OrderColumn(name = "sort_order")
     private List<String> imageUrls = new ArrayList<>();
 
+    // 현재 썸네일(0번 이미지)을 반환 (없으면 null)
+    public String getThumbnail() {
+        return (imageUrls == null || imageUrls.isEmpty()) ? null : imageUrls.get(0);
+    }
+
+    // 썸네일을 지정 인덱스 이미지로 변경 (맨 앞으로 이동)
+    public void promoteThumbnail(int index) {
+        if (imageUrls == null) return;
+        if (index <= 0 || index >= imageUrls.size()) return;
+        String picked = imageUrls.remove(index);
+        imageUrls.add(0, picked);
+    }
+
+    // 썸네일을 지정 URL 이미지로 변경
+    public void promoteThumbnailByUrl(String url) {
+        if (imageUrls == null || url == null) return;
+        int idx = imageUrls.indexOf(url);
+        if (idx > 0) promoteThumbnail(idx);
+    }
+
     @Enumerated(EnumType.STRING)
     @Column(name = "post_category", nullable = false, columnDefinition = "ENUM('FREE','QUESTION','TIP')")
     private PostCategory category;

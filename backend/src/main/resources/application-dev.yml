@@ -12,3 +12,11 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
+
+# 커뮤니티 업로드 전용 설정 (로컬 환경 한정)
+file:
+  community:
+    upload-dir: ${UPLOAD_DIR}
+    upload:
+      sub-dir: ${UPLOAD_SUB_DIR}
+    public-prefix: ${UPLOAD_PREFIX}

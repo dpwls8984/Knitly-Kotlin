@@ -5,17 +5,23 @@ import { useRouter } from 'next/navigation';
 import { getPosts } from '@/lib/api/community.api';
 import { PostListItem, CATEGORY_LABELS } from '@/types/community.types';
 
+const ASSET_ORIGIN = process.env.NEXT_PUBLIC_ASSET_ORIGIN || '';
+const abs = (u?: string) =>
+  !u ? '' : (/^https?:\/\//i.test(u) ? u : `${ASSET_ORIGIN}${u.startsWith('/') ? '' : '/'}${u}`);
+const stripPrefix = (t: string) => t.replace(/^\[[^\]]+\]\s*/, '');
+const badge = (cat: PostListItem['category']) => CATEGORY_LABELS[cat];
+
 export default function FreePage() {
   const router = useRouter();
-  
+
   const [posts, setPosts] = useState<PostListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isLastPage, setIsLastPage] = useState(false);
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
 
@@ -25,7 +31,7 @@ export default function FreePage() {
       setError(null);
 
       const response = await getPosts('FREE', query, page, 10);
-      
+
       setPosts(response.content);
       setCurrentPage(response.page);
       setTotalPages(response.totalPages);
@@ -124,7 +130,7 @@ export default function FreePage() {
                     <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
                       {post.thumbnailUrl ? (
                         <img
-                          src={post.thumbnailUrl}
+                          src={abs(post.thumbnailUrl)}
                           alt={post.title}
                           className="w-full h-full object-cover"
                         />
@@ -137,13 +143,13 @@ export default function FreePage() {
 
                     <div className="flex-1 min-w-0">
                       <div className="mb-2">
-                        <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                          {CATEGORY_LABELS[post.category]}
+                        <span className="inline-block bg-[#925C4C] text-white text-xs font-medium px-3 py-1 rounded-full">
+                          {badge(post.category)}
                         </span>
                       </div>
 
                       <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">
-                        {post.title}
+                        {stripPrefix(post.title)}
                       </h3>
 
                       <p className="text-gray-600 text-sm mb-3 line-clamp-2">
@@ -152,13 +158,15 @@ export default function FreePage() {
 
                       <div className="flex items-center gap-4 text-sm text-gray-500">
                         <span>작성자 {post.authorDisplay}</span>
-                        <span>{new Date(post.createdAt).toLocaleDateString('ko-KR', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}</span>
+                        <span>
+                          {new Date(post.createdAt).toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
                         <span>댓글수 {post.commentCount}</span>
                       </div>
                     </div>
@@ -180,7 +188,6 @@ export default function FreePage() {
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   const startPage = Math.max(0, Math.min(currentPage - 2, totalPages - 5));
                   const page = startPage + i;
-                  
                   return (
                     <button
                       key={page}

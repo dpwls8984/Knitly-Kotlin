@@ -75,11 +75,16 @@ export default function ProductCard({ product, onLikeToggle }: ProductCardProps)
             className="flex-shrink-0"
           >
             <svg
-              className="w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+              // 1. 찜 상태에 따라 클래스(색상) 변경
+              className={`w-5 h-5 ${
+                product.isLikedByUser ? 'text-[#925C4C]' : 'text-gray-400'
+              }`}
+              // 2. 찜 상태에 따라 fill(채우기) 변경
+              fill={product.isLikedByUser ? '#925C4C' : 'none'}
+              // 3. 찜 상태에 따라 stroke(테두리) 변경
+              stroke={product.isLikedByUser ? '#925C4C' : 'currentColor'}
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

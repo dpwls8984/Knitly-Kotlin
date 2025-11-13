@@ -101,7 +101,7 @@ public class MyPageQueryRepository {
         return new PageImpl<>(cards, pageable, total);
     }
 
-    // ✅ 수정: 내가 쓴 글 조회 - CAST를 사용하여 CLOB → VARCHAR 변환
+    // 수정: 내가 쓴 글 조회 - CAST를 사용하여 CLOB → VARCHAR 변환
     public Page<MyPostListItemResponse> findMyPosts(Long userId, String query, Pageable pageable) {
         String base = """
                 SELECT new com.mysite.knitly.domain.mypage.dto.MyPostListItemResponse(
@@ -146,14 +146,14 @@ public class MyPageQueryRepository {
         return new PageImpl<>(list, pageable, total);
     }
 
-    // ✅ 최종 수정: 내가 쓴 댓글 조회 - LocalDate로 CAST
+    // 최종 수정: 내가 쓴 댓글 조회 - LocalDate로 CAST
     public Page<MyCommentListItem> findMyComments(Long userId, String query, Pageable pageable) {
         String base = """
                 SELECT new com.mysite.knitly.domain.mypage.dto.MyCommentListItem(
                     c.id,
                     c.post.id,
-                    CAST(c.createdAt AS LocalDate),
-                    CASE WHEN LENGTH(CAST(c.content AS string)) > 30 
+                    c.createdAt,
+                    CASE WHEN LENGTH(CAST(c.content AS string)) > 30\s
                          THEN CONCAT(SUBSTRING(CAST(c.content AS string), 1, 30), '...')
                          ELSE CAST(c.content AS string)
                     END
@@ -161,6 +161,7 @@ public class MyPageQueryRepository {
                 FROM Comment c
                 WHERE c.author.userId = :uid
                   AND c.deleted = false
+                  AND c.post.deleted = false
                 """;
 
         if (query != null && !query.isBlank()) {
