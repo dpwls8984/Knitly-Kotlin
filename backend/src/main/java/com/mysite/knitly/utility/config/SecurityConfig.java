@@ -41,7 +41,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 🔥 허용할 출처 (프론트엔드 URL)
+        // 허용할 출처 (프론트엔드 URL)
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",     // 개발 환경
                 "http://localhost:3001",     // 개발 환경 (추가 포트)
@@ -54,6 +54,7 @@ public class SecurityConfig {
         ));
 
         // 허용할 헤더
+        // 프론트에서 Authorization: Bearer 헤더를 보내기 때문에, CORS 허용 헤더에 Authorization 등을 명시적으로 추가
         configuration.setAllowedHeaders(Arrays.asList(
                 "Authorization",
                 "Content-Type",
@@ -62,7 +63,7 @@ public class SecurityConfig {
                 "Origin"
         ));
 
-        // 🔥 쿠키 포함 허용 (매우 중요!)
+        // 쿠키 포함 허용 (매우 중요)
         configuration.setAllowCredentials(true);
 
         // 노출할 헤더 (프론트엔드에서 접근 가능)
@@ -102,7 +103,10 @@ public class SecurityConfig {
 
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 프리플라이트 허용
+                        // 프리플라이트(OPTIONS) 요청은 전역 허용
+                        // 새 글 작성 등 인증이 필요한 요청 전에 오는 OPTIONS 요청이 막히지 않도록 추가
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         // 커뮤니티 게시글 목록/상세 조회는 로그인 없이 허용
                         .requestMatchers(HttpMethod.GET, "/community/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/community/comments/**").permitAll()
@@ -125,17 +129,29 @@ public class SecurityConfig {
                         // 인증 불필요
                         .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/refresh", "/auth/test").permitAll()
 
-                        // 커뮤니티 이미지(uploads) 공개 허용
+                        // 업로드한 리뷰 이미지 조회 (팀원 경로 유지)
+                        .requestMatchers("/reviews/**").permitAll()
+
+                        // 커뮤니티/리뷰 등 업로드 이미지 파일이 /uploads/** 경로로 제공될 경우 공개 허용
+                        // 프론트에서 게시글/댓글 이미지 등을 로그인 없이 조회할 수 있도록 추가
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+
+                        .requestMatchers(
+                                "/resources/**",          // 정적 리소스
+                                "/static/**",
+                                "/files/**"               // 파일 접근
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/public/**",
+                                "/home/**",              // 홈 화면
+                                "/products/**"           // 상품 목록 (읽기는 public)
+                        ).permitAll()
 
                         // JWT 인증 필요
                         .requestMatchers("/users/**").authenticated()
 
                         // Swagger 사용
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-
-                        // 업로드한 리뷰 이미지 조회
-                        .requestMatchers("/review/**").permitAll()
 
                         // 나머지 모두 인증 필요
                         .anyRequest().authenticated()
@@ -155,4 +171,5 @@ public class SecurityConfig {
 
         return http.build();
     }
+
 }
