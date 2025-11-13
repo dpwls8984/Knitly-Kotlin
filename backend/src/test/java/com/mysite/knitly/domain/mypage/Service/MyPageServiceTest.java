@@ -119,3 +119,4 @@ class MyPageServiceTest {
         assertThat(result.getContent().get(0).productId()).isEqualTo(9001L);
     }
 }
+

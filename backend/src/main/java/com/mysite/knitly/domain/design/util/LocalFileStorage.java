@@ -22,13 +22,13 @@ import java.util.UUID;
 public class LocalFileStorage {
 
     @Value("${file.upload-dir:./uploads/designs}")
-    private final String backendBaseUrl = "http://localhost:8080";
-    private final String productsUrlPrefix = "/products/";
     private String uploadDir;
 
     @Value("${file.public-prefix:/files}")
     private String publicPrefix;
 
+    private final String backendBaseUrl = "http://localhost:8080";
+    private final String productsUrlPrefix = "/products/";
     // 바이트 배열로 들어온 pdf를 저장
     // {uuid8}_{sanitizedName}.pdf 형태로 저장
     public String savePdfFile(byte[] fileData, String fileName) {
