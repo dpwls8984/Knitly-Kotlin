@@ -36,4 +36,15 @@ public class ProductLikeController {
 
         return ResponseEntity.ok().build();
     }
+
+    //TODO: 프론트에서 보정 이거 호출 해야함
+    @GetMapping
+    public ResponseEntity<Boolean> isLiked(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long productId) {
+
+        Long currentUserId = user.getUserId();
+        boolean liked = productLikeService.isLiked(currentUserId, productId);
+        return ResponseEntity.ok(liked);
+    }
 }

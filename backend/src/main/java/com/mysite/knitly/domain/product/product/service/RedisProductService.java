@@ -23,26 +23,84 @@ public class RedisProductService {
 
     // 상품 구매시 인기도 증가
     public void incrementPurchaseCount(Long productId) {
-        redisTemplate.opsForZSet().incrementScore(POPULAR_KEY, productId.toString(), 1);
-        log.debug("Redis 인기도 증가: productId={}", productId);
+        long startTime = System.currentTimeMillis();
+
+        try {
+            Double newScore = redisTemplate.opsForZSet().incrementScore(POPULAR_KEY, productId.toString(), 1);
+            long duration = System.currentTimeMillis() - startTime;
+
+            log.info("[Redis] [Product] [IncrementScore] 인기도 증가 완료 - productId={}, newScore={}, duration={}ms",
+                    productId, newScore, duration);
+
+        } catch (Exception e) {
+            log.error("[Redis] [Product] [IncrementScore] 인기도 증가 실패 - productId={}", productId, e);
+        }
     }
 
     // 인기순 Top N 상품 조회
     public List<Long> getTopNPopularProducts(int n) {
-        Set<String> top = redisTemplate.opsForZSet().reverseRange(POPULAR_KEY, 0, n - 1);
-        if (top == null || top.isEmpty()) return Collections.emptyList();
-        return top.stream().map(Long::valueOf).toList();
+        long startTime = System.currentTimeMillis();
+        try{
+            Set<String> top = redisTemplate.opsForZSet().reverseRange(POPULAR_KEY, 0, n - 1);
+            if (top == null || top.isEmpty()) {
+                long duration = System.currentTimeMillis() - startTime;
+                log.warn("[Redis] [Product] [GetTopN] Redis에 데이터 없음 - requestedCount={}, duration={}ms", n, duration);
+                return Collections.emptyList();
+            }
+
+            List result = top.stream().map(Long::valueOf).toList();
+            long duration = System.currentTimeMillis() - startTime;
+
+            log.info("[Redis] [Product] [GetTopN] Top N 조회 완료 - requestedCount={}, resultCount={}, duration={}ms",
+                    n, result.size(), duration);
+
+            return result;
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[Redis] [Product] [GetTopN] Top N 조회 실패 - requestedCount={}, duration={}ms", n, duration, e);
+            return Collections.emptyList();
+        }
     }
 
     // DB의 purchaseCount를 Redis에 동기화
     public void syncFromDatabase(List<Product> products) {
-        products.forEach(product -> {
-            redisTemplate.opsForZSet().add(
-                    POPULAR_KEY,
-                    product.getProductId().toString(),
-                    product.getPurchaseCount()
-            );
-        });
-        log.info("Redis 동기화 완료: {} 개 상품", products.size());
+        long startTime = System.currentTimeMillis();
+
+        if (products == null || products.isEmpty()) {
+            log.warn("[Redis] [Product] [Sync] 동기화할 상품 없음");
+            return;
+        }
+
+        log.info("[Redis] [Product] [Sync] DB → Redis 동기화 시작 - productCount={}", products.size());
+
+        try {
+            int successCount = 0;
+            int failCount = 0;
+
+            for (Product product : products) {
+                try {
+                    redisTemplate.opsForZSet().add(
+                            POPULAR_KEY,
+                            product.getProductId().toString(),
+                            product.getPurchaseCount()
+                    );
+                    successCount++;
+                } catch (Exception e) {
+                    failCount++;
+                    log.error("[Redis] [Product] [Sync] 개별 상품 동기화 실패 - productId={}, purchaseCount={}",
+                            product.getProductId(), product.getPurchaseCount(), e);
+                }
+            }
+
+            long duration = System.currentTimeMillis() - startTime;
+
+            log.info("[Redis] [Product] [Sync] DB → Redis 동기화 완료 - totalCount={}, successCount={}, failCount={}, duration={}ms",
+                    products.size(), successCount, failCount, duration);
+
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[Redis] [Product] [Sync] DB → Redis 동기화 실패 - productCount={}, duration={}ms",
+                    products.size(), duration, e);
+        }
     }
 }
