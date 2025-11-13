@@ -34,6 +34,9 @@ public class LikeEventConsumer {
     @Transactional
     @RabbitListener(queues = LIKE_QUEUE_NAME)
     public void handleLikeEvent(LikeEventRequest eventDto) {
+        log.info("[Like] [Consume] 좋아요 이벤트 수신 - userId={}, productId={}",
+                eventDto.userId(), eventDto.productId());
+
         String redisKey = "likes:product:" + eventDto.productId();
         String userKey = eventDto.userId().toString();
 
@@ -47,7 +50,8 @@ public class LikeEventConsumer {
             ProductLikeId productLikeId = new ProductLikeId(user.getUserId(), product.getProductId());
 
             if (productLikeRepository.existsById(productLikeId)) {
-                log.info("Like already exists in DB. Skipping: {}", productLikeId);
+                log.debug("[Like] [Consume] 이미 DB에 존재하는 좋아요 - {}", productLikeId);
+
                 return;
             }
 
@@ -60,10 +64,10 @@ public class LikeEventConsumer {
 
             // 5. DB 저장
             productLikeRepository.save(productLike);
-            log.info("Successfully saved like to DB: {}", productLikeId);
+            log.info("[Like] [Consume] 좋아요 DB 반영 완료 - {}", productLikeId);
 
         } catch (Exception e) {
-            log.error("Failed to save like to DB. Rolling back Redis cache for {}.", redisKey, e);
+            log.error("[Like] [Consume] DB 반영 실패 - redisKey={}, userKey={}", redisKey, userKey, e);
 
             redisTemplate.opsForSet().remove(redisKey, userKey);
 
@@ -74,7 +78,8 @@ public class LikeEventConsumer {
     @Transactional
     @RabbitListener(queues = DISLIKE_QUEUE_NAME)
     public void handleDislikeEvent(LikeEventRequest eventDto) {
-        log.info("[handleDislikeEvent] received event: {}", eventDto);
+        log.info("[Like] [Consume] 좋아요 취소 이벤트 수신 - userId={}, productId={}",
+                eventDto.userId(), eventDto.productId());
         ProductLikeId productLikeId = new ProductLikeId(eventDto.userId(), eventDto.productId());
 
         try {
@@ -87,13 +92,13 @@ public class LikeEventConsumer {
 
                 productLikeRepository.deleteById(productLikeId);
 
-                log.info("[handleDislikeEvent] ProductLike deleted and count decremented: {}", productLikeId);
+                log.info("[Like] [Consume] 좋아요 삭제 및 카운트 감소 완료 - {}", productLikeId);
 
             } else {
-                log.warn("[handleDislikeEvent] ProductLike not found in DB, skipping: {}", productLikeId);
+                log.warn("[Like] [Consume] DB에 존재하지 않는 좋아요 - {}", productLikeId);
             }
         } catch (Exception e) {
-            log.error("[handleDislikeEvent] Error processing dislike event: {}", eventDto, e);
+            log.error("[Like] [Consume] 좋아요 삭제 처리 중 오류 - {}", eventDto, e);
             throw new AmqpRejectAndDontRequeueException("DB operation failed during dislike.", e);
         }
     }

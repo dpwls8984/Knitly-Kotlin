@@ -127,7 +127,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
 
                         // 업로드한 리뷰 이미지 조회
-                        .requestMatchers("/review/**").permitAll()
+                        .requestMatchers("/reviews/**").permitAll()
 
                         .requestMatchers(
                                 "/resources/**",          // 정적 리소스

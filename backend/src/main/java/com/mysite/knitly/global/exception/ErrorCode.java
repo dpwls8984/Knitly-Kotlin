@@ -66,6 +66,7 @@ public enum ErrorCode {
 
     REVIEW_NOT_FOUND("5001", HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_NOT_AUTHORIZED("5002", HttpStatus.FORBIDDEN, "리뷰 삭제 권한이 없습니다."),
+    REVIEW_IMAGE_SIZE_EXCEEDED("5003", HttpStatus.BAD_REQUEST, "개별 파일 용량은 3MB를 초과할 수 없습니다."),
 
     // Design 6000
     DESIGN_NOT_FOUND("2001", HttpStatus.NOT_FOUND, "도안을 찾을 수 없습니다."),

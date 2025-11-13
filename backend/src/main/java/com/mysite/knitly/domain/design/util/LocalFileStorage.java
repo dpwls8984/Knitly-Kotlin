@@ -188,6 +188,54 @@ public class LocalFileStorage {
         }
     }
 
+    public String saveReviewImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ServiceException(ErrorCode.REVIEW_IMAGE_SAVE_FAILED);
+        }
+
+        final long MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024; // 3MB
+
+        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
+            throw new ServiceException(ErrorCode.REVIEW_IMAGE_SIZE_EXCEEDED);
+        }
+
+        try {
+            LocalDate today = LocalDate.now();
+            Path base = Paths.get(uploadDir).getParent().resolve("reviews").toAbsolutePath().normalize();
+            Path dir = base.resolve(Paths.get(
+                    String.valueOf(today.getYear()),
+                    String.format("%02d", today.getMonthValue()),
+                    String.format("%02d", today.getDayOfMonth())
+            ));
+            Files.createDirectories(dir);
+
+            String originalName = file.getOriginalFilename();
+            String uuid8 = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String savedName = uuid8 + "_" + originalName;
+
+            Path filePath = dir.resolve(savedName);
+            Files.write(filePath, file.getBytes(), StandardOpenOption.CREATE_NEW);
+
+            // public URL
+            String relativePath = String.join("/",
+                    String.valueOf(today.getYear()),
+                    String.format("%02d", today.getMonthValue()),
+                    String.format("%02d", today.getDayOfMonth()),
+                    savedName
+            );
+
+            String url = "/reviews/" + relativePath;
+
+            log.info("리뷰 이미지 저장 완료: {}", filePath);
+            return url;
+
+        } catch (IOException e) {
+            log.error("리뷰 이미지 저장 실패", e);
+            throw new ServiceException(ErrorCode.REVIEW_IMAGE_SAVE_FAILED);
+        }
+    }
+
+
     private String stripPdfExtension(String name) {
         if (name.toLowerCase().endsWith(".pdf")) {
             return name.substring(0, name.length() - 4);

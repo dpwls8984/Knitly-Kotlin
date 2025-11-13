@@ -2,14 +2,13 @@ package com.mysite.knitly.domain.order.entity;
 
 import com.mysite.knitly.domain.product.product.entity.Product;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 @Table(name = "order_items")
 public class OrderItem {
 
@@ -31,7 +30,6 @@ public class OrderItem {
     @Column(nullable = false)
     private int quantity; // 수량 (항상 1)
 
-    @Builder
     public OrderItem(Order order, Product product, Double orderPrice, int quantity) {
         this.order = order;
         this.product = product;
