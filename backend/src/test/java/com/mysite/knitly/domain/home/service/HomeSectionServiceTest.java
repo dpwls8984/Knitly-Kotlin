@@ -186,3 +186,4 @@ class HomeSectionServiceTest {
         assertThat(response.latestPosts().get(1).category()).isEqualTo("QUESTION");
     }
 }
+
