@@ -69,6 +69,8 @@ dependencies {
     implementation ("org.springframework.retry:spring-retry")
     implementation ("org.springframework:spring-aspects")
 
+    implementation("me.paulschwarz:spring-dotenv:3.0.0")
+
 }
 
 tasks.withType<Test> {
