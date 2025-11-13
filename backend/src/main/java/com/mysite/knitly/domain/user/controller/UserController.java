@@ -194,7 +194,7 @@ public class UserController {
 
     /**
      * 유저가 판매하는 상품 조회 (AT 불필요)
-     * GET user/{userId}/products
+     * GET users/{userId}/products
      */
     @Operation(
             summary = "판매자 상품 조회",
@@ -210,7 +210,5 @@ public class UserController {
         log.info("getProductsWithUserId response: {}", response);
         return ResponseEntity.ok(response);
     }
-
-
 
 }
