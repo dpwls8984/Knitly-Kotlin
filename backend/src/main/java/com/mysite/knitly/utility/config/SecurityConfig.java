@@ -16,8 +16,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import com.mysite.knitly.utility.config.JsonAuthEntryPoint;        // 401 JSON
-import com.mysite.knitly.utility.config.JsonAccessDeniedHandler;   // 403 JSON
 
 import java.util.Arrays;
 
@@ -43,7 +41,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 🔥 허용할 출처 (프론트엔드 URL)
+        // 허용할 출처 (프론트엔드 URL)
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",     // 개발 환경
                 "http://localhost:3001",     // 개발 환경 (추가 포트)
@@ -58,7 +56,7 @@ public class SecurityConfig {
         // 허용할 헤더
         configuration.setAllowedHeaders(Arrays.asList("*"));
 
-        // 🔥 쿠키 포함 허용 (매우 중요!)
+        // 쿠키 포함 허용 (매우 중요)
         configuration.setAllowCredentials(true);
 
         // 노출할 헤더 (프론트엔드에서 접근 가능)
@@ -98,6 +96,9 @@ public class SecurityConfig {
 
                 // URL 별 권한 설정
                 .authorizeHttpRequests(auth -> auth
+                        // 프리플라이트(OPTIONS) 요청 허용
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         // 커뮤니티 게시글 목록/상세 조회는 로그인 없이 허용
                         .requestMatchers(HttpMethod.GET, "/community/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/community/comments/**").permitAll()
@@ -129,6 +130,9 @@ public class SecurityConfig {
                         // 업로드한 리뷰 이미지 조회
                         .requestMatchers("/reviews/**").permitAll()
 
+                        // 업로드한 리뷰이미지 조회 (uploads 이미지 경로 허용)
+                        .requestMatchers("/uploads/**").permitAll()
+
                         .requestMatchers(
                                 "/resources/**",          // 정적 리소스
                                 "/static/**",
@@ -158,6 +162,5 @@ public class SecurityConfig {
 
         return http.build();
     }
-
 
 }

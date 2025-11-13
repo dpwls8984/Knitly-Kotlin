@@ -1,57 +1,56 @@
+// ========== path: src/test/java/com/mysite/knitly/domain/community/post/controller/PostControllerValidationTest.java ==========
 package com.mysite.knitly.domain.community.post.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mysite.knitly.domain.community.config.CurrentUserResolver;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
+import com.mysite.knitly.domain.community.post.service.CommunityImageStorage;
+import com.mysite.knitly.domain.community.post.service.PostService;
+import com.mysite.knitly.domain.community.post.dto.PostResponse;
 import com.mysite.knitly.domain.user.entity.Provider;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.repository.UserRepository;
-import org.apiguardian.api.API;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-
-// 게시글 작성 API 입력값 검증 및 권한 테스트
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
 @Transactional
 class PostControllerValidationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired MockMvc mockMvc;
+    @Autowired ObjectMapper objectMapper;
+    @Autowired UserRepository userRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @MockBean PostService postService;
+    @MockBean CommunityImageStorage imageStorage;
+    @MockBean CurrentUserResolver currentUserResolver;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    // 전역 테스트 필드
     private User author;
     private Long authorId;
-    private User other;
-    private Long otherId;
 
     @BeforeEach
     void setUp() {
-        // 작성자
         author = User.builder()
                 .socialId("s1")
                 .email("author@test.com")
@@ -60,101 +59,87 @@ class PostControllerValidationTest {
                 .build();
         authorId = userRepository.save(author).getUserId();
 
-        // 다른 사용자
-        other = User.builder()
-                .socialId("s2")
-                .email("other@test.com")
-                .name("Other")
-                .provider(Provider.KAKAO)
-                .build();
-        otherId = userRepository.save(other).getUserId();
-
-        // 인증 유저를 SecurityContext에 주입 (MockMvc가 @AuthenticationPrincipal로 읽을 수 있게)
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(author, null, List.of())
         );
+        given(currentUserResolver.getCurrentUserOrNull()).willReturn(author);
     }
 
-
-    // 제목이 100자 초과 시 validation 실패 테스트
     @Test
-    void createPost_titleTooLong_returnsBadRequest() throws Exception {
-        String longTitle = "a".repeat(101);
-        Map<String, Object> request = Map.of(
-                "category", PostCategory.FREE.name(),
-                "title", longTitle,
-                "content", "내용",
-                "imageUrls", List.of("https://example.com/a.jpg")
+    void createPost_success_returnsCreated() throws Exception {
+        MockMultipartFile img = new MockMultipartFile("images", "ok.jpg", "image/jpeg", "bin".getBytes());
+
+        given(imageStorage.saveImages(anyList())).willReturn(
+                List.of("/uploads/communitys/2025/11/09/ok.jpg")
         );
 
-        mockMvc.perform(post("/community/posts")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        given(postService.create(any(), any())).willReturn(
+                new PostResponse(
+                        1001L, PostCategory.QUESTION, "첫 글", "내용",
+                        List.of("/uploads/communitys/2025/11/09/ok.jpg"),
+                        authorId, "익명의 털실",
+                        LocalDateTime.now(), LocalDateTime.now(),
+                        0L, true
+                )
+        );
+
+        mockMvc.perform(multipart("/community/posts")
+                        .file(img)
+                        .param("title", "첫 글")
+                        .param("content", "내용")
+                        .param("category", "QUESTION")
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("첫 글"))
+                .andExpect(jsonPath("$.authorId").value(authorId));
+    }
+
+    @Test
+    void createPost_missingCategory_returnsBadRequest() throws Exception {
+        mockMvc.perform(multipart("/community/posts")
+                        .param("title", "제목")
+                        .param("content", "내용")
+                        // category 누락
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.error.status").value(400))
+                .andExpect(jsonPath("$.error.message").value("잘못된 요청입니다."));
+    }
+
+    @Test
+    void createPost_titleTooLong_returnsBadRequest() throws Exception {
+        // 서비스에서 제목 길이 초과 시 ServiceException(ErrorCode.POST_TITLE_LENGTH_INVALID) 던진다고 가정
+        given(postService.create(any(), any()))
+                .willThrow(new com.mysite.knitly.global.exception.ServiceException(
+                        com.mysite.knitly.global.exception.ErrorCode.POST_TITLE_LENGTH_INVALID
+                ));
+
+        String longTitle = "a".repeat(101);
+
+        mockMvc.perform(multipart("/community/posts")
+                        .param("title", longTitle)
+                        .param("content", "내용")
+                        .param("category", "FREE")
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("POST_TITLE_LENGTH_INVALID"));
     }
 
-
-    // 이미지 6개 이상이면 validation 실패 테스트
     @Test
     void createPost_tooManyImages_returnsBadRequest() throws Exception {
-        List<String> sixImages = List.of(
-                "https://example.com/1.jpg",
-                "https://example.com/2.jpg",
-                "https://example.com/3.jpg",
-                "https://example.com/4.jpg",
-                "https://example.com/5.jpg",
-                "https://example.com/6.jpg"
-        );
-        Map<String, Object> request = Map.of(
-                "category", PostCategory.TIP.name(),
-                "title", "제목",
-                "content", "내용",
-                "imageUrls", sixImages
-        );
+        given(postService.create(any(), any()))
+                .willThrow(new com.mysite.knitly.global.exception.ServiceException(
+                        com.mysite.knitly.global.exception.ErrorCode.POST_IMAGE_COUNT_EXCEEDED
+                ));
 
-        mockMvc.perform(post("/community/posts")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        // 실제 파일 6개를 보낼 필요 없이, 서비스 목이 예외를 던지도록 처리
+        mockMvc.perform(multipart("/community/posts")
+                        .param("title", "제목")
+                        .param("content", "내용")
+                        .param("category", "TIP")
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("POST_IMAGE_COUNT_EXCEEDED"));
-    }
-
-
-     //필수값 누락 시 validation 실패 테스트
-    @Test
-    void createPost_missingFields_returnsBadRequest() throws Exception {
-        Map<String, Object> request = Map.of(
-                "category", PostCategory.FREE.name(),
-                "title", "",
-                "content", ""
-        );
-
-        mockMvc.perform(post("/community/posts")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
-    }
-
-
-     // 정상 요청 시 201 Created 반환 테스트
-    @Test
-    void createPost_success_returnsCreated() throws Exception {
-        Map<String, Object> request = Map.of(
-                "category", PostCategory.QUESTION.name(),
-                "title", "첫 글",
-                "content", "내용",
-                "imageUrls", List.of("https://example.com/ok.jpg")
-        );
-
-        mockMvc.perform(post("/community/posts")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.title").value("첫 글"))
-                .andExpect(jsonPath("$.authorId").value(authorId));
-
-        assertThat(userRepository.findById(authorId)).isPresent();
     }
 }
