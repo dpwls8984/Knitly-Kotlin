@@ -1,40 +1,41 @@
 package com.mysite.knitly.domain.product.review.service;
 
+import com.mysite.knitly.domain.design.util.LocalFileStorage;
+import com.mysite.knitly.domain.order.entity.OrderItem;
+import com.mysite.knitly.domain.order.repository.OrderItemRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
-import com.mysite.knitly.domain.product.product.repository.ProductRepository;
+import com.mysite.knitly.domain.product.product.entity.ProductImage;
 import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest;
-import com.mysite.knitly.domain.product.review.dto.ReviewDeleteRequest;
+import com.mysite.knitly.domain.product.review.dto.ReviewCreateResponse;
 import com.mysite.knitly.domain.product.review.dto.ReviewListResponse;
 import com.mysite.knitly.domain.product.review.entity.Review;
 import com.mysite.knitly.domain.product.review.entity.ReviewImage;
 import com.mysite.knitly.domain.product.review.repository.ReviewRepository;
 import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Path;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 class ReviewServiceTest {
 
@@ -42,196 +43,272 @@ class ReviewServiceTest {
     private ReviewRepository reviewRepository;
 
     @Mock
-    private ProductRepository productRepository;
+    private OrderItemRepository orderItemRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private LocalFileStorage localFileStorage;
 
     @InjectMocks
     private ReviewService reviewService;
 
-    @TempDir
-    Path tempDir;
+    private User user;
+    private Product product;
+    private OrderItem orderItem;
+    private Long orderItemId = 1L;
+    private Long userId = 3L;
+    private Long productId = 10L;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        // @TempDir을 사용하도록 uploadDir 설정 변경
-        reviewService.uploadDir = tempDir.toString();
-        reviewService.urlPrefix = "/resources/static/review/";
+        user = User.builder().userId(userId).name("테스트유저").build();
+        product = Product.builder().productId(productId).title("테스트상품").build();
+        orderItem = OrderItem.builder().orderItemId(orderItemId).product(product).build();
     }
 
-//    @Test
-//    @DisplayName("리뷰 등록: 정상")
-//    void createReview_ValidInput_ShouldReturnResponse() {
-//        Long productId = 1L;
-//        Long userId = 3L;
-//        ReviewCreateRequest request = new ReviewCreateRequest((int) 5, "좋아요", Collections.emptyList());
-//
-//        User user = User.builder().userId(userId).name("홍길동").build();
-//        Product product = Product.builder().productId(productId).build();
-//
-//        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-//        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-//        when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> {
-//            Review reviewToSave = invocation.getArgument(0);
-//            return Review.builder()
-//                    .reviewId(1L)
-//                    .user(reviewToSave.getUser())
-//                    .product(reviewToSave.getProduct())
-//                    .rating(reviewToSave.getRating())
-//                    .content(reviewToSave.getContent())
-//                    .build();
-//        });
-//
-//        ReviewListResponse response = reviewService.createReview(productId, user, request);
-//
-//        assertThat(response).isNotNull();
-//        assertThat(response.reviewId()).isEqualTo(1L);
-//        assertThat(response.content()).isEqualTo("좋아요");
-//        assertThat(response.userName()).isEqualTo("홍길동");
-//        verify(reviewRepository).save(any(Review.class));
-//    }
+    @Test
+    @DisplayName("리뷰 폼 조회: 정상")
+    void getReviewFormInfo_Success() {
+        // given
+        ProductImage thumbnail = ProductImage.builder()
+                .productImageUrl("http://test.com/thumbnail.jpg")
+                .build();
+
+        product.addProductImages(List.of(thumbnail));
+
+        when(orderItemRepository.findById(orderItemId)).thenReturn(Optional.of(orderItem));
+
+        // when
+        ReviewCreateResponse response = reviewService.getReviewFormInfo(orderItemId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.productTitle()).isEqualTo("테스트상품");
+        assertThat(response.productThumbnailUrl()).isEqualTo("http://test.com/thumbnail.jpg");
+    }
 
     @Test
-    @DisplayName("리뷰 삭제: 정상")
-    void deleteReview_ValidUser_ShouldSetDeleted() {
-        Long userId = 3L;
-        Long reviewId = 1L;
+    @DisplayName("리뷰 폼 조회: OrderItem 없음")
+    void getReviewFormInfo_OrderItemNotFound_ShouldThrowException() {
+        // given
+        when(orderItemRepository.findById(orderItemId)).thenReturn(Optional.empty());
 
-        User user = User.builder().userId(userId).build();
+        // when & then
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> reviewService.getReviewFormInfo(orderItemId));
+
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ORDER_ITEM_NOT_FOUND);
+    }
+
+
+    @Test
+    @DisplayName("리뷰 등록: 정상 (이미지 없음)")
+    void createReview_ValidInputNoImages_ShouldSaveReview() {
+        // given
+        ReviewCreateRequest request = new ReviewCreateRequest(5, "좋아요", new ArrayList<>());
+
+        when(orderItemRepository.findById(orderItemId)).thenReturn(Optional.of(orderItem));
+
+        ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
+
+        // when
+        reviewService.createReview(orderItemId, user, request);
+
+        // then
+        verify(reviewRepository).save(reviewCaptor.capture());
+        Review savedReview = reviewCaptor.getValue();
+
+        assertThat(savedReview.getUser()).isEqualTo(user);
+        assertThat(savedReview.getProduct()).isEqualTo(product);
+        assertThat(savedReview.getOrderItem()).isEqualTo(orderItem);
+        assertThat(savedReview.getRating()).isEqualTo(5);
+        assertThat(savedReview.getContent()).isEqualTo("좋아요");
+        assertThat(savedReview.getReviewImages()).isEmpty();
+
+        verify(localFileStorage, never()).saveReviewImage(any());
+    }
+
+    @Test
+    @DisplayName("리뷰 등록: 정상 (이미지 포함)")
+    void createReview_ValidInputWithImages_ShouldSaveReviewAndImages() {
+        // given
+        MultipartFile mockFile = new MockMultipartFile("file", "image.jpg", "image/jpeg", new byte[]{1, 2, 3});
+        List<MultipartFile> images = List.of(mockFile);
+        ReviewCreateRequest request = new ReviewCreateRequest(5, "이미지 리뷰", images);
+
+        String savedImageUrl = "/static/review/saved_image.jpg";
+
+        when(orderItemRepository.findById(orderItemId)).thenReturn(Optional.of(orderItem));
+        when(localFileStorage.saveReviewImage(mockFile)).thenReturn(savedImageUrl);
+
+        ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
+
+        // when
+        reviewService.createReview(orderItemId, user, request);
+
+        // then
+        verify(reviewRepository).save(reviewCaptor.capture());
+        Review savedReview = reviewCaptor.getValue();
+
+        assertThat(savedReview.getContent()).isEqualTo("이미지 리뷰");
+
+        verify(localFileStorage).saveReviewImage(mockFile);
+
+        assertThat(savedReview.getReviewImages()).hasSize(1);
+        assertThat(savedReview.getReviewImages().get(0).getReviewImageUrl()).isEqualTo(savedImageUrl);
+        assertThat(savedReview.getReviewImages().get(0).getReview()).isEqualTo(savedReview);
+    }
+
+    @Test
+    @DisplayName("리뷰 등록: OrderItem 없음")
+    void createReview_OrderItemNotFound_ShouldThrowException() {
+        // given
+        ReviewCreateRequest request = new ReviewCreateRequest(5, "좋아요", new ArrayList<>());
+        when(orderItemRepository.findById(orderItemId)).thenReturn(Optional.empty());
+
+        // when & then
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> reviewService.createReview(orderItemId, user, request));
+
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ORDER_ITEM_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("리뷰 등록: 이미지 저장 실패 (예: 형식 오류)")
+    void createReview_InvalidImageFormat_ShouldThrowException() {
+        // given
+        MultipartFile invalidFile = new MockMultipartFile("file", "document.txt", "text/plain", new byte[]{1, 2, 3});
+        ReviewCreateRequest request = new ReviewCreateRequest(5, "좋아요", List.of(invalidFile));
+
+        when(orderItemRepository.findById(orderItemId)).thenReturn(Optional.of(orderItem));
+        when(localFileStorage.saveReviewImage(invalidFile))
+                .thenThrow(new ServiceException(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED));
+
+        // when & then
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> reviewService.createReview(orderItemId, user, request));
+
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
+
+        verify(reviewRepository, never()).save(any());
+    }
+
+
+    @Test
+    @DisplayName("리뷰 삭제: 정상 (소유자)")
+    void deleteReview_ValidUser_ShouldSetDeleted() {
+        // given
+        Long reviewId = 1L;
         Review review = Review.builder().reviewId(reviewId).user(user).isDeleted(false).build();
 
         when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review));
 
+        // when
         reviewService.deleteReview(reviewId, user);
 
+        // then
         assertThat(review.getIsDeleted()).isTrue();
     }
 
     @Test
     @DisplayName("리뷰 삭제: 권한 없는 유저가 요청시 실패")
     void deleteReview_NotOwner_ShouldThrowException() {
-        Long requesterId = 3L;
-        Long ownerId = 9L;
+        // given
         Long reviewId = 1L;
+        User owner = User.builder().userId(99L).build();
+        User requester = user;
 
-        User owner = User.builder().userId(ownerId).build();
         Review review = Review.builder().reviewId(reviewId).user(owner).build();
-        User requester = User.builder().userId(requesterId).build();
 
         when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review));
 
+        // when & then
         ServiceException ex = assertThrows(ServiceException.class,
                 () -> reviewService.deleteReview(reviewId, requester));
 
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.REVIEW_NOT_AUTHORIZED);
     }
 
-//    @Test
-//    @DisplayName("리뷰 목록 조회: 삭제되지 않은 리뷰만 반환")
-//    void getReviewsByProduct_ShouldReturnOnlyNonDeletedReviews() {
-//        Long productId = 1L;
-//        Long userId = 3L;
-//        User user = User.builder().userId(userId).name("사용자1").build();
-//
-//        Review review1 = Review.builder()
-//                .reviewId(1L)
-//                .content("좋아요")
-//                .rating(5)
-//                .user(user)
-//                .product(Product.builder().productId(productId).build())
-//                .isDeleted(false)
-//                .build();
-//
-//        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(eq(productId), any(Pageable.class)))
-//                .thenReturn(List.of(review1));
-//
-//        List<ReviewListResponse> responses = reviewService.getReviewsByProduct(productId, 0, 10);
-//
-//        assertThat(responses).hasSize(1);
-//        assertThat(responses.get(0).reviewId()).isEqualTo(1L);
-//        assertThat(responses.get(0).content()).isEqualTo("좋아요");
-//    }
+    @Test
+    @DisplayName("리뷰 삭제: 리뷰 없음")
+    void deleteReview_ReviewNotFound_ShouldThrowException() {
+        // given
+        Long reviewId = 1L;
+        when(reviewRepository.findById(reviewId)).thenReturn(Optional.empty());
 
-//    @Test
-//    @DisplayName("리뷰 등록: 이미지 URL까지 포함해서 ReviewListResponse 반환")
-//    void createReview_WithImages_ShouldReturnResponseWithUrls() throws Exception {
-//        Long productId = 1L;
-//        Long userId = 3L;
-//
-//        MultipartFile mockFile = new MockMultipartFile("file", "image.jpg", "image/jpeg", new byte[]{1, 2, 3});
-//        ReviewCreateRequest request = new ReviewCreateRequest(5, "이미지 리뷰", List.of(mockFile));
-//
-//        User user = User.builder().userId(userId).name("홍길동").build();
-//        Product product = Product.builder().productId(productId).build();
-//
-//        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-//        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-//        when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
-//
-//        ReviewListResponse response = reviewService.createReview(productId, user, request);
-//
-//        assertThat(response).isNotNull();
-//        assertThat(response.content()).isEqualTo("이미지 리뷰");
-//        assertThat(response.reviewImageUrls()).hasSize(1);
-//        assertThat(response.reviewImageUrls().get(0))
-//                .startsWith("/resources/static/review/")
-//                .contains("image.jpg");
-//    }
+        // when & then
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> reviewService.deleteReview(reviewId, user));
 
-//    @Test
-//    @DisplayName("리뷰 목록 조회: 삭제되지 않은 리뷰와 이미지 URL 반환")
-//    void getReviewsByProduct_ShouldReturnOnlyNonDeletedReviewsWithImages() {
-//        Long productId = 1L;
-//        Long userId = 3L;
-//        User user = User.builder().userId(userId).name("홍길동").build();
-//
-//        Review review = Review.builder()
-//                .reviewId(1L)
-//                .content("좋아요")
-//                .rating(5)
-//                .user(user)
-//                .isDeleted(false)
-//                .build();
-//
-//        ReviewImage image1 = ReviewImage.builder().reviewImageUrl("/static/review/img1.jpg").build();
-//        ReviewImage image2 = ReviewImage.builder().reviewImageUrl("/static/review/img2.png").build();
-//        review.addReviewImages(List.of(image1, image2));
-//
-//        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(eq(productId), any(Pageable.class)))
-//                .thenReturn(List.of(review));
-//        // when
-//        List<ReviewListResponse> responses = reviewService.getReviewsByProduct(productId, 0, 10);
-//
-//        // then
-//        assertThat(responses).hasSize(1);
-//        ReviewListResponse r = responses.get(0);
-//        assertThat(r.reviewId()).isEqualTo(1L);
-//
-//        assertThat(r.reviewImageUrls())
-//                .containsExactly("/static/review/img1.jpg", "/static/review/img2.png");
-//    }
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.REVIEW_NOT_FOUND);
+    }
+
 
     @Test
-    @DisplayName("리뷰 등록: 지원하지 않는 이미지 형식")
-    void createReview_InvalidImageFormat_ShouldThrowException() throws Exception {
-        Long productId = 1L;
-        Long userId = 3L;
+    @DisplayName("리뷰 목록 조회: 정상 (이미지 포함)")
+    void getReviewsByProduct_ShouldReturnPageOfReviewsWithImages() {
+        // given
+        int page = 0;
+        int size = 10;
 
-        MultipartFile invalidFile = new MockMultipartFile("file", "document.txt", "text/plain", new byte[]{1, 2, 3});
-        ReviewCreateRequest request = new ReviewCreateRequest(5, "좋아요", List.of(invalidFile));
+        Review review1 = Review.builder()
+                .reviewId(1L).content("좋아요").rating(5).user(user).isDeleted(false).build();
+        ReviewImage image1 = ReviewImage.builder().reviewImageUrl("/static/review/img1.jpg").build();
+        ReviewImage image2 = ReviewImage.builder().reviewImageUrl("/static/review/img2.png").build();
+        review1.addReviewImages(List.of(image1, image2)); // 편의 메서드 사용
 
-        User user = User.builder().userId(userId).name("홍길동").build();
-        Product product = Product.builder().productId(productId).build();
+        Review review2 = Review.builder()
+                .reviewId(2L).content("괜찮아요").rating(4).user(user).isDeleted(false).build();
+        review2.addReviewImages(new ArrayList<>()); // 빈 리스트 추가
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        ServiceException ex = assertThrows(ServiceException.class,
-                () -> reviewService.createReview(productId, user, request));
+        List<Review> reviewList = List.of(review1, review2);
+        Page<Review> reviewPage = new PageImpl<>(reviewList, pageable, reviewList.size());
 
-        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
+        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(eq(productId), any(Pageable.class)))
+                .thenReturn(reviewPage);
+
+        // when
+        Page<ReviewListResponse> resultPage = reviewService.getReviewsByProduct(productId, page, size);
+
+        // then
+        assertThat(resultPage).isNotNull();
+        assertThat(resultPage.getTotalElements()).isEqualTo(2);
+        assertThat(resultPage.getContent()).hasSize(2);
+
+        ReviewListResponse r1 = resultPage.getContent().get(0);
+        assertThat(r1.reviewId()).isEqualTo(1L);
+        assertThat(r1.content()).isEqualTo("좋아요");
+        assertThat(r1.reviewImageUrls())
+                .containsExactly("/static/review/img1.jpg", "/static/review/img2.png");
+
+        ReviewListResponse r2 = resultPage.getContent().get(1);
+        assertThat(r2.reviewId()).isEqualTo(2L);
+        assertThat(r2.content()).isEqualTo("괜찮아요");
+        assertThat(r2.reviewImageUrls()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("리뷰 목록 조회: 리뷰 없음 (빈 페이지)")
+    void getReviewsByProduct_NoReviews_ShouldReturnEmptyPage() {
+        // given
+        int page = 0;
+        int size = 10;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<Review> emptyPage = new PageImpl<>(new ArrayList<>(), pageable, 0);
+
+        when(reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(eq(productId), any(Pageable.class)))
+                .thenReturn(emptyPage);
+
+        // when
+        Page<ReviewListResponse> resultPage = reviewService.getReviewsByProduct(productId, page, size);
+
+        // then
+        assertThat(resultPage).isNotNull();
+        assertThat(resultPage.getTotalElements()).isEqualTo(0);
+        assertThat(resultPage.getContent()).isEmpty();
     }
 }

@@ -19,11 +19,19 @@ public class FileStorageConfig implements WebMvcConfigurer {
     //로컬에 저장된 파일을 HTTP로 접근 가능하게 설정
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // designs 핸들러
         Path base = Paths.get(uploadDir).toAbsolutePath().normalize();
         String location = "file:" + base.toString() + "/";
         String pattern = publicPrefix.endsWith("/**") ? publicPrefix : publicPrefix + "/**";
 
         registry.addResourceHandler(pattern)
                 .addResourceLocations(location);
+
+        // products 핸들러
+        Path productBasePath = Paths.get(uploadDir).getParent().resolve("products").toAbsolutePath().normalize();
+        String productLocation = "file:" + productBasePath.toString() + "/";
+
+        registry.addResourceHandler("/products/**") // /products/ 로 시작하는 URL
+                .addResourceLocations(productLocation);    // 실제 .../uploads/products/ 폴더에 매핑
     }
 }

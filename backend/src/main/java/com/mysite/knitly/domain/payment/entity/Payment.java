@@ -22,7 +22,8 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long paymentId;
 
-    @Column(nullable = false, unique = true)
+    // READY 상태에서는 tossPaymentKey가 아직 없으므로 null 허용
+    @Column(unique = true)
     private String tossPaymentKey; // 결제 고유 키
 
     @Column(nullable = false)
@@ -61,8 +62,10 @@ public class Payment {
     private LocalDateTime canceledAt; // 결제 취소 시간
 
     @Column(length = 500)
-    private String cancelReason; // 취소 사유 (취소 API에서 사용)
+    private String cancelReason; // 취소 사유
 
+    @Column(length = 1000)
+    private String failureReason; // 실패 사유
 
     // 결제 승인 처리
     public void approve(LocalDateTime approvedAt) {
@@ -83,11 +86,7 @@ public class Payment {
     // 결제 실패 처리
     public void fail(String failureReason) {
         this.paymentStatus = PaymentStatus.FAILED;
-    }
-
-    // 가상계좌 입금 대기 상태로 변경
-    public void waitingForDeposit() {
-        this.paymentStatus = PaymentStatus.WAITING_FOR_DEPOSIT;
+        this.failureReason = failureReason;
     }
 
     // 결제 완료 여부 확인

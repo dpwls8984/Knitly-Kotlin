@@ -28,7 +28,9 @@ public class MyPageQueryRepository {
             from Order o
             join o.orderItems oi
             join oi.product p
+            left join Payment pay on pay.order.orderId = o.orderId
             where o.user.userId = :uid
+            and pay.paymentStatus = 'DONE'
             order by o.createdAt desc
         """;
 
