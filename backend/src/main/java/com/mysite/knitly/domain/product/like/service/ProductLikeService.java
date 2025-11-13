@@ -25,6 +25,8 @@ public class ProductLikeService {
     private static final String LIKE_ROUTING_KEY = "like.add.routingkey";
     private static final String DISLIKE_ROUTING_KEY = "like.delete.routingkey";
 
+    private static final String PRODUCT_DETAIL_CACHE_PREFIX = "product:detail:";
+
     public void addLike(Long userId, Long productId) {
         log.info("[Like] [Add] 좋아요 추가 시작 - userId={}, productId={}", userId, productId);
 
@@ -32,15 +34,18 @@ public class ProductLikeService {
         String userKey = userId.toString();
 
         redisTemplate.opsForSet().add(redisKey, userKey);
-        log.debug("[Like] [Add] Redis에 좋아요 추가 완료 - redisKey={}, userKey={}", redisKey, userKey);
-
         redisTemplate.expire(redisKey, Duration.ofDays(7));
+        log.debug("[Like] [Add] Redis 찜 Set에 추가 완료");
 
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
         rabbitTemplate.convertAndSend(EXCHANGE_NAME, LIKE_ROUTING_KEY, eventDto);
-        log.debug("[Like] [Add] RabbitMQ 이벤트 전송 완료 - exchange={}, routingKey={}", EXCHANGE_NAME, LIKE_ROUTING_KEY);
+        log.debug("[Like] [Add] RabbitMQ 이벤트 전송 완료");
 
-        log.info("[Like] [Add] 좋아요 추가 완료 - userId={}, productId={}", userId, productId);
+        String productCacheKey = PRODUCT_DETAIL_CACHE_PREFIX + productId;
+        redisTemplate.delete(productCacheKey);
+        log.info("[Like] [Invalidate] 상품 상세 캐시 삭제 완료 - key={}", productCacheKey);
+
+        log.info("[Like] [Add] 좋아요 추가 완료");
     }
 
     @Transactional
@@ -52,15 +57,18 @@ public class ProductLikeService {
 
         // Redis에서 제거
         redisTemplate.opsForSet().remove(redisKey, userKey);
-        log.debug("[Like] [Delete] Redis에서 좋아요 제거 완료 - redisKey={}, userKey={}", redisKey, userKey);
+        log.debug("[Like] [Delete] Redis 찜 Set에서 제거 완료");
 
         // DB 삭제는 항상 수행
         LikeEventRequest eventDto = new LikeEventRequest(userId, productId);
         rabbitTemplate.convertAndSend(EXCHANGE_NAME, DISLIKE_ROUTING_KEY, eventDto);
+        log.debug("[Like] [Delete] RabbitMQ 이벤트 전송 완료");
 
-        log.debug("[Like] [Delete] RabbitMQ 이벤트 전송 완료 - exchange={}, routingKey={}", EXCHANGE_NAME, DISLIKE_ROUTING_KEY);
+        String productCacheKey = PRODUCT_DETAIL_CACHE_PREFIX + productId;
+        redisTemplate.delete(productCacheKey);
+        log.info("[Like] [Invalidate] 상품 상세 캐시 삭제 완료 - key={}", productCacheKey);
 
-        log.info("[Like] [Delete] 좋아요 삭제 완료 - userId={}, productId={}", userId, productId);
+        log.info("[Like] [Delete] 좋아요 삭제 완료");
     }
 
     public boolean isLiked(Long userId, Long productId) {
