@@ -211,4 +211,9 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * 유저 이름을 이용해
+     */
+
+
 }

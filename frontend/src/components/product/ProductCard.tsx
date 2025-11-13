@@ -21,6 +21,7 @@ export default function ProductCard({ product, onLikeToggle }: ProductCardProps)
     e.stopPropagation();
     // TODO: 판매자 스토어 페이지로 이동 (아직 구현 전)
     //alert('판매자 스토어 페이지로 이동합니다. (구현 예정)');
+      router.push(`/mypage/store/${product.userId}`);
 
   };
 

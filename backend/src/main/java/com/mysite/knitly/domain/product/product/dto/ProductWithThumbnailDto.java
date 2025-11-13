@@ -1,8 +1,6 @@
 package com.mysite.knitly.domain.product.product.dto;
 
 import com.mysite.knitly.domain.product.product.entity.ProductCategory;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 
 import java.time.LocalDateTime;
 
@@ -19,7 +17,8 @@ public record ProductWithThumbnailDto (Long productId,
                                        Integer stockQuantity,
                                        Double avgReviewRating,
                                        LocalDateTime createdAt,
-                                       String thumbnailUrl){
+                                       String thumbnailUrl,
+                                       Long userId){
 
 
 
@@ -43,7 +42,8 @@ public record ProductWithThumbnailDto (Long productId,
                 // 추가로 계산된 Boolean 필드들
                 this.price == 0.0, // isFree
                 this.stockQuantity != null, // isLimited
-                this.stockQuantity != null && this.stockQuantity == 0 // isSoldOut
+                this.stockQuantity != null && this.stockQuantity == 0, // isSoldOut
+                this.userId
         );
     }
 }

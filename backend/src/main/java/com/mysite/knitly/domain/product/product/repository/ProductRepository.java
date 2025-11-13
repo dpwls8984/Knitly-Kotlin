@@ -1,5 +1,4 @@
 package com.mysite.knitly.domain.product.product.repository;
-import org.springframework.data.repository.query.Param;
 
 import com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto;
 import com.mysite.knitly.domain.product.product.entity.Product;
@@ -8,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -49,27 +49,56 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * sortOrder = 1인 대표 이미지만 LEFT JOIN
      * DTO 프로젝션으로 한 번의 쿼리로 조회
      */
-    @Query("""
-            SELECT new com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto(
-                p.productId,
-                p.title,
-                p.productCategory,
-                p.price,
-                p.purchaseCount,
-                p.likeCount,
-                p.stockQuantity,
-                p.avgReviewRating,
-                p.createdAt,
-                pi.productImageUrl
-            )
-            FROM Product p
-            LEFT JOIN ProductImage pi ON pi.product.productId = p.productId 
-                AND pi.sortOrder = 1
-            WHERE p.user.userId = :userId
-            AND p.isDeleted = false
-            ORDER BY p.createdAt DESC
-            """)
+//    @Query("""
+//            SELECT new com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto(
+//                p.productId,
+//                p.title,
+//                p.productCategory,
+//                p.price,
+//                p.purchaseCount,
+//                p.likeCount,
+//                p.stockQuantity,
+//                p.avgReviewRating,
+//                p.createdAt,
+//                pi.productImageUrl
+//            )
+//            FROM Product p
+//            LEFT JOIN ProductImage pi ON pi.product.productId = p.productId
+//                AND pi.sortOrder = 1
+//            WHERE p.user.userId = :userId
+//            AND p.isDeleted = false
+//            ORDER BY p.createdAt DESC
+//            """)
+//    Page<ProductWithThumbnailDto> findByUserIdWithThumbnail(@Param("userId") Long userId, Pageable pageable);
+    @Query(value = """
+        SELECT new com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto(
+            p.productId,
+            p.title,
+            p.productCategory,
+            p.price,
+            p.purchaseCount,
+            p.likeCount,
+            p.stockQuantity,
+            p.avgReviewRating,
+            p.createdAt,
+            pi.productImageUrl,
+            p.user.userId
+        )
+        FROM Product p
+        LEFT JOIN ProductImage pi ON pi.product.productId = p.productId 
+            AND pi.sortOrder = 1
+        WHERE p.user.userId = :userId
+        AND p.isDeleted = false
+        ORDER BY p.createdAt DESC
+        """,
+            countQuery = """
+        SELECT COUNT(DISTINCT p.productId)
+        FROM Product p
+        WHERE p.user.userId = :userId
+        AND p.isDeleted = false
+        """)
     Page<ProductWithThumbnailDto> findByUserIdWithThumbnail(@Param("userId") Long userId, Pageable pageable);
+
 
     /**
      * 전체 상품 조회 (이미지 포함, N+1 방지)
