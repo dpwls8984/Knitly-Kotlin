@@ -130,7 +130,7 @@ public class SecurityConfig {
                         // 업로드한 리뷰 이미지 조회
                         .requestMatchers("/reviews/**").permitAll()
 
-                        // 업로드한 리뷰이미지 조회 (uploads 이미지 경로 허용)
+                        // 업로드한 이미지 조회 (uploads 이미지 경로 허용)
                         .requestMatchers("/uploads/**").permitAll()
 
                         .requestMatchers(
