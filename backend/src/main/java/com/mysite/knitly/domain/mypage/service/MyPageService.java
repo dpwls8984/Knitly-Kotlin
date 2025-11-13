@@ -7,6 +7,7 @@ import com.mysite.knitly.domain.product.like.repository.ProductLikeRepository;
 import com.mysite.knitly.domain.product.review.entity.Review;
 import com.mysite.knitly.domain.product.review.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MyPageService {
@@ -26,26 +28,38 @@ public class MyPageService {
     // 주문 내역 조회
     @Transactional(readOnly = true)
     public Page<OrderCardResponse> getOrderCards(Long userId, Pageable pageable) {
-        return repo.findOrderCards(userId, pageable);
+        log.info("[MyPageService] 주문 내역 조회 - userId={}, page={}, size={}", userId, pageable.getPageNumber(), pageable.getPageSize());
+        Page<OrderCardResponse> page = repo.findOrderCards(userId, pageable);
+        log.info("[MyPageService] 주문 내역 조회 완료 - userId={}, totalElements={}", userId, page.getTotalElements());
+        return page;
     }
 
     // 내가 쓴 글 조회
     @Transactional(readOnly = true)
     public Page<MyPostListItemResponse> getMyPosts(Long userId, String query, Pageable pageable) {
-        return repo.findMyPosts(userId, query, pageable);
+        log.info("[MyPageService] 내 글 조회 - userId={}, query='{}', page={}, size={}", userId, query, pageable.getPageNumber(), pageable.getPageSize());
+        Page<MyPostListItemResponse> page = repo.findMyPosts(userId, query, pageable);
+        log.info("[MyPageService] 내 글 조회 완료 - userId={}, totalElements={}", userId, page.getTotalElements());
+        return page;
     }
 
     // 내가 쓴 댓글 조회
     @Transactional(readOnly = true)
     public Page<MyCommentListItem> getMyComments(Long userId, String query, Pageable pageable) {
-        return repo.findMyComments(userId, query, pageable);
+        log.info("[MyPageService] 내 댓글 조회 - userId={}, query='{}', page={}, size={}", userId, query, pageable.getPageNumber(), pageable.getPageSize());
+        Page<MyCommentListItem> page = repo.findMyComments(userId, query, pageable);
+        log.info("[MyPageService] 내 댓글 조회 완료 - userId={}, totalElements={}", userId, page.getTotalElements());
+        return page;
     }
 
     // 내가 찜한 상품 조회
     @Transactional(readOnly = true)
     public Page<FavoriteProductItem> getMyFavorites(Long userId, Pageable pageable) {
-        return productLikeRepository.findByUser_UserId(userId, pageable)
+        log.info("[MyPageService] 찜 목록 조회 - userId={}, page={}, size={}", userId, pageable.getPageNumber(), pageable.getPageSize());
+        Page<FavoriteProductItem> page = productLikeRepository.findByUser_UserId(userId, pageable)
                 .map(this::convertToDto);
+        log.info("[MyPageService] 찜 목록 조회 완료 - userId={}, totalElements={}", userId, page.getTotalElements());
+        return page;
     }
 
     private FavoriteProductItem convertToDto(ProductLike pl) {
@@ -66,6 +80,8 @@ public class MyPageService {
     // 사용자가 작성한 리뷰 조회
     @Transactional(readOnly = true)
     public Page<ReviewListItem> getMyReviewsV2(Long userId, Pageable pageable) {
+        log.info("[MyPageService] 내 리뷰 조회 - userId={}, page={}, size={}", userId, pageable.getPageNumber(), pageable.getPageSize());
+
         List<Review> reviews = reviewRepository.findByUser_UserIdAndIsDeletedFalse(userId, pageable);
 
         List<ReviewListItem> list = reviews.stream().map(r -> {
@@ -90,6 +106,7 @@ public class MyPageService {
         }).toList();
 
         long total = reviewRepository.countByUser_UserIdAndIsDeletedFalse(userId);
+        log.info("[MyPageService] 내 리뷰 조회 완료 - userId={}, totalElements={}", userId, total);
 
         return new PageImpl<>(list, pageable, total);
     }
