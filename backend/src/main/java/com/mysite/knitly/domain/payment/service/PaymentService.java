@@ -2,6 +2,7 @@ package com.mysite.knitly.domain.payment.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mysite.knitly.domain.order.dto.EmailNotificationDto;
 import com.mysite.knitly.domain.order.entity.Order;
 import com.mysite.knitly.domain.order.repository.OrderRepository;
 import com.mysite.knitly.domain.payment.dto.*;
@@ -10,10 +11,13 @@ import com.mysite.knitly.domain.payment.entity.PaymentMethod;
 import com.mysite.knitly.domain.payment.entity.PaymentStatus;
 import com.mysite.knitly.domain.payment.repository.PaymentRepository;
 import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.global.email.entity.EmailOutbox;
+import com.mysite.knitly.global.email.repository.EmailOutboxRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +42,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final ObjectMapper objectMapper;
+    private final EmailOutboxRepository emailOutboxRepository;
 
     @Value("${payment.toss.secret-key}")
     private String tossSecretKey;
@@ -70,6 +75,29 @@ public class PaymentService {
             // 5. Payment 엔티티 생성 및 저장
             Payment payment = createPaymentFromTossResponse(order, tossResponse);
             Payment savedPayment = paymentRepository.save(payment);
+
+            MDC.put("orderId", order.getOrderId().toString());
+            MDC.put("userId", order.getUser().getUserId().toString());
+            try {
+                log.info("[Payment] [Outbox] EmailOutbox 작업 생성 시작");
+                User user = order.getUser();
+                EmailNotificationDto emailDto = new EmailNotificationDto(order.getOrderId(), user.getUserId(), user.getEmail());
+                String payload = objectMapper.writeValueAsString(emailDto);
+
+                EmailOutbox emailJob = EmailOutbox.builder()
+                        .payload(payload)
+                        .build();
+                emailOutboxRepository.save(emailJob);
+                MDC.put("outboxId", emailJob.getId().toString());
+                log.info("[Payment] [Outbox] EmailOutbox 작업 생성 완료");
+
+            } catch (Exception e) {
+                //페이로드 생성/저장 실패 시, 결제 트랜잭션 전체를 롤백시킴
+                log.error("[Payment] [Outbox] EmailOutbox 작업 저장 실패. 결제 트랜잭션을 롤백합니다.", e);
+                throw new ServiceException(ErrorCode.PAYMENT_CONFIRM_FAILED);
+            } finally {
+                MDC.remove("outboxId");
+            }
 
             // 6. 응답 데이터 생성
             PaymentConfirmResponse response = buildPaymentConfirmResponse(savedPayment, tossResponse);

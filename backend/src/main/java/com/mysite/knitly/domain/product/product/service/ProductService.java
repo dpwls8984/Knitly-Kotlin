@@ -1,7 +1,9 @@
 package com.mysite.knitly.domain.product.product.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mysite.knitly.domain.design.entity.Design;
 import com.mysite.knitly.domain.design.repository.DesignRepository;
+import com.mysite.knitly.domain.design.util.LocalFileStorage;
 import com.mysite.knitly.domain.product.like.repository.ProductLikeRepository;
 import com.mysite.knitly.domain.product.product.dto.*;
 import com.mysite.knitly.domain.product.product.entity.*;
@@ -11,16 +13,19 @@ import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
-import com.mysite.knitly.global.util.FileStorageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -29,10 +34,14 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final DesignRepository designRepository;
     private final RedisProductService redisProductService;
-    private final FileStorageService fileStorageService;
+    private final LocalFileStorage localFileStorage;
     private final ProductLikeRepository productLikeRepository;
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
+
+    private static final String CACHE_KEY_PREFIX = "product:detail:";
 
     @Transactional
     public ProductRegisterResponse registerProduct(User seller, Long designId, ProductRegisterRequest request) {
@@ -88,42 +97,42 @@ public class ProductService {
                 request.stockQuantity()
         );
 
-// 1. 기존 이미지 URL 전체
+        // 1. 기존 이미지 URL 전체
         List<String> oldImageUrls = product.getProductImages().stream()
                 .map(ProductImage::getProductImageUrl)
                 .collect(Collectors.toList());
 
-// 2. 유지할 기존 이미지 URL 목록 (프론트에서 전달된 값)
+        // 2. 유지할 기존 이미지 URL 목록 (프론트에서 전달된 값)
         List<String> existingImageUrls = request.existingImageUrls() != null
                 ? request.existingImageUrls()
                 : new ArrayList<>();
 
-// 3. 삭제할 이미지 = oldImageUrls - existingImageUrls
+        // 3. 삭제할 이미지 = oldImageUrls - existingImageUrls
         List<String> deletedImageUrls = oldImageUrls.stream()
                 .filter(url -> !existingImageUrls.contains(url))
                 .collect(Collectors.toList());
 
-// 4. 새로운 이미지 파일을 저장
+        // 4. 새로운 이미지 파일을 저장
         List<ProductImage> newProductImages = saveProductImages(request.productImageUrls());
 
-// 5. 유지할 기존 이미지 + 새 이미지 합치기
+        // 5. 유지할 기존 이미지 + 새 이미지 합치기
         List<ProductImage> mergedImages = new ArrayList<>();
 
-// 기존 이미지 중 유지 대상만 다시 추가
+        // 기존 이미지 중 유지 대상만 다시 추가
         for (ProductImage oldImg : product.getProductImages()) {
             if (existingImageUrls.contains(oldImg.getProductImageUrl())) {
                 mergedImages.add(oldImg);
             }
         }
 
-// 새 이미지 추가
+        // 새 이미지 추가
         mergedImages.addAll(newProductImages);
 
-// 6. 엔티티 반영 (기존 이미지 중 유지 대상은 그대로, 삭제 대상은 orphanRemoval로 DB에서 제거)
+        // 6. 엔티티 반영 (기존 이미지 중 유지 대상은 그대로, 삭제 대상은 orphanRemoval로 DB에서 제거)
         product.addProductImages(mergedImages);
 
-// 7. 삭제할 이미지 파일 실제 삭제 (S3, 로컬 등)
-        deletedImageUrls.forEach(fileStorageService::deleteFile);
+        // 7. 삭제할 이미지 파일 실제 삭제 (S3, 로컬 등)
+        deletedImageUrls.forEach(localFileStorage::deleteProductImage);
 
 
         List<String> currentImageUrls = product.getProductImages().stream()
@@ -170,8 +179,7 @@ public class ProductService {
         for (MultipartFile file : imageFiles) {
             if (file.isEmpty()) continue;
 
-            // FileStorageService에게 "product" 도메인의 파일 저장을 위임하고 URL만 받음
-            String url = fileStorageService.storeFile(file, "product");
+            String url = localFileStorage.saveProductImage(file);
 
             ProductImage productImage = ProductImage.builder()
                     .productImageUrl(url)
@@ -385,10 +393,22 @@ public class ProductService {
     }
 
     // 상품 상세 조회 로직 추가
-    @Transactional(readOnly = true) // 데이터를 읽기만 하므로 readOnly=true로 성능 최적화
+    @Transactional(readOnly = true)
     public ProductDetailResponse getProductDetail(User user, Long productId) {
-        // N+1 방지를 위해 User, Design 등 연관 정보를 함께 가져오는 것이 좋음
-        Product product = productRepository.findProductDetailById(productId) // 예시 메서드
+        String cacheKey = CACHE_KEY_PREFIX + productId;
+
+        try {
+            String cachedData = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedData != null) {
+                log.info("[Service] [Cache] 캐시 히트 - key={}", cacheKey);
+                return objectMapper.readValue(cachedData, ProductDetailResponse.class);
+            }
+        } catch (Exception e) {
+            log.error("[Service] [Cache] 캐시 읽기 실패 - key={}, error={}", cacheKey, e.getMessage(), e);
+        }
+
+        log.info("[Service] [DB] 캐시 미스(Miss) - DB 조회 - key={}", cacheKey);
+        Product product = productRepository.findProductDetailById(productId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
 
         // 판매 중지된 상품은 조회 불가
@@ -410,6 +430,16 @@ public class ProductService {
         long reviewCount = reviewRepository.countByProductAndIsDeletedFalse(product);
         product.setReviewCount((int) reviewCount);
 
-        return ProductDetailResponse.from(product, imageUrls, isLiked);
+        ProductDetailResponse response = ProductDetailResponse.from(product, imageUrls, isLiked);
+
+        try {
+            String jsonData = objectMapper.writeValueAsString(response);
+            redisTemplate.opsForValue().set(cacheKey, jsonData, Duration.ofHours(1));
+            log.info("[Service] [Cache] 캐시 쓰기(Write) 완료 - key={}", cacheKey);
+        } catch (Exception e) {
+            log.error("[Service] [Cache] 캐시 쓰기 실패 - key={}, error={}", cacheKey, e.getMessage(), e);
+        }
+
+        return response;
     }
 }

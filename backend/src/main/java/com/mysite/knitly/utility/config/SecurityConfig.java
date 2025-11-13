@@ -129,6 +129,7 @@ public class SecurityConfig {
                         // 업로드한 리뷰 이미지 조회
                         .requestMatchers("/review/**").permitAll()
 
+                        .requestMatchers("/products/**").permitAll()
                         // 나머지 모두 인증 필요
                         .anyRequest().authenticated()
                 )
