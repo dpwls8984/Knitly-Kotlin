@@ -1,50 +1,45 @@
-package com.mysite.knitly.domain.product.like.controller;
+package com.mysite.knitly.domain.product.like.controller
 
-import com.mysite.knitly.domain.product.like.service.ProductLikeService;
-import com.mysite.knitly.domain.user.entity.User;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import com.mysite.knitly.domain.product.like.service.ProductLikeService
+import com.mysite.knitly.domain.user.entity.User
+import mu.KotlinLogging
+import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.web.bind.annotation.*
 
-import java.util.UUID;
+private val log = KotlinLogging.logger {}
 
-@RequiredArgsConstructor
 @RestController
 @RequestMapping("/products/{productId}/like")
-public class ProductLikeController {
-    private final ProductLikeService productLikeService;
+class ProductLikeController(
+    private val productLikeService: ProductLikeService
+) {
 
     @PostMapping
-    public ResponseEntity<Void> addLike(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long productId) {
+    fun addLike(
+        @AuthenticationPrincipal user: User,
+        @PathVariable productId: Long
+    ): ResponseEntity<Unit> {
 
-        Long currentUserId = user.getUserId();
-        productLikeService.addLike(currentUserId, productId);
+        val currentUserId = user.userId
+        log.info { "[POST /products/$productId/like] 좋아요 추가 - userId=$currentUserId" }
 
-        return ResponseEntity.ok().build();
+        productLikeService.addLike(currentUserId, productId)
+
+        return ResponseEntity.ok().build()
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> deleteLike(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long productId) {
+    fun deleteLike(
+        @AuthenticationPrincipal user: User,
+        @PathVariable productId: Long
+    ): ResponseEntity<Unit> {
 
-        Long currentUserId = user.getUserId();
-        productLikeService.deleteLike(currentUserId, productId);
+        val currentUserId = user.userId
+        log.info { "[DELETE /products/$productId/like] 좋아요 취소 - userId=$currentUserId" }
 
-        return ResponseEntity.ok().build();
-    }
+        productLikeService.deleteLike(currentUserId, productId)
 
-    //TODO: 프론트에서 보정 이거 호출 해야함
-    @GetMapping
-    public ResponseEntity<Boolean> isLiked(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long productId) {
-
-        Long currentUserId = user.getUserId();
-        boolean liked = productLikeService.isLiked(currentUserId, productId);
-        return ResponseEntity.ok(liked);
+        return ResponseEntity.ok().build()
     }
 }

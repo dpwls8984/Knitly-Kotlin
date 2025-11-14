@@ -53,15 +53,15 @@ class LikeEventConsumerTest {
     @BeforeEach
     void setUp() {
         request = new LikeEventRequest(3L, 1L);
-        user = User.builder().userId(request.userId()).build();
+        user = User.builder().userId(request.userId).build();
     }
 
     @Test
     @DisplayName("찜하기: 정상 (DB에 저장 및 카운트 증가)")
     void handleLikeEvent_Success() {
         // given
-        when(userRepository.findById(request.userId())).thenReturn(Optional.of(user));
-        when(productRepository.findById(request.productId())).thenReturn(Optional.of(product));
+        when(userRepository.findById(request.userId)).thenReturn(Optional.of(user));
+        when(productRepository.findById(request.productId)).thenReturn(Optional.of(product));
         when(productLikeRepository.existsById(any(ProductLikeId.class))).thenReturn(false);
 
         // when
@@ -76,8 +76,8 @@ class LikeEventConsumerTest {
     @DisplayName("찜하기: 이미 찜한 상품(아무것도 안 함)")
     void handleLikeEvent_AlreadyExists_ThrowsException() {
         // given
-        when(userRepository.findById(request.userId())).thenReturn(Optional.of(user));
-        when(productRepository.findById(request.productId())).thenReturn(Optional.of(product));
+        when(userRepository.findById(request.userId)).thenReturn(Optional.of(user));
+        when(productRepository.findById(request.productId)).thenReturn(Optional.of(product));
 
         when(productLikeRepository.existsById(any(ProductLikeId.class))).thenReturn(true);
 
@@ -95,8 +95,8 @@ class LikeEventConsumerTest {
         // given
         when(redisTemplate.opsForSet()).thenReturn(setOperations);
 
-        when(userRepository.findById(request.userId())).thenReturn(Optional.of(user));
-        when(productRepository.findById(request.productId())).thenReturn(Optional.of(product));
+        when(userRepository.findById(request.userId)).thenReturn(Optional.of(user));
+        when(productRepository.findById(request.productId)).thenReturn(Optional.of(product));
 
         when(productLikeRepository.existsById(any(ProductLikeId.class))).thenReturn(false);
 
@@ -109,8 +109,8 @@ class LikeEventConsumerTest {
         });
 
         // then
-        String redisKey = "likes:product:" + request.productId();
-        String userKey = request.userId().toString();
+        String redisKey = "likes:product:" + request.productId;
+        String userKey = request.userId.toString();
         verify(redisTemplate.opsForSet()).remove(redisKey, userKey);
     }
 
@@ -119,7 +119,7 @@ class LikeEventConsumerTest {
     void handleDislikeEvent_Success() {
         //given
         when(productLikeRepository.existsById(any(ProductLikeId.class))).thenReturn(true);
-        when(productRepository.findById(request.productId())).thenReturn(Optional.of(product));
+        when(productRepository.findById(request.productId)).thenReturn(Optional.of(product));
 
         // when
         likeEventConsumer.handleDislikeEvent(request);

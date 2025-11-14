@@ -1,18 +1,12 @@
-package com.mysite.knitly.domain.product.like.entity;
+package com.mysite.knitly.domain.product.like.entity
 
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor
+import lombok.EqualsAndHashCode
+import lombok.Getter
+import lombok.NoArgsConstructor
+import java.io.Serializable
 
-import java.io.Serializable;
-import java.util.UUID;
-
-@Getter
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode
-public class ProductLikeId implements Serializable {
-    private Long user;
-    private Long product;
-}
+data class ProductLikeId(
+    val user: Long = 0L,
+    val product: Long = 0L
+) : Serializable
