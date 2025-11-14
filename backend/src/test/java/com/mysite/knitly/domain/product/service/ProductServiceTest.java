@@ -67,8 +67,6 @@ class ProductServiceTest {
     private LocalFileStorage localFileStorage;
 
     @Mock
-    private ProductLikeRepository productLikeRepository;
-    @Mock
     private ReviewRepository reviewRepository;
     @Mock
     private UserRepository userRepository;
@@ -88,6 +86,10 @@ class ProductServiceTest {
     private MockMultipartFile imageFile;
     private static final String CACHE_KEY_PREFIX = "product:detail:";
 
+    private Product product2;
+    private Product product3;
+    private Product product4;
+    private Pageable pageable;
     @BeforeEach
     void setUp() {
         pageable = PageRequest.of(0, 20, Sort.by("createdAt").descending());
@@ -277,17 +279,17 @@ class ProductServiceTest {
 
         given(valueOperations.get(cacheKey)).willReturn(null);
 
-        given(productRepository.findByProductIdAndIsDeletedFalse(1L)).willReturn(Optional.of(product1));
+        given(productRepository.findByProductIdAndIsDeletedFalse(4L)).willReturn(Optional.of(product4));
 
         given(productLikeRepository.existsByUser_UserIdAndProduct_ProductId(4L, 4L)).willReturn(true);
 
-        given(reviewRepository.countByProductAndIsDeletedFalse(product1)).willReturn(5L);
+        given(reviewRepository.countByProductAndIsDeletedFalse(product4)).willReturn(5L);
 
         ProductDetailResponse response = productService.getProductDetail(seller, 4L);
 
         verify(productRepository).findByProductIdAndIsDeletedFalse(4L);
         verify(productLikeRepository).existsByUser_UserIdAndProduct_ProductId(4L, 4L);
-        verify(reviewRepository).countByProductAndIsDeletedFalse(product1);
+        verify(reviewRepository).countByProductAndIsDeletedFalse(product4);
 
         String expectedJson = objectMapper.writeValueAsString(response);
         verify(valueOperations).set(eq(cacheKey), eq(expectedJson), any(Duration.class));
@@ -296,7 +298,7 @@ class ProductServiceTest {
         assertThat(response.title()).isEqualTo("테스트 상품");
         assertThat(response.isLikedByUser()).isTrue();
         assertThat(response.reviewCount()).isEqualTo(5);
-        assertThat(response.createdAt()).isEqualTo(product1.getCreatedAt().toString());
+        assertThat(response.createdAt()).isEqualTo(product4.getCreatedAt().toString());
     }
 
     @Test
@@ -308,7 +310,7 @@ class ProductServiceTest {
 
         List<String> imageUrls = List.of("/static/img.jpg");
         boolean isLiked = true;
-        ProductDetailResponse cachedDto = ProductDetailResponse.from(product1, imageUrls, isLiked);
+        ProductDetailResponse cachedDto = ProductDetailResponse.from(product4, imageUrls, isLiked);
 
         cachedDto = new ProductDetailResponse(
                 cachedDto.productId(), cachedDto.title(), cachedDto.description(), cachedDto.productCategory(),
