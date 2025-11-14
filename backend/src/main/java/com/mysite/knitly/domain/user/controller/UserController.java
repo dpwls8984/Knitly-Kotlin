@@ -8,6 +8,7 @@ import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.service.UserService;
 import com.mysite.knitly.utility.auth.service.AuthService;
 import com.mysite.knitly.utility.cookie.CookieUtil;
+import com.mysite.knitly.utility.jwt.JwtProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -41,6 +42,7 @@ public class UserController {
 
     private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";  // 추가!
     private final UserService userService;
+    private final JwtProvider jwtProvider;
 
     /**
      * 현재 로그인한 사용자 정보 조회 (JWT 인증 필요)
@@ -114,18 +116,29 @@ public class UserController {
     @SecurityRequirement(name = "Bearer Authentication")
     @PostMapping("/logout")
     public ResponseEntity<String> logout(
-            @AuthenticationPrincipal User user,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             HttpServletResponse response) {  // HttpServletResponse 추가!
 
-        if (user == null) {
-            return ResponseEntity.status(401).body("인증이 필요합니다.");
+        String token = null;
+        Long userId = null;
+
+        // 🔥 AT에서 userId 추출
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            try {
+                token = authHeader.substring(7);
+                userId = jwtProvider.getUserIdFromToken(token);  // AT에서 userId 파싱
+                authService.logout(userId);
+                log.info("Refresh Token deleted from Redis - userId: {}", userId);
+            } catch (Exception e) {
+                log.warn("Failed to extract userId from access token", e);
+            }
         }
 
-        log.info("Logout requested - userId: {}", user.getUserId());
+        log.info("Logout requested - userId: {}", userId);
 
         // 1. Redis에서 Refresh Token 삭제
-        authService.logout(user.getUserId());
-        log.info("Refresh Token deleted from Redis - userId: {}", user.getUserId());
+        authService.logout(userId);
+        log.info("Refresh Token deleted from Redis - userId: {}", userId);
 
         // 2. HTTP-only 쿠키 삭제
         cookieUtil.deleteCookie(response, REFRESH_TOKEN_COOKIE_NAME);
@@ -138,7 +151,7 @@ public class UserController {
      * 회원탈퇴 (개선됨)
      * DELETE /users/me
      *
-     * DB에서 사용자 정보 삭제 + Redis에서 Refresh Token 삭제 + HTTP-only 쿠키 삭제
+     * DB에서 사용자 정보 삭제 + Redis에서 Refresh Token 삭제(서버가 가진 RT 삭제) + HTTP-only 쿠키 삭제(클라이언트가 가진 RT 삭제)
      */
     @Operation(
             summary = "회원탈퇴",
@@ -181,7 +194,7 @@ public class UserController {
 
     /**
      * 유저가 판매하는 상품 조회 (AT 불필요)
-     * GET user/{userId}/products
+     * GET users/{userId}/products
      */
     @Operation(
             summary = "판매자 상품 조회",
@@ -197,7 +210,4 @@ public class UserController {
         log.info("getProductsWithUserId response: {}", response);
         return ResponseEntity.ok(response);
     }
-
-
-
 }

@@ -119,9 +119,10 @@ logging:
 # --- Custom JWT 설정 ---
 custom:
   jwt:
-    accessTokenExpireSeconds: 1800   # 30분
-    refreshTokenExpireSeconds: 604800 # 7일
-    secretKey: ${JWT_SECRET_KEY}
+    # Refresh Token 만료 시간 추가
+    accessTokenExpireSeconds: 1800 #{30 * 60} 30분
+    refreshTokenExpireSeconds: 604800 #{7 * 24 * 60 * 60} 7일
+    secretKey: ${JWT_SECRET_KEY}  # 환경 변수로 관리
 
 # --- 프론트엔드 URL 설정 ---
 frontend:

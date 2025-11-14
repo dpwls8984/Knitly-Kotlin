@@ -48,3 +48,6 @@ out/
 backend/.env.properties
 *.env
 .env.*
+
+### etc ###
+resources/static/.DS_Store

@@ -161,8 +161,7 @@ class MyPageControllerTest {
                 5,
                 "아주 좋아요",
                 List.of("r1.jpg", "r2.jpg"),
-                LocalDate.of(2025, 1, 6),
-                LocalDate.of(2025, 1, 2)
+                LocalDate.of(2025, 1, 6)
         );
         var page = new PageImpl<>(List.of(r1), PageRequest.of(0, 10), 1);
         given(service.getMyReviews(eq(1L), Mockito.<Pageable>any())).willReturn(page);

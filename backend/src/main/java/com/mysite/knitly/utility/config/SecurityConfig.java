@@ -4,6 +4,7 @@ import com.mysite.knitly.utility.handler.OAuth2FailureHandler;
 import com.mysite.knitly.utility.handler.OAuth2SuccessHandler;
 import com.mysite.knitly.utility.jwt.JwtAuthenticationFilter;
 import com.mysite.knitly.utility.oauth.CustomOAuth2UserService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -158,7 +159,18 @@ public class SecurityConfig {
                 )
 
                 // JWT 인증 필터 추가
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // 인증 실패 시 401을 반환
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // 🔥 401 반환 (리다이렉트 대신)
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\": \"Unauthorized\"}");
+                        })
+                );
+
 
         return http.build();
     }

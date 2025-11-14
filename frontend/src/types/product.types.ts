@@ -17,6 +17,7 @@ export interface ProductListResponse {
     isFree: boolean;
     isLimited: boolean;
     isSoldOut: boolean;
+    userId: number;
 }
 
 /**
