@@ -1,10 +1,16 @@
 package com.mysite.knitly.domain.user.entity;
 
+import com.mysite.knitly.domain.community.post.entity.Post;
+import com.mysite.knitly.domain.design.entity.Design;
+import com.mysite.knitly.domain.product.product.entity.Product;
+import com.mysite.knitly.domain.product.review.entity.Review;
 import com.mysite.knitly.domain.userstore.entity.UserStore;
 import com.mysite.knitly.global.jpa.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -29,9 +35,39 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false, length = 50)
     private String name; // 구글에서 받아온 이름
 
-    // UserStore와 1:1 양방향 관계
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    // 🔥 연관 관계에 CascadeType.REMOVE 추가
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Design> designs;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Product> products;
+
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+//    private List<Order> orders;
+
+    @OneToMany(mappedBy = "author", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Post> posts;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Review> reviews;
+
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+//    private List<Comment> comments;
+//
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+//    private List<Payment> payments;
+
+    @OneToOne(mappedBy = "user", cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true)
     private UserStore userStore;
+
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+//    private List<CouponClaim> couponClaims;
+
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+//    private List<ProductLike> productLikes;
+
+//    @OneToMany(mappedBy = "subscriber", cascade = CascadeType.REMOVE, orphanRemoval = true)
+//    private List<Subscription> subscriptions;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

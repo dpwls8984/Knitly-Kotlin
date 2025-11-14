@@ -65,9 +65,12 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.11")
 
     implementation("com.fasterxml.jackson.core:jackson-databind")
+    implementation("me.paulschwarz:spring-dotenv:3.0.0")
 
     implementation ("org.springframework.retry:spring-retry")
     implementation ("org.springframework:spring-aspects")
+
+    implementation("me.paulschwarz:spring-dotenv:3.0.0")
 
 }
 

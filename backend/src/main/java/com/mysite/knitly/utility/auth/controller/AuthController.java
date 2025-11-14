@@ -34,7 +34,7 @@ public class AuthController {
 
     /**
      * Access Token 갱신 API
-     * POST /api/auth/refresh
+     * POST /auth/refresh
      *
      * 쿠키에서 Refresh Token을 읽어 새로운 Access Token과 Refresh Token을 발급
      */
@@ -78,12 +78,16 @@ public class AuthController {
         String refreshToken = cookieUtil.getCookie(request, REFRESH_TOKEN_COOKIE_NAME)
                 .orElse(null);
 
+        // AuthController.java
         if (refreshToken == null) {
             log.error("Refresh Token not found in cookie");
             return ResponseEntity.badRequest().build();
         }
 
-        log.debug("Refresh Token found in cookie: {}...", refreshToken.substring(0, 20));
+        String tokenPreview = refreshToken.length() >= 20
+                ? refreshToken.substring(0, 20)
+                : refreshToken;
+        log.debug("Refresh Token found in cookie: {}...", tokenPreview);
 
         try {
             // 2. 새로운 토큰 발급

@@ -16,7 +16,7 @@ public class RefreshTokenService {
     private final RedisTemplate<String, String> redisTemplate;
     private final JwtProperties jwtProperties;
 
-    private static final String REFRESH_TOKEN_PREFIX = "RT:";
+    public static final String REFRESH_TOKEN_PREFIX = "RT:";
 
     /**
      * Refresh Token을 Redis에 저장

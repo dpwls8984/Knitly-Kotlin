@@ -1,5 +1,9 @@
 package com.mysite.knitly.utility.auth.service;
 
+import com.mysite.knitly.domain.design.repository.DesignRepository;
+import com.mysite.knitly.domain.product.product.service.ProductService;
+import com.mysite.knitly.domain.user.entity.User;
+import com.mysite.knitly.domain.user.repository.UserRepository;
 import com.mysite.knitly.domain.user.service.UserService;
 import com.mysite.knitly.utility.auth.dto.TokenRefreshResponse;
 import com.mysite.knitly.utility.jwt.JwtProperties;
@@ -10,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -19,6 +24,9 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final JwtProperties jwtProperties;
     private final UserService userService;
+    private final UserRepository userRepository;
+    private final ProductService productService;
+    private final DesignRepository designRepository;
 
     /**
      * Refresh Token으로 Access Token 갱신
@@ -70,14 +78,31 @@ public class AuthService {
      * 1. Refresh Token 삭제 (Redis)
      * 2. User 삭제 (DB)
      */
+//    @Transactional
+//    public void deleteAccount(Long userId) {
+//        // 1. Redis에서 Refresh Token 삭제
+//        refreshTokenService.deleteRefreshToken(userId);
+//
+//        // 2. DB에서 사용자 삭제
+//        userService.deleteUser(userId);
+//
+//        log.info("Account deleted - userId: {}", userId);
+//    }
+
+
     @Transactional
     public void deleteAccount(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        log.info("회원 탈퇴 시작 - userId: {}", userId);
+
         // 1. Redis에서 Refresh Token 삭제
         refreshTokenService.deleteRefreshToken(userId);
+        log.info("Redis에서 Refresh Token 삭제 완료 - userId: {}", userId);
 
-        // 2. DB에서 사용자 삭제
-        userService.deleteUser(userId);
-
-        log.info("Account deleted - userId: {}", userId);
+        // 2. 사용자 삭제 (Cascade로 자동으로 연관 데이터 모두 삭제됨!)
+        userRepository.delete(user);
+        log.info("사용자 및 모든 연관 데이터 삭제 완료 - userId: {}", userId);
     }
 }

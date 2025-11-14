@@ -29,12 +29,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     },
 
     logout: async () => {
-        try {
-            // 백엔드 로그아웃 API 호출
-            await api.post('/users/logout');
-        } catch (error) {
-            console.error('로그아웃 API 에러:', error);
-        } finally {
+
             // 로컬 상태 초기화
             localStorage.removeItem('accessToken');
             localStorage.removeItem('user');
@@ -47,7 +42,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             });
 
             console.log('✅ 로그아웃 완료');
-        }
     },
 
     setUser: (user: User | null) => {

@@ -1,5 +1,6 @@
 package com.mysite.knitly.domain.design.entity;
 
+import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.global.exception.ErrorCode;
 import com.mysite.knitly.global.exception.ServiceException;
@@ -12,7 +13,6 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Getter
@@ -51,6 +51,9 @@ public class Design {
     @CreatedDate
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @OneToOne(mappedBy = "design", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY) // 👈 REMOVE 추가
+    private Product product;
 
     // 삭제 가능 여부 확인 - BEFORE_SALE 상태인 경우에만 삭제 가능
     public boolean isDeletable() {

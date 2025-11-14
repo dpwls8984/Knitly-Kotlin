@@ -51,7 +51,6 @@ public class Product {
     private LocalDateTime createdAt; // DATETIME
 
     @ManyToOne(fetch = FetchType.LAZY)
-    //Cascade 안하는 이유 : User 삭제시 Product도 삭제되면 안됨
     @JoinColumn(name = "user_id", nullable = false)
     private User user; // 판매자
 
@@ -69,7 +68,6 @@ public class Product {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "design_id", nullable = false)
-    //Cascade 안하는 이유 : Design 삭제시 Product도 삭제되면 안됨
     private Design design;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)

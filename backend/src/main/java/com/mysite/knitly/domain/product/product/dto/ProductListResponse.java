@@ -20,7 +20,8 @@ public record ProductListResponse(
         String sellerName,
         Boolean isFree,     // 무료 여부
         Boolean isLimited,  // 한정판매 여부
-        Boolean isSoldOut   // 품절 여부 (stockQuantity = 0)
+        Boolean isSoldOut,   // 품절 여부 (stockQuantity = 0)
+        Long userId
 ) {
     public static ProductListResponse from(Product product, boolean isLikedByUser) {
         // Product의 첫 번째 이미지를 thumbnailUrl로 사용
@@ -50,7 +51,8 @@ public record ProductListResponse(
                 product.getUser() !=null? product.getUser().getName() : "알 수 없음",
                 product.getPrice() == 0.0,
                 product.getStockQuantity() != null,
-                product.getStockQuantity() != null && product.getStockQuantity() == 0
+                product.getStockQuantity() != null && product.getStockQuantity() == 0,
+                product.getUser().getUserId()
         );
     }
 }
