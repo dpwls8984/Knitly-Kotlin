@@ -45,152 +45,232 @@ public class ProductService {
 
     @Transactional
     public ProductRegisterResponse registerProduct(User seller, Long designId, ProductRegisterRequest request) {
+        log.info("[Product] [Register] 상품 등록 시작 - sellerId={}, designId={}, title={}",
+                seller.getUserId(), designId, request.title());
 
-        Design design = designRepository.findById(designId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.DESIGN_NOT_FOUND));
+        try {
+            Design design = designRepository.findById(designId)
+                    .orElseThrow(() -> new ServiceException(ErrorCode.DESIGN_NOT_FOUND));
+            log.debug("[Product] [Register] 도안 조회 완료 - designId={}", designId);
 
-        // 도안 등록시 [판매 중] 상태로 변경
-        design.startSale();
+            design.startSale();
+            log.debug("[Product] [Register] design.startSale() 호출");
 
-        Product product = Product.builder()
-                .title(request.title())
-                .description(request.description())
-                .productCategory(request.productCategory())
-                .sizeInfo(request.sizeInfo())
-                .price(request.price())
-                .stockQuantity(request.stockQuantity())
-                .user(seller) // 판매자 정보 연결
-                .design(design) // 도안 정보 연결
-                .isDeleted(false) // 초기 상태: 판매 중
-                .purchaseCount(0) // 초기값 설정
-                .likeCount(0) // 초기값 설정
-                .build();
+            Product product = Product.builder()
+                    .title(request.title())
+                    .description(request.description())
+                    .productCategory(request.productCategory())
+                    .sizeInfo(request.sizeInfo())
+                    .price(request.price())
+                    .stockQuantity(request.stockQuantity())
+                    .user(seller) // 판매자 정보 연결
+                    .design(design) // 도안 정보 연결
+                    .isDeleted(false) // 초기 상태: 판매 중
+                    .purchaseCount(0) // 초기값 설정
+                    .likeCount(0) // 초기값 설정
+                    .build();
+            log.debug("[Product] [Register] Product 엔티티 빌드 완료");
 
-        List<ProductImage> productImages = saveProductImages(request.productImageUrls());
-        product.addProductImages(productImages);
+            List<ProductImage> productImages = saveProductImages(request.productImageUrls());
+            product.addProductImages(productImages);
 
-        Product savedProduct = productRepository.save(product);
+            Product savedProduct = productRepository.save(product);
+            log.debug("[Product] [Register] DB 상품 저장 완료");
 
-        List<String> imageUrls = savedProduct.getProductImages().stream()
-                .map(ProductImage::getProductImageUrl)
-                .collect(Collectors.toList());
+            List<String> imageUrls = savedProduct.getProductImages().stream()
+                    .map(ProductImage::getProductImageUrl)
+                    .collect(Collectors.toList());
 
-        return ProductRegisterResponse.from(savedProduct, imageUrls);
+            log.info("[Product] [Register] 상품 등록 성공 - new productId={}", savedProduct.getProductId());
+
+            return ProductRegisterResponse.from(savedProduct, imageUrls);
+        } catch (Exception e) {
+            log.error("[Product] [Register] 상품 등록 실패 - sellerId={}, designId={}",
+                    seller.getUserId(), designId, e);
+            throw e;
+        }
     }
+
 
     @Transactional
     public ProductModifyResponse modifyProduct(User currentUser, Long productId, ProductModifyRequest request) {
-        Product product = findProductById(productId);
+        log.info("[Product] [Modify] 상품 수정 시작 - userId={}, productId={}",
+                currentUser.getUserId(), productId);
 
-        if (product.getIsDeleted()) {
-            throw new ServiceException(ErrorCode.PRODUCT_ALREADY_DELETED);
-        }
+        try {
+            Product product = findProductById(productId);
+            log.debug("[Product] [Modify] 상품 조회 완료 - productId={}", productId);
 
-        if (!product.getUser().getUserId().equals(currentUser.getUserId())) {
-            throw new ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED);
-        }
-
-        product.update(
-                request.description(),
-                request.productCategory(),
-                request.sizeInfo(),
-                request.stockQuantity()
-        );
-
-        // 1. 기존 이미지 URL 전체
-        List<String> oldImageUrls = product.getProductImages().stream()
-                .map(ProductImage::getProductImageUrl)
-                .collect(Collectors.toList());
-
-        // 2. 유지할 기존 이미지 URL 목록 (프론트에서 전달된 값)
-        List<String> existingImageUrls = request.existingImageUrls() != null
-                ? request.existingImageUrls()
-                : new ArrayList<>();
-
-        // 3. 삭제할 이미지 = oldImageUrls - existingImageUrls
-        List<String> deletedImageUrls = oldImageUrls.stream()
-                .filter(url -> !existingImageUrls.contains(url))
-                .collect(Collectors.toList());
-
-        // 4. 새로운 이미지 파일을 저장
-        List<ProductImage> newProductImages = saveProductImages(request.productImageUrls());
-
-        // 5. 유지할 기존 이미지 + 새 이미지 합치기
-        List<ProductImage> mergedImages = new ArrayList<>();
-
-        // 기존 이미지 중 유지 대상만 다시 추가
-        for (ProductImage oldImg : product.getProductImages()) {
-            if (existingImageUrls.contains(oldImg.getProductImageUrl())) {
-                mergedImages.add(oldImg);
+            if (product.getIsDeleted()) {
+                log.warn("[Product] [Modify] 실패: 이미 삭제된 상품 - productId={}", productId);
+                throw new ServiceException(ErrorCode.PRODUCT_ALREADY_DELETED);
             }
+
+            if (!product.getUser().getUserId().equals(currentUser.getUserId())) {
+                log.warn("[Product] [Modify] 실패: 권한 없음 - userId={}, sellerId={}",
+                        currentUser.getUserId(), product.getUser().getUserId());
+                throw new ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED);
+            }
+
+            product.update(
+                    request.description(),
+                    request.productCategory(),
+                    request.sizeInfo(),
+                    request.stockQuantity()
+            );
+            log.debug("[Product] [Modify] 상품 엔티티 필드 업데이트 완료");
+
+            // 1. 기존 이미지 URL 전체
+            List<String> oldImageUrls = product.getProductImages().stream()
+                    .map(ProductImage::getProductImageUrl)
+                    .collect(Collectors.toList());
+
+            // 2. 유지할 기존 이미지 URL 목록 (프론트에서 전달된 값)
+            List<String> existingImageUrls = request.existingImageUrls() != null
+                    ? request.existingImageUrls()
+                    : new ArrayList<>();
+
+            // 3. 삭제할 이미지 = oldImageUrls - existingImageUrls
+            List<String> deletedImageUrls = oldImageUrls.stream()
+                    .filter(url -> !existingImageUrls.contains(url))
+                    .collect(Collectors.toList());
+
+            log.debug("[Product] [Modify] 이미지 계산 - Old: {}, Existing: {}, To Delete: {}",
+                    oldImageUrls.size(), existingImageUrls.size(), deletedImageUrls.size());
+
+            // 4. 새로운 이미지 파일을 저장
+            List<ProductImage> newProductImages = saveProductImages(request.productImageUrls());
+            log.debug("[Product] [Modify] 새 이미지 {}개 임시 저장 완료.", newProductImages.size());
+
+            // 5. 유지할 기존 이미지 + 새 이미지 합치기
+            List<ProductImage> mergedImages = new ArrayList<>();
+
+            // 기존 이미지 중 유지 대상만 다시 추가
+            for (ProductImage oldImg : product.getProductImages()) {
+                if (existingImageUrls.contains(oldImg.getProductImageUrl())) {
+                    mergedImages.add(oldImg);
+                }
+            }
+
+            // 새 이미지 추가
+            mergedImages.addAll(newProductImages);
+            log.debug("[Product] [Modify] 병합된 이미지 리스트 크기: {}", mergedImages.size());
+
+            // 6. 엔티티 반영 (기존 이미지 중 유지 대상은 그대로, 삭제 대상은 orphanRemoval로 DB에서 제거)
+            product.addProductImages(mergedImages);
+            log.debug("[Product] [Modify] product.addProductImages (orphanRemoval) 호출");
+
+            // 7. 삭제할 이미지 파일 실제 삭제
+            if (!deletedImageUrls.isEmpty()) {
+                log.debug("[Product] [Modify] 스토리지에서 {}개의 이미지 파일 삭제 시작...", deletedImageUrls.size());
+                deletedImageUrls.forEach(localFileStorage::deleteProductImage);
+                log.debug("[Product] [Modify] 스토리지 이미지 삭제 완료");
+            }
+
+            List<String> currentImageUrls = product.getProductImages().stream()
+                    .map(ProductImage::getProductImageUrl)
+                    .collect(Collectors.toList());
+
+            log.info("[Product] [Modify] 상품 수정 성공 - productId={}", product.getProductId());
+
+            return ProductModifyResponse.from(product, currentImageUrls);
+        } catch (Exception e) {
+            log.error("[Product] [Modify] 상품 수정 실패 - userId={}, productId={}",
+                    currentUser.getUserId(), productId, e);
+            throw e;
         }
-
-        // 새 이미지 추가
-        mergedImages.addAll(newProductImages);
-
-        // 6. 엔티티 반영 (기존 이미지 중 유지 대상은 그대로, 삭제 대상은 orphanRemoval로 DB에서 제거)
-        product.addProductImages(mergedImages);
-
-        // 7. 삭제할 이미지 파일 실제 삭제 (S3, 로컬 등)
-        deletedImageUrls.forEach(localFileStorage::deleteProductImage);
-
-
-        List<String> currentImageUrls = product.getProductImages().stream()
-                .map(ProductImage::getProductImageUrl)
-                .collect(Collectors.toList());
-
-        return ProductModifyResponse.from(product, currentImageUrls);
     }
 
     @Transactional
-    public void deleteProduct(User currentUser, Long productId) {
-        Product product = findProductById(productId);
+        public void deleteProduct(User currentUser, Long productId) {
+        log.info("[Product] [Delete] 상품 삭제 시작 - userId={}, productId={}",
+                currentUser.getUserId(), productId);
 
-        if (!product.getUser().getUserId().equals(currentUser.getUserId())) {
-            throw new ServiceException(ErrorCode.PRODUCT_DELETE_UNAUTHORIZED);
+        try {
+            Product product = findProductById(productId);
+
+            if (!product.getUser().getUserId().equals(currentUser.getUserId())) {
+                log.warn("[Product] [Delete] 실패: 권한 없음 - userId={}, sellerId={}",
+                        currentUser.getUserId(), product.getUser().getUserId());
+                throw new ServiceException(ErrorCode.PRODUCT_DELETE_UNAUTHORIZED);
+            }
+
+            product.softDelete();
+            log.debug("[Product] [Delete] 상품 softDelete() 호출");
+
+            product.getDesign().stopSale();
+            log.debug("[Product] [Delete] design.stopSale() 호출");
+
+            log.info("[Product] [Delete] 상품 삭제(Soft) 성공 - productId={}", productId);
+
+        } catch (Exception e) {
+            log.error("[Product] [Delete] 상품 삭제 실패 - userId={}, productId={}",
+                    currentUser.getUserId(), productId, e);
+            throw e;
         }
-
-        // 소프트 딜리트 처리 (isDeleted = true)
-        product.softDelete();
-
-        // [판매중] 도안을 [판매 중지]로 변경
-        product.getDesign().stopSale();
     }
 
     @Transactional
     public void relistProduct(User currentUser, Long productId) {
-        Product product = findProductById(productId);
+        log.info("[Product] [Relist] 상품 재판매 시작 - userId={}, productId={}",
+                currentUser.getUserId(), productId);
 
-        if (!product.getUser().getUserId().equals(currentUser.getUserId())) {
-            throw new ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED); // 수정 권한 에러 재사용
+        try {
+            Product product = findProductById(productId);
+
+            if (!product.getUser().getUserId().equals(currentUser.getUserId())) {
+                log.warn("[Product] [Relist] 실패: 권한 없음 - userId={}, sellerId={}",
+                        currentUser.getUserId(), product.getUser().getUserId());
+                throw new ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED);
+            }
+
+            product.relist();
+            log.debug("[Product] [Relist] product.relist() 호출");
+            product.getDesign().relist();
+            log.debug("[Product] [Relist] design.relist() 호출");
+
+            log.info("[Product] [Relist] 상품 재판매 성공 - productId={}", productId);
+
+        } catch (Exception e) {
+            log.error("[Product] [Relist] 상품 재판매 실패 - userId={}, productId={}",
+                    currentUser.getUserId(), productId, e);
+            throw e;
         }
-
-        // 3. Product와 Design 상태를 '판매 중'으로 원복
-        product.relist(); // Product의 isDeleted를 false로 변경
-        product.getDesign().relist(); // Design의 designState를 ON_SALE으로 변경
     }
 
     private List<ProductImage> saveProductImages(List<MultipartFile> imageFiles) {
         if (imageFiles == null || imageFiles.isEmpty()) {
+            log.debug("[Product] [ImageSave] 저장할 이미지 파일 없음.");
             return new ArrayList<>();
         }
 
-        List<ProductImage> productImages = new ArrayList<>();
-        for (MultipartFile file : imageFiles) {
-            if (file.isEmpty()) continue;
+        int fileCount = (int) imageFiles.stream().filter(f -> !f.isEmpty()).count();
+        log.debug("[Product] [ImageSave] 이미지 저장 시작 - fileCount={}", fileCount);
 
-            String url = localFileStorage.saveProductImage(file);
+        try {
+            List<ProductImage> productImages = new ArrayList<>();
+            for (MultipartFile file : imageFiles) {
+                if (file.isEmpty()) continue;
 
-            ProductImage productImage = ProductImage.builder()
-                    .productImageUrl(url)
-                    .build();
-            productImages.add(productImage);
+                log.trace("[Product] [ImageSave] 파일 처리 중: {}", file.getOriginalFilename());
+                String url = localFileStorage.saveProductImage(file);
+                log.trace("[Product] [ImageSave] 스토리지 저장 완료 - URL: {}", url);
+
+                ProductImage productImage = ProductImage.builder()
+                        .productImageUrl(url)
+                        .build();
+                productImages.add(productImage);
+            }
+            log.debug("[Product] [ImageSave] 이미지 저장 완료 - savedCount={}", productImages.size());
+            return productImages;
+        } catch (Exception e) {
+            log.error("[Product] [ImageSave] 이미지 저장 실패 - fileCount={}", fileCount, e);
+            throw new ServiceException(ErrorCode.FILE_STORAGE_FAILED); // 예외 전환
         }
-        return productImages;
     }
 
     private Product findProductById(Long productId){
-        return productRepository.findByIdWithUser(productId)
+        return productRepository.findById(productId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
     }
 
@@ -491,6 +571,8 @@ public class ProductService {
     @Transactional(readOnly = true)
     public ProductDetailResponse getProductDetail(User user, Long productId) {
         String cacheKey = CACHE_KEY_PREFIX + productId;
+        Long userId = (user != null) ? user.getUserId() : null;
+        log.info("[Product] [Detail] 상품 상세 조회 시작 - cacheKey={}, userId={}", cacheKey, userId);
 
         try {
             String cachedData = redisTemplate.opsForValue().get(cacheKey);
@@ -502,39 +584,49 @@ public class ProductService {
             log.error("[Service] [Cache] 캐시 읽기 실패 - key={}, error={}", cacheKey, e.getMessage(), e);
         }
 
-        log.info("[Service] [DB] 캐시 미스(Miss) - DB 조회 - key={}", cacheKey);
-        Product product = productRepository.findProductDetailById(productId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
 
         // 판매 중지된 상품은 조회 불가
-        if (product.getIsDeleted()) {
-            throw new ServiceException(ErrorCode.PRODUCT_NOT_FOUND);
-        }
+        try{
+            log.info("[Service] [DB] 캐시 미스(Miss) - DB 조회 - key={}", cacheKey);
+            Product product = productRepository.findByProductIdAndIsDeletedFalse(productId)
+                    .orElseThrow(() -> new ServiceException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        List<String> imageUrls = product.getProductImages().stream()
-                .map(ProductImage::getProductImageUrl)
-                .collect(Collectors.toList());
+            log.debug("[Product] [Detail] [DB] 상품 조회 완료");
 
-        boolean isLiked = false;
-        if (user != null) {
-            Long userId = user.getUserId();
+            if (product.getIsDeleted()) {
+                log.warn("[Product] [Detail] [DB] 실패: 삭제된 상품 - productId={}", productId);
+                throw new ServiceException(ErrorCode.PRODUCT_NOT_FOUND);
+            }
 
-            isLiked = productLikeRepository.existsByUser_UserIdAndProduct_ProductId(userId, productId);
-        }
+            List<String> imageUrls = product.getProductImages().stream()
+                    .map(ProductImage::getProductImageUrl)
+                    .collect(Collectors.toList());
 
-        long reviewCount = reviewRepository.countByProductAndIsDeletedFalse(product);
-        product.setReviewCount((int) reviewCount);
+            boolean isLiked = false;
+            if (user != null) {
+                isLiked = productLikeRepository.existsByUser_UserIdAndProduct_ProductId(userId, productId);
+                log.debug("[Product] [Detail] [DB] '좋아요' 상태 확인 완료 - isLiked={}", isLiked);
+            }
 
-        ProductDetailResponse response = ProductDetailResponse.from(product, imageUrls, isLiked);
+            long reviewCount = reviewRepository.countByProductAndIsDeletedFalse(product);
+            product.setReviewCount((int) reviewCount);
+            log.debug("[Product] [Detail] [DB] 리뷰 개수 카운트 완료 - count={}", reviewCount);
+            ProductDetailResponse response = ProductDetailResponse.from(product, imageUrls, isLiked);
 
-        try {
-            String jsonData = objectMapper.writeValueAsString(response);
-            redisTemplate.opsForValue().set(cacheKey, jsonData, Duration.ofHours(1));
-            log.info("[Service] [Cache] 캐시 쓰기(Write) 완료 - key={}", cacheKey);
+            try {
+                String jsonData = objectMapper.writeValueAsString(response);
+                redisTemplate.opsForValue().set(cacheKey, jsonData, Duration.ofHours(1));
+                log.info("[Service] [Cache] 캐시 쓰기(Write) 완료 - key={}", cacheKey);
+            } catch (Exception e) {
+                log.error("[Service] [Cache] 캐시 쓰기 실패 - key={}, error={}", cacheKey, e.getMessage(), e);
+            }
+
+            log.info("[Product] [Detail] [DB] 상품 상세 조회 완료 - productId={}", productId);
+            return response;
+
         } catch (Exception e) {
-            log.error("[Service] [Cache] 캐시 쓰기 실패 - key={}, error={}", cacheKey, e.getMessage(), e);
+            log.error("[Product] [Detail] 상품 상세 조회 실패 - productId={}", productId, e);
+            throw e;
         }
-
-        return response;
     }
 }

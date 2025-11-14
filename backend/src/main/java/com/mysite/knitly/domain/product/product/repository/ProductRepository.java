@@ -15,9 +15,6 @@ import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    //n+1 문제 해결을 위한 fetch join
-    @Query("SELECT p FROM Product p JOIN FETCH p.user WHERE p.productId = :productId")
-    Optional<Product> findByIdWithUser(Long productId);
 
     // 전체 상품 조회 (삭제되지 않은 것만)
     Page<Product> findByIsDeletedFalse(Pageable pageable);
@@ -35,13 +32,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // productId로 여러 개 조회 (인기순용 - Redis에서 받은 ID로 조회)
     List<Product> findByProductIdInAndIsDeletedFalse(List<Long> productIds);
 
-    // User + Design + ProductImages fetch join으로 상품 상세 조회
-    @Query("SELECT p FROM Product p " +
-            "JOIN FETCH p.user " +
-            "JOIN FETCH p.design " +
-            "LEFT JOIN FETCH p.productImages " + // 이미지가 없을 수도 있으므로 LEFT JOIN
-            "WHERE p.productId = :productId AND p.isDeleted = false")
-    Optional<Product> findProductDetailById(Long productId);
+    Optional<Product> findByProductIdAndIsDeletedFalse(Long productId);
 
     /**
      * userId로 판매 상품 조회 (대표 이미지 포함)
