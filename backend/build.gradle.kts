@@ -2,8 +2,11 @@ import org.gradle.kotlin.dsl.implementation
 
 plugins {
     java
+    kotlin("jvm") version "1.9.25"
+    kotlin("plugin.spring") version "1.9.25"
     id("org.springframework.boot") version "3.5.6"
     id("io.spring.dependency-management") version "1.1.7"
+    kotlin("plugin.jpa") version "1.9.25"
 }
 
 group = "com.mysite"
@@ -35,6 +38,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-amqp")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
     compileOnly("org.projectlombok:lombok")
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
@@ -44,6 +48,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.apache.pdfbox:pdfbox:2.0.29") // PDF 변환 라이브러리
     implementation("commons-codec:commons-codec:1.16.0")
@@ -65,13 +70,18 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.11")
 
     implementation("com.fasterxml.jackson.core:jackson-databind")
-    implementation("me.paulschwarz:spring-dotenv:3.0.0")
 
     implementation ("org.springframework.retry:spring-retry")
     implementation ("org.springframework:spring-aspects")
 
     implementation("me.paulschwarz:spring-dotenv:3.0.0")
 
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xjsr305=strict")
+    }
 }
 
 tasks.withType<Test> {
