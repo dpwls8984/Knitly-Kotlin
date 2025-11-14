@@ -1,5 +1,5 @@
-package com.mysite.knitly.domain.product.review.dto;
+package com.mysite.knitly.domain.product.review.dto
 
-public record ReviewDeleteRequest(
-        Long userId
-) {}
+data class ReviewDeleteRequest(
+    val userId: Long
+)

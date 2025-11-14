@@ -1,25 +1,20 @@
-package com.mysite.knitly.domain.product.review.repository;
+package com.mysite.knitly.domain.product.review.repository
 
-import com.mysite.knitly.domain.product.product.entity.Product;
-import com.mysite.knitly.domain.product.review.entity.Review;
-import jakarta.persistence.Entity;
-import org.springframework.data.domain.Page;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-import org.springframework.data.domain.Pageable;
-
-import java.util.List;
+import com.mysite.knitly.domain.product.product.entity.Product
+import com.mysite.knitly.domain.product.review.entity.Review
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
 
 @Repository
-public interface ReviewRepository extends JpaRepository<Review, Long> {
-    Page<Review> findByProduct_ProductIdAndIsDeletedFalse(Long productId, Pageable pageable);
+interface ReviewRepository : JpaRepository<Review, Long> {
 
-    //마이페이지 리뷰 조회
-    List<Review> findByUser_UserIdAndIsDeletedFalse(Long userId, Pageable pageable);
+    fun findByProduct_ProductIdAndIsDeletedFalse(productId: Long, pageable: Pageable): Page<Review>
 
-    long countByUser_UserIdAndIsDeletedFalse(Long userId);
+    fun findByUser_UserIdAndIsDeletedFalse(userId: Long, pageable: Pageable): List<Review>
 
-    long countByProductAndIsDeletedFalse(Product product);
+    fun countByUser_UserIdAndIsDeletedFalse(userId: Long): Long
 
+    fun countByProductAndIsDeletedFalse(product: Product): Long
 }

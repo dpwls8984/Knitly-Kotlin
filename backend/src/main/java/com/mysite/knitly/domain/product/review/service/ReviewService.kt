@@ -1,155 +1,123 @@
-package com.mysite.knitly.domain.product.review.service;
+package com.mysite.knitly.domain.product.review.service
 
-import com.mysite.knitly.domain.design.util.LocalFileStorage;
-import com.mysite.knitly.domain.order.entity.OrderItem;
-import com.mysite.knitly.domain.order.repository.OrderItemRepository;
-import com.mysite.knitly.domain.product.product.entity.Product;
-import com.mysite.knitly.domain.product.product.repository.ProductRepository;
-import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest;
-import com.mysite.knitly.domain.product.review.dto.ReviewCreateResponse;
-import com.mysite.knitly.domain.product.review.dto.ReviewDeleteRequest;
-import com.mysite.knitly.domain.product.review.dto.ReviewListResponse;
-import com.mysite.knitly.domain.product.review.entity.Review;
-import com.mysite.knitly.domain.product.review.entity.ReviewImage;
-import com.mysite.knitly.domain.product.review.repository.ReviewRepository;
-import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepository;
-import com.mysite.knitly.global.exception.ErrorCode;
-import com.mysite.knitly.global.exception.ServiceException;
-import com.mysite.knitly.global.util.FileNameUtils;
-import com.mysite.knitly.global.util.ImageValidator;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.beans.factory.annotation.Value;
+import com.mysite.knitly.domain.design.util.LocalFileStorage
+import com.mysite.knitly.domain.product.review.dto.ReviewCreateRequest
+import com.mysite.knitly.domain.product.review.dto.ReviewCreateResponse
+import com.mysite.knitly.domain.product.review.dto.ReviewListResponse
+import com.mysite.knitly.domain.product.review.entity.Review
+import com.mysite.knitly.domain.product.review.entity.ReviewImage
+import com.mysite.knitly.domain.product.review.repository.ReviewRepository
+import com.mysite.knitly.domain.order.repository.OrderItemRepository
+import com.mysite.knitly.domain.user.entity.User
+import com.mysite.knitly.global.exception.ErrorCode
+import com.mysite.knitly.global.exception.ServiceException
+import mu.KotlinLogging
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
+import org.springframework.data.repository.findByIdOrNull
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+private val log = KotlinLogging.logger {}
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
-public class ReviewService {
+@Transactional(readOnly = true)
+class ReviewService(
+    private val reviewRepository: ReviewRepository,
+    private val localFileStorage: LocalFileStorage,
+    private val orderItemRepository: OrderItemRepository
+) {
 
-    private final ReviewRepository reviewRepository;
-    private final LocalFileStorage localFileStorage;
-    private final OrderItemRepository orderItemRepository;
+    fun getReviewFormInfo(orderItemId: Long): ReviewCreateResponse {
+        log.info { "[Review] [Form] 리뷰 작성 폼 조회 시작 - orderItemId=$orderItemId" }
 
-    // 리뷰 작성 시 필요한 정보
-    public ReviewCreateResponse getReviewFormInfo(Long orderItemId) {
-        log.info("[Review] [Form] 리뷰 작성 폼 조회 시작 - orderItemId={}", orderItemId);
+        val orderItem = orderItemRepository.findByIdOrNull(orderItemId)
+            ?: throw ServiceException(ErrorCode.ORDER_ITEM_NOT_FOUND)
 
-        OrderItem orderItem = orderItemRepository.findById(orderItemId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.ORDER_ITEM_NOT_FOUND)); // (ErrorCode 추가 필요)
+        val product = orderItem.product
 
-        Product product = orderItem.getProduct();
+        val thumbnailUrl = product.productImages.firstOrNull()?.productImageUrl
 
-        String thumbnailUrl = null;
-        if (product.getProductImages() != null && !product.getProductImages().isEmpty()) {
-            thumbnailUrl = product.getProductImages().get(0).getProductImageUrl();
-        }
+        log.debug { "[Review] [Form] 썸네일 URL 추출 완료 - thumbnailUrl=$thumbnailUrl" }
+        log.info { "[Review] [Form] 리뷰 작성 폼 조회 완료 - productTitle=${product.title}" }
 
-        log.debug("[Review] [Form] 썸네일 URL 추출 완료 - thumbnailUrl={}", thumbnailUrl);
-        log.info("[Review] [Form] 리뷰 작성 폼 조회 완료 - productTitle={}", product.getTitle());
-
-        return new ReviewCreateResponse(product.getTitle(), thumbnailUrl);
+        return ReviewCreateResponse(product.title, thumbnailUrl)
     }
 
     // 1. 리뷰 등록
     @Transactional
-    public void createReview(Long orderItemId, User user, ReviewCreateRequest request) {
-        log.info("[Review] [Create] 리뷰 생성 시작 - orderItemId={}, userId={}", orderItemId, user.getUserId());
+    fun createReview(orderItemId: Long, user: User, request: ReviewCreateRequest) {
+        log.info { "[Review] [Create] 리뷰 생성 시작 - orderItemId=$orderItemId, userId=${user.userId}" }
 
-        OrderItem orderItem = orderItemRepository.findById(orderItemId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.ORDER_ITEM_NOT_FOUND));
+        val orderItem = orderItemRepository.findByIdOrNull(orderItemId)
+            ?: throw ServiceException(ErrorCode.ORDER_ITEM_NOT_FOUND)
 
-        Product product = orderItem.getProduct();
+        val product = orderItem.product
 
-        Review review = Review.builder()
-                .user(user)
-                .product(product)
-                .orderItem(orderItem)
-                .rating(request.rating())
-                .content(request.content())
-                .build();
+        val review = Review(
+            user = user,
+            product = product,
+            orderItem = orderItem,
+            rating = request.rating!!,
+            content = request.content!!
+        )
 
-        List<ReviewImage> reviewImages = new ArrayList<>();
+        val reviewImages = request.reviewImageUrls
+            .filter { !it.isEmpty } // 빈 파일 필터링
+            .mapIndexed { index, file ->
+                val url = localFileStorage.saveReviewImage(file)
+                log.debug { "[Review] [Create] 이미지 저장 완료 - index=$index, url=$url" }
 
-        if (request.reviewImageUrls() != null && !request.reviewImageUrls().isEmpty()) {
-            log.debug("[Review] [Create] 첨부 이미지 처리 시작 - count={}", request.reviewImageUrls().size());
-
-            List<MultipartFile> imageFiles = request.reviewImageUrls();
-
-            for (int i = 0; i < imageFiles.size(); i++) {
-                MultipartFile file = imageFiles.get(i);
-                if (file.isEmpty()) continue;
-
-                String url = localFileStorage.saveReviewImage(file);
-                log.debug("[Review] [Create] 이미지 저장 완료 - index={}, url={}", i, url);
-
-                ReviewImage reviewImage = ReviewImage.builder()
-                        .review(review)
-                        .reviewImageUrl(url)
-                        .sortOrder(i)
-                        .build();
-                reviewImages.add(reviewImage);
+                ReviewImage(
+                    reviewImageUrl = url,
+                    sortOrder = index
+                )
             }
+
+        review.updateReviewImages(reviewImages)
+        reviewRepository.save(review)
+
+        log.info {
+            "[Review] [Create] 리뷰 생성 완료 - reviewId=${review.reviewId}, productId=${product.productId}"
         }
-
-        review.addReviewImages(reviewImages);
-        reviewRepository.save(review);
-        log.info("[Review] [Create] 리뷰 생성 완료 - reviewId={}, productId={}", review.getReviewId(), product.getProductId());
     }
-
 
     // 2. 리뷰 소프트 삭제 (본인 리뷰만)
     @Transactional
-    public void deleteReview(Long reviewId, User user) {
-        log.info("[Review] [Delete] 리뷰 삭제 요청 - reviewId={}, userId={}", reviewId, user.getUserId());
+    fun deleteReview(reviewId: Long, user: User) {
+        log.info { "[Review] [Delete] 리뷰 삭제 요청 - reviewId=$reviewId, userId=${user.userId}" }
 
-        Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.REVIEW_NOT_FOUND));
+        val review = reviewRepository.findByIdOrNull(reviewId)
+            ?: throw ServiceException(ErrorCode.REVIEW_NOT_FOUND)
 
-        if (!review.getUser().getUserId().equals(user.getUserId())) {
-            log.warn("[Review] [Delete] 삭제 권한 없음 - reviewUserId={}, requesterId={}",
-                    review.getUser().getUserId(), user.getUserId());
-            throw new ServiceException(ErrorCode.REVIEW_NOT_AUTHORIZED);
+        if (review.user.userId != user.userId) {
+            log.warn {
+                "[Review] [Delete] 삭제 권한 없음 - reviewUserId=${review.user.userId}, requesterId=${user.userId}"
+            }
+            throw ServiceException(ErrorCode.REVIEW_NOT_AUTHORIZED)
         }
 
-        review.setIsDeleted(true);
-        log.info("[Review] [Delete] 리뷰 소프트 삭제 완료 - reviewId={}", reviewId);
+        review.softDelete()
+        log.info { "[Review] [Delete] 리뷰 소프트 삭제 완료 - reviewId=$reviewId" }
     }
 
-    // 3️. 특정 상품 리뷰 목록 조회
-    @Transactional(readOnly = true)
-    public Page<ReviewListResponse> getReviewsByProduct(Long productId, int page, int size) {
-        log.info("[Review] [List] 상품 리뷰 목록 조회 시작 - productId={}, page={}", productId, page);
+    fun getReviewsByProduct(productId: Long, page: Int, size: Int): Page<ReviewListResponse> {
+        log.info { "[Review] [List] 상품 리뷰 목록 조회 시작 - productId=$productId, page=$page" }
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Review> reviews = reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId, pageable);
+        val pageable: Pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
 
-        Page<ReviewListResponse> result = reviews.map(review -> {
-            List<String> imageUrls = review.getReviewImages().stream()
-                    .map(ReviewImage::getReviewImageUrl)
-                    .toList();
-            return ReviewListResponse.from(review, imageUrls);
-        });
+        val reviews: Page<Review> = reviewRepository.findByProduct_ProductIdAndIsDeletedFalse(productId, pageable)
 
-        log.debug("[Review] [List] 조회된 리뷰 수 - count={}", result.getTotalElements());
-        log.info("[Review] [List] 상품 리뷰 목록 조회 완료 - productId={}", productId);
+        val result = reviews.map { review ->
+            val imageUrls = review.reviewImages.mapNotNull { it.reviewImageUrl }
+            ReviewListResponse.from(review, imageUrls)
+        }
 
-        return result;
+        log.debug { "[Review] [List] 조회된 리뷰 수 - count=${result.totalElements}" }
+        log.info { "[Review] [List] 상품 리뷰 목록 조회 완료 - productId=$productId" }
+
+        return result
     }
 }

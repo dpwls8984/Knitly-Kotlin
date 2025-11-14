@@ -1,6 +1,6 @@
-package com.mysite.knitly.domain.product.review.dto;
+package com.mysite.knitly.domain.product.review.dto
 
-public record ReviewCreateResponse(
-        String productTitle,
-        String productThumbnailUrl
-) {}
+data class ReviewCreateResponse(
+    val productTitle: String,
+    val productThumbnailUrl: String?
+) 

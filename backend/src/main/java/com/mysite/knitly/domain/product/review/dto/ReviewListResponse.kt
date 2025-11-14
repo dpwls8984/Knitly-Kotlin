@@ -1,26 +1,31 @@
-package com.mysite.knitly.domain.product.review.dto;
+package com.mysite.knitly.domain.product.review.dto
 
-import com.mysite.knitly.domain.product.review.entity.Review;
+import com.mysite.knitly.domain.product.review.entity.Review
+import java.time.LocalDateTime
 
-import java.time.LocalDateTime;
-import java.util.List;
+data class ReviewListResponse(
+    val reviewId: Long,
 
-public record ReviewListResponse(
-        Long reviewId,
-        Integer rating,
-        String content,
-        LocalDateTime createdAt,
-        String userName,
-        List<String> reviewImageUrls
+    val rating: Int,
+
+    val content: String,
+
+    val createdAt: LocalDateTime,
+
+    val userName: String,
+
+    val reviewImageUrls: List<String> = emptyList()
 ) {
-    public static ReviewListResponse from(Review review, List<String> imageUrls) {
-        return new ReviewListResponse(
-                review.getReviewId(),
-                review.getRating(),
-                review.getContent(),
-                review.getCreatedAt(),
-                review.getUser().getName(),
-                imageUrls
-        );
+    companion object {
+        fun from(review: Review, imageUrls: List<String>): ReviewListResponse {
+            return ReviewListResponse(
+                reviewId = review.reviewId,
+                rating = review.rating,
+                content = review.content,
+                createdAt = review.createdAt,
+                userName = review.user.name,
+                reviewImageUrls = imageUrls
+            )
+        }
     }
 }
