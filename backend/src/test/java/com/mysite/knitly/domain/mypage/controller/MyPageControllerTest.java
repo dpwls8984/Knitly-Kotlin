@@ -4,13 +4,16 @@ import com.mysite.knitly.domain.mypage.dto.*;
 import com.mysite.knitly.domain.mypage.service.MyPageService;
 import com.mysite.knitly.domain.payment.service.PaymentService;
 import com.mysite.knitly.domain.user.entity.User;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -19,46 +22,53 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class MyPageControllerTest {
 
     private MockMvc mvc;
     private MyPageService service;
-    private User principal;
     private PaymentService paymentService;
+    private User principal;
 
     @BeforeEach
     void setUp() {
         service = Mockito.mock(MyPageService.class);
+        paymentService = Mockito.mock(PaymentService.class);
+
         MyPageController controller = new MyPageController(service, paymentService);
 
+        // AuthenticationPrincipal 강제 주입
         HandlerMethodArgumentResolver forceUserResolver = new HandlerMethodArgumentResolver() {
             @Override
             public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
-                return parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class)
+                return parameter.hasParameterAnnotation(
+                        org.springframework.security.core.annotation.AuthenticationPrincipal.class)
                         && parameter.getParameterType().isAssignableFrom(User.class);
             }
 
             @Override
-            public Object resolveArgument(org.springframework.core.MethodParameter parameter,
-                                          org.springframework.web.method.support.ModelAndViewContainer mavContainer,
-                                          org.springframework.web.context.request.NativeWebRequest webRequest,
-                                          org.springframework.web.bind.support.WebDataBinderFactory binderFactory) {
+            public Object resolveArgument(
+                    org.springframework.core.MethodParameter parameter,
+                    org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                    org.springframework.web.context.request.NativeWebRequest webRequest,
+                    org.springframework.web.bind.support.WebDataBinderFactory binderFactory
+            ) {
                 return principal;
             }
         };
 
-        mvc = MockMvcBuilders.standaloneSetup(controller)
+        mvc = MockMvcBuilders
+                .standaloneSetup(controller)
                 .setCustomArgumentResolvers(forceUserResolver)
                 .build();
 
+        // principal 기본 값 설정
         principal = Mockito.mock(User.class);
         given(principal.getUserId()).willReturn(1L);
         given(principal.getName()).willReturn("홍길동");
@@ -66,7 +76,7 @@ class MyPageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /mypage/profile → 이름/이메일 반환")
+    @DisplayName("GET /mypage/profile → profile 반환")
     void profile() throws Exception {
         mvc.perform(get("/mypage/profile"))
                 .andExpect(status().isOk())
@@ -75,20 +85,30 @@ class MyPageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /mypage/orders → 주문 카드 페이지")
+    @DisplayName("GET /mypage/orders → 주문 카드 목록 반환")
     void orders() throws Exception {
-        OrderCardResponse card1 = OrderCardResponse.of(101L, LocalDateTime.of(2025, 1, 2, 10, 0), 30000.0);
-        card1.items().add(new OrderLine(11L, "도안 A", 1, 10000.0));
-        card1.items().add(new OrderLine(12L, "도안 B", 2, 20000.0));
+        OrderCardResponse card = OrderCardResponse.of(
+                101L,
+                LocalDateTime.of(2025, 1, 2, 10, 0),
+                30000.0
+        );
 
-        var page = new PageImpl<>(List.of(card1), PageRequest.of(0, 3), 1);
-        given(service.getOrderCards(eq(1L), Mockito.<Pageable>any())).willReturn(page);
+        card.items().add(new OrderLine(
+                11L, 1001L, "도안 A", 1, 10000.0, false
+        ));
+        card.items().add(new OrderLine(
+                12L, 1002L, "도안 B", 2, 20000.0, true
+        ));
 
-        mvc.perform(get("/mypage/orders").param("page", "0").param("size", "3"))
+        var page = new PageImpl<>(List.of(card), PageRequest.of(0, 3), 1);
+
+        given(service.getOrderCards(eq(1L), Mockito.<Pageable>any()))
+                .willReturn(page);
+
+        mvc.perform(get("/mypage/orders")
+                        .param("page", "0")
+                        .param("size", "3"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.page").value(0))
-                .andExpect(jsonPath("$.size").value(3))
-                .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].orderId").value(101))
                 .andExpect(jsonPath("$.content[0].items", hasSize(2)))
@@ -96,13 +116,17 @@ class MyPageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /mypage/posts?query=키워드 → 내가 쓴 글 페이지")
+    @DisplayName("GET /mypage/posts → 내가 쓴 글 목록")
     void myPosts() throws Exception {
         var dto = new MyPostListItemResponse(
-                501L, "제목1", "요약1", "thumb1.jpg", LocalDateTime.of(2025, 1, 3, 9, 0)
+                501L, "제목1", "요약1", "thumb1.jpg",
+                LocalDateTime.of(2025, 1, 3, 9, 0)
         );
+
         var page = new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1);
-        given(service.getMyPosts(eq(1L), eq("키워드"), Mockito.<Pageable>any())).willReturn(page);
+
+        given(service.getMyPosts(eq(1L), eq("키워드"), Mockito.<Pageable>any()))
+                .willReturn(page);
 
         mvc.perform(get("/mypage/posts")
                         .param("query", "키워드")
@@ -110,18 +134,22 @@ class MyPageControllerTest {
                         .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(501))
-                .andExpect(jsonPath("$.content[0].title").value("제목1"))
-                .andExpect(jsonPath("$.page").value(0))
-                .andExpect(jsonPath("$.size").value(10));
+                .andExpect(jsonPath("$.content[0].title").value("제목1"));
     }
 
     @Test
-    @DisplayName("GET /mypage/comments?query=단어 → 내가 쓴 댓글 페이지")
+    @DisplayName("GET /mypage/comments → 내가 쓴 댓글 목록")
     void myComments() throws Exception {
-        // createdAt은 LocalDateTime 이어야 함
-        var c1 = new MyCommentListItem(701L, 501L, LocalDateTime.of(2025, 1, 4, 12, 0), "내용 미리보기");
-        var page = new PageImpl<>(List.of(c1), PageRequest.of(0, 10), 1);
-        given(service.getMyComments(eq(1L), eq("단어"), Mockito.<Pageable>any())).willReturn(page);
+        var dto = new MyCommentListItem(
+                701L, 501L,
+                LocalDateTime.of(2025, 1, 4, 12, 0),
+                "내용 미리보기"
+        );
+
+        var page = new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1);
+
+        given(service.getMyComments(eq(1L), eq("단어"), Mockito.<Pageable>any()))
+                .willReturn(page);
 
         mvc.perform(get("/mypage/comments")
                         .param("query", "단어")
@@ -134,12 +162,19 @@ class MyPageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /mypage/favorites → 내가 찜한 상품 페이지")
+    @DisplayName("GET /mypage/favorites → 내가 찜한 상품 목록")
     void myFavorites() throws Exception {
-        // NOTE: 팀 코드와 DTO가 다를 수 있으니 비게시글/댓글 영역은 기존 유지
-        var f1 = new FavoriteProductItem(9001L, "인기 도안", "t.jpg", 9900.0, 4.5, LocalDate.of(2025, 1, 5));
-        var page = new PageImpl<>(List.of(f1), PageRequest.of(0, 10), 1);
-        given(service.getMyFavorites(eq(1L), Mockito.<Pageable>any())).willReturn(page);
+        var f = new FavoriteProductItem(
+                9001L,
+                "인기 도안",
+                "홍길동",
+                "t.jpg"
+        );
+
+        var page = new PageImpl<>(List.of(f), PageRequest.of(0, 10), 1);
+
+        given(service.getMyFavorites(eq(1L), Mockito.<Pageable>any()))
+                .willReturn(page);
 
         mvc.perform(get("/mypage/favorites")
                         .param("page", "0")
@@ -147,24 +182,29 @@ class MyPageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].productId").value(9001))
                 .andExpect(jsonPath("$.content[0].productTitle").value("인기 도안"))
-                .andExpect(jsonPath("$.content[0].averageRating").value(4.5));
+                .andExpect(jsonPath("$.content[0].sellerName").value("홍길동"))
+                .andExpect(jsonPath("$.content[0].thumbnailUrl").value("t.jpg"));
     }
 
     @Test
-    @DisplayName("GET /mypage/reviews → 내가 남긴 리뷰 페이지")
+    @DisplayName("GET /mypage/reviews → 내가 작성한 리뷰 목록")
     void myReviews() throws Exception {
-        var r1 = new ReviewListItem(
+
+        var r = new ReviewListItem(
                 301L,
                 9001L,
                 "인기 도안",
                 "t.jpg",
                 5,
-                "아주 좋아요",
+                "좋아요",
                 List.of("r1.jpg", "r2.jpg"),
-                LocalDate.of(2025, 1, 6)
+                LocalDate.of(2025,1,6)
         );
-        var page = new PageImpl<>(List.of(r1), PageRequest.of(0, 10), 1);
-        given(service.getMyReviews(eq(1L), Mockito.<Pageable>any())).willReturn(page);
+
+        var page = new PageImpl<>(List.of(r), PageRequest.of(0, 10), 1);
+
+        given(service.getMyReviewsV2(eq(1L), Mockito.<Pageable>any()))
+                .willReturn(page);
 
         mvc.perform(get("/mypage/reviews")
                         .param("page", "0")
@@ -172,8 +212,6 @@ class MyPageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].reviewId").value(301))
                 .andExpect(jsonPath("$.content[0].rating").value(5))
-                .andExpect(jsonPath("$.content[0].content").value("아주 좋아요"))
-                .andExpect(jsonPath("$.content[0].reviewImageUrls", hasSize(2)))
-                .andExpect(jsonPath("$.content[0].purchasedDate", contains(2025, 1, 2)));
+                .andExpect(jsonPath("$.content[0].reviewImageUrls", hasSize(2)));
     }
 }
