@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ProductListResponse, PageResponse } from '@/types/product.types';
-import { getProductList, toggleProductLike, ProductListParams } from '@/lib/api/product.api';
+import { getProductList, ProductListParams } from '@/lib/api/product.api';
+import { addLike, removeFavorite } from '@/lib/api/like.api';
 import ProductCard from './ProductCard';
 
 interface ProductListProps {
@@ -108,23 +109,48 @@ export default function ProductList({ title, category, filter, basePath }: Produ
 
   // 찜 토글
   const handleLikeToggle = async (productId: number) => {
-    try {
-      await toggleProductLike(productId);
-      
-      // 성공 시 로컬 상태 업데이트 (찜 개수 증가/감소)
-      setProducts(prev => prev.map(product => 
-        product.productId === productId 
-          ? { 
-              ...product, 
-              likeCount: product.likeCount + 1 // 백엔드에서 실제 찜 상태를 반환하지 않으므로 단순히 증가
-            }
-          : product
-      ));
-    } catch (error) {
-      console.error('찜 토글 실패:', error);
-      // 에러 처리 (예: 토스트 메시지 표시)
-    }
-  };
+    // 🔥 [수정] 전체 로직 변경
+
+    // 1. 현재 상태 찾기
+    const product = products.find(p => p.productId === productId);
+    if (!product) return;
+
+    const currentIsLiked = product.isLikedByUser;
+
+    // 2. 낙관적 업데이트 (UI 먼저 변경)
+    setProducts(prev => prev.map(p => 
+      p.productId === productId 
+        ? { 
+            ...p, 
+            // 찜 상태와 카운트를 모두 토글
+            isLikedByUser: !currentIsLiked, 
+            likeCount: currentIsLiked ? p.likeCount - 1 : p.likeCount + 1
+          }
+        : p
+    ));
+
+    try {
+      // 3. 상태에 따라 다른 API 호출
+      if (currentIsLiked) {
+        await removeFavorite(productId); // 찜 취소
+      } else {
+        await addLike(productId); // 찜 등록
+      }
+    } catch (error) {
+      console.error('찜 토글 실패:', error);
+      // 4. 실패 시 롤백
+      setProducts(prev => prev.map(p => 
+        p.productId === productId 
+          ? { 
+              ...p, 
+              // 원래 상태로 되돌리기
+              isLikedByUser: currentIsLiked, 
+              likeCount: product.likeCount // 원래 카운트로
+            }
+          : p
+      ));
+    }
+  };
 
   // 정렬 옵션
   const sortOptions = [

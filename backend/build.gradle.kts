@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.implementation
+
 plugins {
     java
     id("org.springframework.boot") version "3.5.6"
@@ -47,6 +49,9 @@ dependencies {
     implementation("commons-codec:commons-codec:1.16.0")
     implementation("org.springframework.boot:spring-boot-starter-mail")   // Spring Email
 
+    // 날짜,시간 모듈 LocalDateTime
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+
     // JWT 라이브러리 (필수)
     implementation("io.jsonwebtoken:jjwt-api:0.12.5")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.5")
@@ -60,6 +65,11 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.11")
 
     implementation("com.fasterxml.jackson.core:jackson-databind")
+    implementation("me.paulschwarz:spring-dotenv:3.0.0")
+
+    implementation ("org.springframework.retry:spring-retry")
+    implementation ("org.springframework:spring-aspects")
+
     implementation("me.paulschwarz:spring-dotenv:3.0.0")
 
 }

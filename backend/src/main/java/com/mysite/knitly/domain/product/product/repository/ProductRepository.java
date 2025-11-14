@@ -19,15 +19,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // 전체 상품 조회 (삭제되지 않은 것만)
     Page<Product> findByIsDeletedFalse(Pageable pageable);
 
-    // 카테고리별 조회
-    Page<Product> findByProductCategoryAndIsDeletedFalse(
-            ProductCategory category, Pageable pageable);
-
-    // 무료 상품 조회 (price = 0)
-    Page<Product> findByPriceAndIsDeletedFalse(Double price, Pageable pageable);
-
-    // 한정판매 조회 (stockQuantity != null)
-    Page<Product> findByStockQuantityIsNotNullAndIsDeletedFalse(Pageable pageable);
+//    // 카테고리별 조회
+//    Page<Product> findByProductCategoryAndIsDeletedFalse(
+//            ProductCategory category, Pageable pageable);
+//
+//    // 무료 상품 조회 (price = 0)
+//    Page<Product> findByPriceAndIsDeletedFalse(Double price, Pageable pageable);
+//
+//    // 한정판매 조회 (stockQuantity != null)
+//    Page<Product> findByStockQuantityIsNotNullAndIsDeletedFalse(Pageable pageable);
 
     // productId로 여러 개 조회 (인기순용 - Redis에서 받은 ID로 조회)
     List<Product> findByProductIdInAndIsDeletedFalse(List<Long> productIds);

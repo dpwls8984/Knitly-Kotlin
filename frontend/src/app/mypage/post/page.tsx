@@ -1,12 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { getMyPosts, deletePost } from '@/lib/api/mypage.api';
 import { MyPostListItemResponse } from '@/types/mypage.types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const ASSET_ORIGIN = process.env.NEXT_PUBLIC_ASSET_ORIGIN || '';
+
+const categoryLabel = (c?: string) => {
+  if (!c) return '';
+  switch (c) {
+    case 'FREE': return '자유';
+    case 'QUESTION': return '질문';
+    case 'TIP': return '팁';
+    default: return c;
+  }
+};
 
 export default function MyPostPage() {
   const router = useRouter();
@@ -25,7 +35,6 @@ export default function MyPostPage() {
 
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
 
-  // 비로그인 상태 체크
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       alert('로그인이 필요합니다.');
@@ -33,7 +42,6 @@ export default function MyPostPage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  // 글 목록 조회
   const fetchPosts = async (page: number = 0, query?: string) => {
     if (!user || !isAuthenticated) return;
 
@@ -61,7 +69,6 @@ export default function MyPostPage() {
     }
   }, [user, isAuthenticated, authLoading, searchQuery]);
 
-  // 검색
   const handleSearch = () => {
     setSearchQuery(searchInput);
     setCurrentPage(0);
@@ -73,20 +80,15 @@ export default function MyPostPage() {
     }
   };
 
-  // 체크박스 토글
   const handleCheckboxToggle = (postId: number) => {
     setSelectedPosts(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(postId)) {
-        newSet.delete(postId);
-      } else {
-        newSet.add(postId);
-      }
+      if (newSet.has(postId)) newSet.delete(postId);
+      else newSet.add(postId);
       return newSet;
     });
   };
 
-  // 전체 선택/해제
   const handleSelectAll = () => {
     if (selectedPosts.size === posts.length) {
       setSelectedPosts(new Set());
@@ -95,23 +97,15 @@ export default function MyPostPage() {
     }
   };
 
-  // 선택 항목 삭제
   const handleBatchDelete = async () => {
     if (selectedPosts.size === 0) {
       alert('삭제할 글을 선택해주세요.');
       return;
     }
-
-    if (!confirm(`선택한 ${selectedPosts.size}개의 글을 삭제하시겠습니까?`)) {
-      return;
-    }
+    if (!confirm(`선택한 ${selectedPosts.size}개의 글을 삭제하시겠습니까?`)) return;
 
     try {
-      // 선택된 글들을 순차적으로 삭제
-      await Promise.all(
-        Array.from(selectedPosts).map(id => deletePost(id))
-      );
-
+      await Promise.all(Array.from(selectedPosts).map(id => deletePost(id)));
       alert('선택한 글이 삭제되었습니다.');
       setSelectedPosts(new Set());
       fetchPosts(currentPage, searchQuery);
@@ -121,14 +115,18 @@ export default function MyPostPage() {
     }
   };
 
-  // 페이지네이션
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     fetchPosts(page, searchQuery);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 로딩 중
+  const goDetail = (postId: number) => {
+    router.push(`/community/posts/${postId}`);
+  };
+
+  const stop = (e: MouseEvent) => e.stopPropagation();
+
   if (authLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -139,20 +137,15 @@ export default function MyPostPage() {
     );
   }
 
-  // 비로그인 상태
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="bg-white rounded-lg shadow-sm">
-        {/* 헤더 */}
         <div className="bg-gray-100 py-8 px-6 text-center rounded-t-lg">
           <h1 className="text-3xl font-bold text-gray-900">내가 작성한 글 조회</h1>
         </div>
 
-        {/* 검색 바 */}
         <div className="p-6 bg-gray-50 border-b">
           <div className="flex gap-2 max-w-2xl mx-auto">
             <input
@@ -172,14 +165,12 @@ export default function MyPostPage() {
           </div>
         </div>
 
-        {/* 에러 메시지 */}
         {error && (
           <div className="m-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
             {error}
           </div>
         )}
 
-        {/* 글 목록 */}
         <div className="p-6">
           {isLoading && posts.length === 0 ? (
             <div className="flex justify-center items-center py-12">
@@ -191,9 +182,8 @@ export default function MyPostPage() {
             </div>
           ) : (
             <>
-              {/* 전체 선택 및 일괄 삭제 */}
               <div className="flex justify-between items-center mb-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer" onClick={stop}>
                   <input
                     type="checkbox"
                     checked={selectedPosts.size === posts.length && posts.length > 0}
@@ -215,53 +205,61 @@ export default function MyPostPage() {
                 </button>
               </div>
 
-              {/* 글 아이템 */}
               <div className="space-y-3">
-                {posts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    {/* 체크박스 */}
-                    <input
-                      type="checkbox"
-                      checked={selectedPosts.has(post.id)}
-                      onChange={() => handleCheckboxToggle(post.id)}
-                      className="mt-1 w-5 h-5 text-[#925C4C] border-gray-300 rounded focus:ring-[#925C4C]"
-                    />
+                {posts.map((post) => {
+                  const label = categoryLabel((post as any).category);
+                  const summary =
+                    (post as any).excerpt ??
+                    (post as any).content ??
+                    '';
+                  const thumb = (post as any).thumbnailUrl;
 
-                    {/* 글 정보 */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-sm font-medium text-gray-500">자유</span>
+                  return (
+                    <div
+                      key={post.id}
+                      className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                      onClick={() => goDetail(post.id)}
+                      role="button"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedPosts.has(post.id)}
+                        onChange={() => handleCheckboxToggle(post.id)}
+                        onClick={stop}
+                        className="mt-1 w-5 h-5 text-[#925C4C] border-gray-300 rounded focus:ring-[#925C4C]"
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          {label && <span className="text-sm font-medium text-gray-500">{label}</span>}
+                        </div>
+                        <h3 className="font-semibold text-lg text-gray-900 mb-2">{post.title}</h3>
+                        <div className="mb-3">
+                          <p className="text-gray-600">{summary}</p>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          작성시간: {new Date(post.createdAt).toLocaleDateString('ko-KR')}
+                        </div>
                       </div>
-                      <h3 className="font-semibold text-lg text-gray-900 mb-2">{post.title}</h3>
-                      <div className="mb-3">
-                        <p className="text-gray-600">{post.content || '내용없음'}</p>
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        작성시간: {new Date(post.createdAt).toLocaleDateString('ko-KR')}
-                      </div>
+
+                      {thumb && (
+                        <div className="flex-shrink-0 w-24 h-24 bg-gray-200 rounded-lg overflow-hidden">
+                          <img
+                            src={`${ASSET_ORIGIN}${thumb.startsWith('/') ? '' : '/'}${thumb}`}
+                            alt="썸네일"
+                            className="w-full h-full object-cover"
+                            onClick={stop}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://placehold.co/200x200/CCCCCC/FFFFFF?text=No+Image';
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
-
-                    {/* 이미지 */}
-                    {post.thumbnailUrl && (
-                      <div className="flex-shrink-0 w-24 h-24 bg-gray-200 rounded-lg overflow-hidden">
-                        <img
-                          src={`${API_URL}${post.thumbnailUrl}`}
-                          alt="썸네일"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://placehold.co/200x200/CCCCCC/FFFFFF?text=No+Image';
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              {/* 페이지네이션 */}
               {totalPages > 1 && (
                 <div className="mt-8 flex justify-center items-center gap-2">
                   {Array.from({ length: totalPages }, (_, i) => (

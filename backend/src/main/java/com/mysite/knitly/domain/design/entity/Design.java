@@ -38,6 +38,10 @@ public class Design {
     @Column(nullable = false)
     private DesignState designState;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private DesignType designType;
+
     @Column(nullable = false, length = 30)
     private String designName;
 

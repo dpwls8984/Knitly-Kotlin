@@ -4,6 +4,10 @@ import com.mysite.knitly.domain.order.entity.Order;
 import com.mysite.knitly.domain.order.entity.OrderItem;
 import com.mysite.knitly.domain.order.event.OrderCreatedEvent;
 import com.mysite.knitly.domain.order.repository.OrderRepository;
+import com.mysite.knitly.domain.payment.entity.Payment;
+import com.mysite.knitly.domain.payment.entity.PaymentMethod;
+import com.mysite.knitly.domain.payment.entity.PaymentStatus;
+import com.mysite.knitly.domain.payment.repository.PaymentRepository;
 import com.mysite.knitly.domain.product.product.entity.Product;
 import com.mysite.knitly.domain.product.product.repository.ProductRepository;
 import com.mysite.knitly.domain.user.entity.User;
@@ -25,6 +29,7 @@ public class OrderService {
 
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // Facade에서만 호출될 핵심 비즈니스 로직
@@ -60,8 +65,21 @@ public class OrderService {
             Order order = Order.create(user, orderItems);
             log.debug("[Order] [Service] Order 엔티티 생성 완료");
 
+            // 4. Order 저장 (OrderItem은 CascadeType.ALL에 의해 함께 저장됨)
             Order savedOrder = orderRepository.save(order);
             log.debug("[Order] [Service] DB 주문 저장 완료");
+
+            //5. Payment를 READY 상태로 생성 - Order 생성 이후에 실행되어야 함
+            Payment readyPayment = Payment.builder()
+                    .tossOrderId(savedOrder.getTossOrderId())
+                    .order(savedOrder)
+                    .buyer(user)
+                    .totalAmount(savedOrder.getTotalPrice().longValue())
+                    .paymentMethod(PaymentMethod.CARD)  // 초기값 (나중에 실제 결제 수단으로 업데이트됨)
+                    .paymentStatus(PaymentStatus.READY)  // READY 상태
+                    .build();
+
+            paymentRepository.save(readyPayment);
 
             eventPublisher.publishEvent(new OrderCreatedEvent(products));
             log.debug("[Order] [Service] OrderCreatedEvent 발행 완료");

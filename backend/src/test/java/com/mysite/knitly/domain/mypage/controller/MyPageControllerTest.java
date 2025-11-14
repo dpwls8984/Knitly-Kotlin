@@ -15,7 +15,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -67,7 +66,7 @@ class MyPageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/mypage/profile → 이름/이메일 반환")
+    @DisplayName("GET /mypage/profile → 이름/이메일 반환")
     void profile() throws Exception {
         mvc.perform(get("/mypage/profile"))
                 .andExpect(status().isOk())
@@ -76,7 +75,7 @@ class MyPageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/mypage/orders → 주문 카드 페이지")
+    @DisplayName("GET /mypage/orders → 주문 카드 페이지")
     void orders() throws Exception {
         OrderCardResponse card1 = OrderCardResponse.of(101L, LocalDateTime.of(2025, 1, 2, 10, 0), 30000.0);
         card1.items().add(new OrderLine(11L, "도안 A", 1, 10000.0));
@@ -97,7 +96,7 @@ class MyPageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/mypage/posts?query=키워드 → 내가 쓴 글 페이지")
+    @DisplayName("GET /mypage/posts?query=키워드 → 내가 쓴 글 페이지")
     void myPosts() throws Exception {
         var dto = new MyPostListItemResponse(
                 501L, "제목1", "요약1", "thumb1.jpg", LocalDateTime.of(2025, 1, 3, 9, 0)
@@ -117,9 +116,10 @@ class MyPageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/mypage/comments?query=단어 → 내가 쓴 댓글 페이지")
+    @DisplayName("GET /mypage/comments?query=단어 → 내가 쓴 댓글 페이지")
     void myComments() throws Exception {
-        var c1 = new MyCommentListItem(701L, 501L, LocalDate.of(2025, 1, 4), "내용 미리보기");
+        // createdAt은 LocalDateTime 이어야 함
+        var c1 = new MyCommentListItem(701L, 501L, LocalDateTime.of(2025, 1, 4, 12, 0), "내용 미리보기");
         var page = new PageImpl<>(List.of(c1), PageRequest.of(0, 10), 1);
         given(service.getMyComments(eq(1L), eq("단어"), Mockito.<Pageable>any())).willReturn(page);
 
@@ -134,8 +134,9 @@ class MyPageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/mypage/favorites → 내가 찜한 상품 페이지")
+    @DisplayName("GET /mypage/favorites → 내가 찜한 상품 페이지")
     void myFavorites() throws Exception {
+        // NOTE: 팀 코드와 DTO가 다를 수 있으니 비게시글/댓글 영역은 기존 유지
         var f1 = new FavoriteProductItem(9001L, "인기 도안", "t.jpg", 9900.0, 4.5, LocalDate.of(2025, 1, 5));
         var page = new PageImpl<>(List.of(f1), PageRequest.of(0, 10), 1);
         given(service.getMyFavorites(eq(1L), Mockito.<Pageable>any())).willReturn(page);
@@ -150,7 +151,7 @@ class MyPageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/mypage/reviews → 내가 남긴 리뷰 페이지")
+    @DisplayName("GET /mypage/reviews → 내가 남긴 리뷰 페이지")
     void myReviews() throws Exception {
         var r1 = new ReviewListItem(
                 301L,
@@ -177,4 +178,3 @@ class MyPageControllerTest {
                 .andExpect(jsonPath("$.content[0].purchasedDate", contains(2025, 1, 2)));
     }
 }
-

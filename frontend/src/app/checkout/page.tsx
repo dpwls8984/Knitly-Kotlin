@@ -7,7 +7,7 @@ import { useAuthStore } from '@/lib/store/authStore';
 
 // 환경 변수
 const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = 'http://localhost:8080';
 
 // 장바구니에서 전달받는 아이템 타입
 interface CheckoutItem {

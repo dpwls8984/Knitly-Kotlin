@@ -66,11 +66,12 @@ public enum ErrorCode {
 
     REVIEW_NOT_FOUND("5001", HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_NOT_AUTHORIZED("5002", HttpStatus.FORBIDDEN, "리뷰 삭제 권한이 없습니다."),
+    REVIEW_IMAGE_SIZE_EXCEEDED("5003", HttpStatus.BAD_REQUEST, "개별 파일 용량은 3MB를 초과할 수 없습니다."),
 
     // Design 6000
     DESIGN_NOT_FOUND("2001", HttpStatus.NOT_FOUND, "도안을 찾을 수 없습니다."),
-    DESIGN_DELETION_NOT_ALLOWED("2002", HttpStatus.BAD_REQUEST, "판매 전 상태의 도안만 삭제할 수 있습니다."),
-    DESIGN_UNAUTHORIZED("2003", HttpStatus.FORBIDDEN, "본인의 도안만 접근할 수 있습니다."),
+    DESIGN_FILE_NOT_FOUND("2002", HttpStatus.NOT_FOUND, "도안 파일을 찾을 수 없습니다."),
+    DESIGN_UNAUTHORIZED_ACCESS("2003", HttpStatus.FORBIDDEN, "본인의 도안만 접근할 수 있습니다."),
     DESIGN_INVALID_GRID_SIZE("2004", HttpStatus.BAD_REQUEST, "도안은 10x10 크기여야 합니다."),
     DESIGN_PDF_GENERATION_FAILED("2005", HttpStatus.INTERNAL_SERVER_ERROR, "PDF 생성에 실패했습니다."),
     DESIGN_FILE_SAVE_FAILED("2006", HttpStatus.INTERNAL_SERVER_ERROR, "PDF 파일 저장에 실패했습니다."),   // Image 7000
@@ -79,12 +80,9 @@ public enum ErrorCode {
     DESIGN_FILE_EMPTY("2009", HttpStatus.BAD_REQUEST, "업로드할 파일이 없습니다."),
     DESIGN_FILE_INVALID_TYPE("2010", HttpStatus.BAD_REQUEST, "PDF 파일만 업로드 가능합니다."),
     DESIGN_FILE_SIZE_EXCEEDED("2011", HttpStatus.BAD_REQUEST, "파일 크기는 10MB를 초과할 수 없습니다."),
-    DESIGN_FILE_NAME_INVALID("2012", HttpStatus.BAD_REQUEST, "파일명이 유효하지 않습니다."),
-    DESIGN_NOT_ON_SALE("2013", HttpStatus.BAD_REQUEST, "판매중이 아닌 도안입니다."),
-    DESIGN_ALREADY_ON_SALE("2014", HttpStatus.BAD_REQUEST, "이미 판매중인 도안입니다."),
-    DESIGN_NOT_STOPPED("2015", HttpStatus.BAD_REQUEST, "이미 판매중지된 도안입니다."),
-    DESIGN_UNAUTHORIZED_ACCESS("2016", HttpStatus.FORBIDDEN, "본인의 도안만 접근할 수 있습니다."),
-    DESIGN_FILE_NOT_FOUND("2017", HttpStatus.NOT_FOUND, "도안 파일을 찾을 수 없습니다."),
+    DESIGN_NOT_ON_SALE("2012", HttpStatus.BAD_REQUEST, "판매중이 아닌 도안입니다."),
+    DESIGN_ALREADY_ON_SALE("2013", HttpStatus.BAD_REQUEST, "이미 판매중인 도안입니다."),
+    DESIGN_NOT_STOPPED("2014", HttpStatus.BAD_REQUEST, "이미 판매중지된 도안입니다."),
 
     // Event 6000
 
@@ -108,6 +106,10 @@ public enum ErrorCode {
     PAYMENT_CANCEL_API_FAILED("8007", HttpStatus.INTERNAL_SERVER_ERROR, "결제 취소 API 호출에 실패했습니다."),
     PAYMENT_CANCEL_FAILED("8008", HttpStatus.INTERNAL_SERVER_ERROR, "결제 취소에 실패했습니다."),
     PAYMENT_UNAUTHORIZED_ACCESS("8009", HttpStatus.FORBIDDEN, "결제 정보에 접근할 권한이 없습니다."),
+    PAYMENT_TIMEOUT("8010", HttpStatus.REQUEST_TIMEOUT, "결제 처리 시간이 초과되었습니다."),
+    PAYMENT_WEBHOOK_PROCESSING_FAILED("8011", HttpStatus.INTERNAL_SERVER_ERROR, "웹훅 처리 중 오류가 발생했습니다."),
+    INVALID_PAYMENT_STATUS("8012", HttpStatus.BAD_REQUEST, "유효하지 않은 결제 상태입니다."),
+
     // System 9000
 
     LOCK_ACQUISITION_FAILED("9001", HttpStatus.INTERNAL_SERVER_ERROR, "락 획득에 실패했습니다. 잠시 후 다시 시도해주세요.");
