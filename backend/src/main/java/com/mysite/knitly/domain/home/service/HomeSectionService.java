@@ -1,5 +1,7 @@
 package com.mysite.knitly.domain.home.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mysite.knitly.domain.home.dto.HomeSummaryResponse;
 import com.mysite.knitly.domain.home.dto.LatestPostItem;
 import com.mysite.knitly.domain.home.dto.LatestReviewItem;
@@ -15,8 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,12 +34,39 @@ public class HomeSectionService {
     private final HomeQueryRepository homeQueryRepository;
     private final ProductLikeRepository productLikeRepository;
 
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
+
+    private static final String HOME_POPULAR_TOP5_CACHE_KEY = "home:popular:top5";
+
     // 인기 Top5 조회 - 홈 화면용
     public List<ProductListResponse> getPopularTop5(User user) {
         long startTime = System.currentTimeMillis();
         Long userId = user != null ? user.getUserId() : null;
 
         log.info("[Home] [Top5] 인기 Top5 조회 시작 - userId={}", userId);
+
+        boolean cacheable = (userId == null);
+
+        if (cacheable) {
+            try {
+                String cachedJson = stringRedisTemplate.opsForValue()
+                        .get(HOME_POPULAR_TOP5_CACHE_KEY);
+
+                if (cachedJson != null) {
+                    List<ProductListResponse> cachedResult =
+                            objectMapper.readValue(cachedJson, new TypeReference<>() {});
+
+                    long duration = System.currentTimeMillis() - startTime;
+                    log.info("[Home] [Top5] 캐시 히트 - key={}, resultCount={}, duration={}ms",
+                            HOME_POPULAR_TOP5_CACHE_KEY, cachedResult.size(), duration);
+
+                    return cachedResult;
+                }
+            } catch (Exception e) {
+                log.error("[Home] [Top5] 캐시 조회 실패 - key={}", HOME_POPULAR_TOP5_CACHE_KEY, e);
+            }
+        }
 
         try {
             long redisStartTime = System.currentTimeMillis();
@@ -94,6 +125,19 @@ public class HomeSectionService {
             long totalDuration = System.currentTimeMillis() - startTime;
             log.info("[Home] [Top5] 인기 Top5 조회 완료 - userId={}, resultCount={}, totalDuration={}ms",
                     userId, result.size(), totalDuration);
+
+            if (cacheable) {
+                try {
+                    String jsonData = objectMapper.writeValueAsString(result);
+                    stringRedisTemplate.opsForValue()
+                            .set(HOME_POPULAR_TOP5_CACHE_KEY, jsonData, Duration.ofSeconds(60));
+
+                    log.info("[Home] [Top5] 캐시 쓰기 완료 - key={}, ttl={}s",
+                            HOME_POPULAR_TOP5_CACHE_KEY, 60);
+                } catch (Exception e) {
+                    log.error("[Home] [Top5] 캐시 쓰기 실패 - key={}", HOME_POPULAR_TOP5_CACHE_KEY, e);
+                }
+            }
 
             return result;
 

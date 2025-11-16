@@ -42,6 +42,7 @@ public class ProductService {
     private final ObjectMapper objectMapper;
 
     private static final String CACHE_KEY_PREFIX = "product:detail:";
+    private static final String POPULAR_LIST_CACHE_PREFIX = "product:list:popular:";
 
     @Transactional
     public ProductRegisterResponse registerProduct(User seller, Long designId, ProductRegisterRequest request) {
@@ -295,6 +296,33 @@ public class ProductService {
             ProductCategory effectiveCategory =
                     (effectiveFilter == ProductFilterType.ALL) ? category : null;
 
+            // 캐시 대상 여부 (비로그인 + 인기순만 캐시)
+            boolean cacheable = (user == null) && (sortType == ProductSortType.POPULAR);
+
+            String popularCacheKey = null;
+            if (cacheable) {
+                popularCacheKey = buildPopularListCacheKey(effectiveCategory, effectiveFilter, pageable);
+
+                try {
+                    String cachedJson = redisTemplate.opsForValue().get(popularCacheKey);
+                    if (cachedJson != null) {
+                        ProductListPageCache cached =
+                                objectMapper.readValue(cachedJson, ProductListPageCache.class);
+
+                        log.info("[Product] [List] [Popular] 캐시 히트 - key={}", popularCacheKey);
+
+                        return new PageImpl<>(
+                                cached.getContent(),
+                                pageable,
+                                cached.getTotalElements()
+                        );
+                    }
+                } catch (Exception e) {
+                    log.error("[Product] [List] [Popular] 캐시 읽기 실패 - key={}, error={}",
+                            popularCacheKey, e.getMessage(), e);
+                }
+            }
+
             Page<Product> productPage;
             long dbStartTime = System.currentTimeMillis();
 
@@ -322,12 +350,31 @@ public class ProductService {
                     likedProductIds.size(), likeDuration);
 
             // DTO 변환
-            Page response = productPage.map(product ->
+            Page<ProductListResponse> response = productPage.map(product ->
                     ProductListResponse.from(
                             product,
                             likedProductIds.contains(product.getProductId())
                     )
             );
+
+            // 캐시 쓰기
+            if (cacheable && popularCacheKey != null) {
+                try {
+                    ProductListPageCache cache = new ProductListPageCache(
+                            response.getContent(),
+                            response.getTotalElements()
+                    );
+                    String jsonData = objectMapper.writeValueAsString(cache);
+                    redisTemplate
+                            .opsForValue()
+                            .set(popularCacheKey, jsonData, Duration.ofSeconds(60)); // 60초 캐시 유지
+
+                    log.info("[Product] [List] [Popular] 캐시 쓰기 완료 - key={}", popularCacheKey);
+                } catch (Exception e) {
+                    log.error("[Product] [List] [Popular] 캐시 쓰기 실패 - key={}, error={}",
+                            popularCacheKey, e.getMessage(), e);
+                }
+            }
 
             long totalDuration = System.currentTimeMillis() - startTime;
             log.info("[Product] [List] 상품 목록 조회 완료 - userId={}, totalCount={}, returnedCount={}, totalDuration={}ms",
@@ -403,31 +450,32 @@ public class ProductService {
                 log.debug("[Product] [Popular] DB 상품 정보 조회 완료 - requestedCount={}, foundCount={}, dbDuration={}ms",
                         topIds.size(), unordered.size(), dbDuration);
 
-                // Redis의 순서대로 정렬
-                Map<Long, Product> productMap = unordered.stream()
-                        .collect(Collectors.toMap(Product::getProductId, p -> p));
+                long sortFilterStartTime = System.currentTimeMillis();
 
-                products = topIds.stream()
-                        .map(productMap::get)
-                        .filter(Objects::nonNull)
-                        .toList();
+                Map<Long, Product> productMap = new HashMap<>(unordered.size());
+                for (Product product : unordered) {
+                    productMap.put(product.getProductId(), product);
+                }
 
-                log.debug("[Product] [Popular] Redis 순서 정렬 완료 - finalCount={}", products.size());
+                // 정렬 + 필터링을 한 번에 처리
+                products = new ArrayList<>(topIds.size());
+                int filteredCount = 0;
+
+                for (Long id : topIds) {
+                    Product product = productMap.get(id);
+                    if (product != null && matchesCondition(product, category, filterType)) {
+                        products.add(product);
+                        filteredCount++;
+                    }
+                }
+
+                long sortFilterDuration = System.currentTimeMillis() - sortFilterStartTime;
+
+                log.debug("[Product] [Popular] 정렬+필터링 완료 - beforeCount={}, afterCount={}, duration={}ms",
+                        topIds.size(), filteredCount, sortFilterDuration);
             }
 
-            // 필터링 적용
-            long filterStartTime = System.currentTimeMillis();
-            int beforeFilterCount = products.size();
-            products = products.stream()
-                    .filter(p -> matchesCondition(p, category, filterType))
-                    .toList();
-            long filterDuration = System.currentTimeMillis() - filterStartTime;
-
-            log.debug("[Product] [Popular] 필터링 완료 - beforeCount={}, afterCount={}, filterDuration={}ms",
-                    beforeFilterCount, products.size(), filterDuration);
-
-
-            Page result = convertToPage(products, pageable);
+            Page<Product> result = convertToPage(products, pageable);
 
             long totalDuration = System.currentTimeMillis() - startTime;
             log.info("[Product] [Popular] 인기순 조회 완료 - totalCount={}, pageSize={}, totalDuration={}ms",
@@ -629,4 +677,20 @@ public class ProductService {
             throw e;
         }
     }
+
+    private String buildPopularListCacheKey(
+            ProductCategory category,
+            ProductFilterType filterType,
+            Pageable pageable
+    ) {
+        String categoryPart = (category != null) ? category.name() : "ALL";
+        String filterPart = (filterType != null) ? filterType.name() : "ALL";
+
+        return POPULAR_LIST_CACHE_PREFIX +
+                "category=" + categoryPart +
+                ":filter=" + filterPart +
+                ":page=" + pageable.getPageNumber() +
+                ":size=" + pageable.getPageSize();
+    }
+
 }

@@ -339,8 +339,6 @@ public class PaymentService {
         return PaymentDetailResponse.from(payment);
     }
 
-    // ========== Private Methods ==========
-
     /**
      * 주문의 모든 상품에 대해 Redis 인기도, purchaseCount 증가
      */
@@ -374,6 +372,8 @@ public class PaymentService {
                             productId, quantity, e);
                 }
             }
+            // 인기순 목록 캐시 삭제
+            redisProductService.evictPopularListCache();
 
             long duration = System.currentTimeMillis() - startTime;
 

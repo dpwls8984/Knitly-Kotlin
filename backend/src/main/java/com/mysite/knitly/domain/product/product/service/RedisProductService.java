@@ -19,6 +19,8 @@ public class RedisProductService {
 
     private final StringRedisTemplate redisTemplate;
     private static final String POPULAR_KEY = "product:popular";
+    private static final String POPULAR_LIST_CACHE_PREFIX = "product:list:popular:";
+    private static final String HOME_POPULAR_TOP5_CACHE_KEY = "home:popular:top5";
 
 
     // 상품 구매시 인기도 증가
@@ -103,4 +105,30 @@ public class RedisProductService {
                     products.size(), duration, e);
         }
     }
+
+    // 인기순 목록 캐시 삭제
+    public void evictPopularListCache() {
+        long startTime = System.currentTimeMillis();
+        try {
+            Set<String> keys = redisTemplate.keys(POPULAR_LIST_CACHE_PREFIX + "*");
+            int deletedCount = 0;
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+                deletedCount += keys.size();
+            }
+
+            Boolean homeDeleted = redisTemplate.delete(HOME_POPULAR_TOP5_CACHE_KEY);
+            if (Boolean.TRUE.equals(homeDeleted)) {
+                deletedCount++;
+            }
+
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("[Redis] [Product] [Cache] 인기순 관련 캐시 삭제 - deletedKeys={}, duration={}ms",
+                    deletedCount, duration);
+
+        } catch (Exception e) {
+            log.error("[Redis] [Product] [Cache] 인기순 캐시 삭제 실패", e);
+        }
+    }
+
 }
