@@ -2,10 +2,10 @@ package com.mysite.knitly.domain.community.post.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mysite.knitly.domain.community.config.CurrentUserResolver;
+import com.mysite.knitly.domain.community.post.dto.PostResponse;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.service.CommunityImageStorage;
 import com.mysite.knitly.domain.community.post.service.PostService;
-import com.mysite.knitly.domain.community.post.dto.PostResponse;
 import com.mysite.knitly.domain.user.entity.Provider;
 import com.mysite.knitly.domain.user.entity.User;
 import com.mysite.knitly.domain.user.repository.UserRepository;
@@ -26,10 +26,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -41,9 +43,12 @@ class PostControllerValidationTest {
     @Autowired ObjectMapper objectMapper;
     @Autowired UserRepository userRepository;
 
-    @MockBean PostService postService;
-    @MockBean CommunityImageStorage imageStorage;
-    @MockBean CurrentUserResolver currentUserResolver;
+    @MockBean
+    PostService postService;
+    @MockBean
+    CommunityImageStorage imageStorage;
+    @MockBean
+    CurrentUserResolver currentUserResolver;
 
     private User author;
     private Long authorId;
