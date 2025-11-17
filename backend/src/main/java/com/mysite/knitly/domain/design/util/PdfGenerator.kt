@@ -1,174 +1,187 @@
-package com.mysite.knitly.domain.design.util;
+package com.mysite.knitly.domain.design.util
 
-import com.mysite.knitly.global.exception.ErrorCode;
-import com.mysite.knitly.global.exception.ServiceException;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDDocumentInformation;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.PDType0Font;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Component;
+import com.mysite.knitly.global.exception.ErrorCode
+import com.mysite.knitly.global.exception.ServiceException
+import lombok.extern.slf4j.Slf4j
+import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.pdmodel.PDDocumentInformation
+import org.apache.pdfbox.pdmodel.PDPage
+import org.apache.pdfbox.pdmodel.PDPageContentStream
+import org.apache.pdfbox.pdmodel.common.PDRectangle
+import org.apache.pdfbox.pdmodel.font.PDType0Font
+import org.slf4j.LoggerFactory
+import org.springframework.core.io.ClassPathResource
+import org.springframework.stereotype.Component
+import java.awt.Color
+import java.io.ByteArrayOutputStream
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.*
+import kotlin.math.min
 
-import java.awt.*;
-import java.io.InputStream;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.io.ByteArrayOutputStream;
-import java.util.List;
-
-@Slf4j
 @Component
-public class PdfGenerator {
-    private static final int GRID_SIZE = 10;
-    private static final float MARGIN = 36f;    // A4 기준 상하좌우 여백 - 0.5 inch
-    private static final float TITLE_SIZE = 18f; // 도안명 - 18pt
-    private static final float SYMBOL_SIZE = 14f; // 격자 셀 안 기호 크기 - 14pt (11pt에서 증가)
+class PdfGenerator {
+    private val log = LoggerFactory.getLogger(PdfGenerator::class.java)
 
-    public byte[] generate(String designName, List<List<String>> gridData){
-        try (PDDocument doc = new PDDocument()) {
-            // 문서 메타
-            PDDocumentInformation info = doc.getDocumentInformation();
-            info.setTitle(designName);
-            info.setAuthor("Knitly");
+    companion object {
+        private const val GRID_SIZE = 10
+        private const val MARGIN = 36f    // A4 기준 상하좌우 여백 - 0.5 inch
+        private const val TITLE_SIZE = 18f // 도안명 - 18pt
+        private const val SYMBOL_SIZE = 14f // 격자 셀 안 기호 크기 - 14pt
+    }
 
-            // 페이지 & 폰트
-            PDPage page = new PDPage(PDRectangle.A4);
-            doc.addPage(page);
-
-            PDType0Font font = loadFont(doc); // 한글 폰트 임베딩
-
-            // 좌표/영역 계산
-            PDRectangle box = page.getMediaBox();
-            float pageWidth = box.getWidth();
-            float pageHeight = box.getHeight();
-
-            float contentLeft = MARGIN;
-            float contentRight = pageWidth - MARGIN;
-            float contentTop = pageHeight - MARGIN;
-            float contentBottom = MARGIN;
-
-            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
-
-                // 제목
-                float titleY = contentTop - 4;
-                drawTextCentered(cs, font, TITLE_SIZE, designName, pageWidth / 2, titleY);
-
-                // 그리드 영역 크기 결정 (가로 폭 기준으로 셀 크기 산정)
-                float availableWidth = contentRight - contentLeft;
-                float cellSize = Math.min(36f, availableWidth / GRID_SIZE); // 기본 36pt, 필요 시 자동 축소
-                float gridWidth = cellSize * GRID_SIZE;
-                float gridHeight = cellSize * GRID_SIZE;
-
-                // 그리드 위치(가로 중앙)
-                float gridLeft = (pageWidth - gridWidth) / 2;
-                float gridTop = titleY - 24f; // 제목과의 간격
-
-                // 격자 라인
-                cs.setStrokingColor(Color.DARK_GRAY);
-                cs.setLineWidth(0.8f);
-                // 가로줄
-                for (int r = 0; r <= GRID_SIZE; r++) {
-                    float y = gridTop - r * cellSize;
-                    cs.moveTo(gridLeft, y);
-                    cs.lineTo(gridLeft + gridWidth, y);
+    fun generate(designName: String, gridData: List<List<String>>): ByteArray {
+        return try {
+            PDDocument().use { doc ->
+                // 문서 메타
+                val info = PDDocumentInformation().apply {
+                    title = designName
+                    author = "Knitly"
                 }
-                // 세로줄
-                for (int c = 0; c <= GRID_SIZE; c++) {
-                    float x = gridLeft + c * cellSize;
-                    cs.moveTo(x, gridTop);
-                    cs.lineTo(x, gridTop - gridHeight);
-                }
-                cs.stroke();
+                doc.documentInformation = info
 
-                // 셀 기호 출력 (중앙정렬)
-                cs.setNonStrokingColor(Color.BLACK);
-                for (int r = 0; r < GRID_SIZE; r++) {
-                    for (int c = 0; c < GRID_SIZE; c++) {
-                        String symbolType = gridData.get(r).get(c);
-                        if (symbolType != null && !symbolType.isBlank()) {
-                            float cx = gridLeft + c * cellSize + cellSize / 2;
-                            float cy = gridTop - r * cellSize - cellSize / 2 + 3f; // 살짝 위 보정
+                // 페이지 & 폰트
+                val page = PDPage(PDRectangle.A4)
+                doc.addPage(page)
 
-                            // 기호 타입에 따라 다른 심볼 출력
-                            String displaySymbol = convertSymbolToDisplay(symbolType);
-                            drawTextCentered(cs, font, SYMBOL_SIZE, displaySymbol, cx, cy);
+                val font = loadFont(doc) // 한글 폰트 임베딩
+
+                // 좌표/영역 계산
+                val box = page.mediaBox
+                val pageWidth = box.width
+                val pageHeight = box.height
+
+                val contentLeft = MARGIN
+                val contentRight = pageWidth - MARGIN
+                val contentTop = pageHeight - MARGIN
+                val contentBottom = MARGIN
+
+                PDPageContentStream(doc, page).use { cs ->
+                    // 제목
+                    val titleY = contentTop - 4
+                    drawTextCentered(cs, font, TITLE_SIZE, designName, pageWidth / 2, titleY)
+
+                    // 그리드 영역 크기 결정 (가로 폭 기준으로 셀 크기 산정)
+                    val availableWidth = contentRight - contentLeft
+                    val cellSize = minOf(36f, availableWidth / GRID_SIZE) // 기본 36pt, 필요 시 자동 축소
+                    val gridWidth = cellSize * GRID_SIZE
+                    val gridHeight = cellSize * GRID_SIZE
+
+                    // 그리드 위치(가로 중앙)
+                    val gridLeft = (pageWidth - gridWidth) / 2
+                    val gridTop = titleY - 24f // 제목과의 간격
+
+                    // 격자 라인
+                    cs.setStrokingColor(Color.DARK_GRAY)
+                    cs.setLineWidth(0.8f)
+                    // 가로줄
+                    for (r in 0..GRID_SIZE) {
+                        val y = gridTop - r * cellSize
+                        cs.moveTo(gridLeft, y)
+                        cs.lineTo(gridLeft + gridWidth, y)
+                    }
+                    // 세로줄
+                    for (c in 0..GRID_SIZE) {
+                        val x = gridLeft + c * cellSize
+                        cs.moveTo(x, gridTop)
+                        cs.lineTo(x, gridTop - gridHeight)
+                    }
+                    cs.stroke()
+
+                    // 셀 기호 출력 (중앙정렬)
+                    cs.setNonStrokingColor(Color.BLACK)
+                    for (r in 0 until GRID_SIZE) {
+                        for (c in 0 until GRID_SIZE) {
+                            val symbolType = gridData[r][c]
+                            if (symbolType.isNotBlank()) {
+                                val cx = gridLeft + c * cellSize + cellSize / 2
+                                val cy = gridTop - r * cellSize - cellSize / 2 + 3f // 살짝 위 보정
+
+                                // 기호 타입에 따라 다른 심볼 출력
+                                val displaySymbol = convertSymbolToDisplay(symbolType)
+                                drawTextCentered(cs, font, SYMBOL_SIZE, displaySymbol, cx, cy)
+                            }
                         }
                     }
+
+                    // 생성일 푸터
+                    val ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                    drawTextRight(cs, font, 9f, "생성일: $ts", contentRight, contentBottom)
                 }
 
-                // 생성일 푸터
-                String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-                drawTextRight(cs, font, 9f, "생성일: " + ts, contentRight, contentBottom);
+                val bos = ByteArrayOutputStream()
+                doc.save(bos)
+                val pdf = bos.toByteArray()
+                log.info("[Design] PDF 생성 완료: name='{}', size={} bytes", designName, pdf.size)
+                pdf
             }
-
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            doc.save(bos);
-            byte[] pdf = bos.toByteArray();
-            log.info("PDF 생성 완료: name='{}', size={} bytes", designName, pdf.length);
-            return pdf;
-
-        } catch (Exception e) {
-            log.error("PDF 생성 실패 - name={}", designName, e);
-            throw new ServiceException(ErrorCode.DESIGN_PDF_GENERATION_FAILED);
+        } catch (e: Exception) {
+            log.error("[Design] PDF 생성 실패 - name={}", designName, e)
+            throw ServiceException(ErrorCode.DESIGN_PDF_GENERATION_FAILED)
         }
     }
 
     /**
      * 프론트엔드에서 받은 기호 타입을 PDF에 표시할 실제 문자로 변환
      */
-    private String convertSymbolToDisplay(String symbolType) {
-        if (symbolType == null) return "";
-
-        switch (symbolType.toLowerCase()) {
-            case "empty":
-                return "○";  // 빈 원 (U+25CB)
-            case "filled":
-                return "●";  // 채워진 원 (U+25CF)
-            case "x":
-                return "×";  // 곱하기 기호 (U+00D7)
-            case "v":
-                return "V";  // V
-            case "t":
-                return "T";  // T
-            case "plus":
-                return "+";  // +
-            case "a":
-                return "A";  // A
-            default:
-                return symbolType;  // 알 수 없는 경우 그대로 출력
+    private fun convertSymbolToDisplay(symbolType: String?): String {
+        return when (symbolType?.lowercase()) {
+            "empty" -> "○"  // 빈 원 (U+25CB)
+            "filled" -> "●"  // 채워진 원 (U+25CF)
+            "x" -> "×"  // 곱하기 기호 (U+00D7)
+            "v" -> "V"  // V
+            "t" -> "T"  // T
+            "plus" -> "+"  // +
+            "a" -> "A"  // A
+            else -> symbolType ?: ""  // 알 수 없는 경우 그대로 출력
         }
     }
 
-    private PDType0Font loadFont(PDDocument doc) throws Exception {
-        ClassPathResource res = new ClassPathResource("fonts/NanumGothic-Regular.ttf");
-        try (InputStream in = res.getInputStream()) {
-            return PDType0Font.load(doc, in, true); // true: 폰트 임베딩
+    private fun loadFont(doc: PDDocument): PDType0Font {
+        val res = ClassPathResource("fonts/NanumGothic-Regular.ttf")
+        return res.inputStream.use { inputStream ->
+            PDType0Font.load(doc, inputStream, true) // true: 폰트 임베딩
         }
     }
 
-    private void drawTextCentered(PDPageContentStream cs, PDType0Font font, float size,
-                                  String text, float centerX, float centerY) throws Exception {
-        float textWidth = font.getStringWidth(text) / 1000 * size;
-        float x = centerX - textWidth / 2;
-        drawText(cs, font, size, text, x, centerY);
+    private fun drawTextCentered(
+        cs: PDPageContentStream,
+        font: PDType0Font,
+        size: Float,
+        text: String,
+        centerX: Float,
+        centerY: Float
+    ) {
+        val textWidth = font.getStringWidth(text) / 1000 * size
+        val x = centerX - textWidth / 2
+        drawText(cs, font, size, text, x, centerY)
     }
 
-    private void drawTextRight(PDPageContentStream cs, PDType0Font font, float size,
-                               String text, float rightX, float y) throws Exception {
-        float textWidth = font.getStringWidth(text) / 1000 * size;
-        float x = rightX - textWidth;
-        drawText(cs, font, size, text, x, y);
+    private fun drawTextRight(
+        cs: PDPageContentStream,
+        font: PDType0Font,
+        size: Float,
+        text: String,
+        rightX: Float,
+        y: Float
+    ) {
+        val textWidth = font.getStringWidth(text) / 1000 * size
+        val x = rightX - textWidth
+        drawText(cs, font, size, text, x, y)
     }
 
-    private void drawText(PDPageContentStream cs, PDType0Font font, float size,
-                          String text, float x, float y) throws Exception {
-        cs.beginText();
-        cs.setFont(font, size);
-        cs.newLineAtOffset(x, y);
-        cs.showText(text);
-        cs.endText();
+    private fun drawText(
+        cs: PDPageContentStream,
+        font: PDType0Font,
+        size: Float,
+        text: String,
+        x: Float,
+        y: Float
+    ) {
+        cs.beginText()
+        cs.setFont(font, size)
+        cs.newLineAtOffset(x, y)
+        cs.showText(text)
+        cs.endText()
     }
 }
