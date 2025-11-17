@@ -16,10 +16,10 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/products")
-class ProductListController(
+class ProductListController (
     private val productService: ProductService
 ) {
-
+    // 상품 목록 조회
     @GetMapping
     fun getProducts(
         @AuthenticationPrincipal user: User?,
@@ -32,6 +32,7 @@ class ProductListController(
         return ResponseEntity.ok(response)
     }
 
+    // TODO : 예진 - 상품 상세 조회
     @GetMapping("/{productId}")
     fun getProductDetail(
         @AuthenticationPrincipal user: User?,

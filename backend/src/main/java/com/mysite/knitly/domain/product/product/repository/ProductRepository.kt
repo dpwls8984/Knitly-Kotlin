@@ -1,38 +1,25 @@
-package com.mysite.knitly.domain.product.product.repository;
+package com.mysite.knitly.domain.product.product.repository
 
-import com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto;
-import com.mysite.knitly.domain.product.product.entity.Product;
-import com.mysite.knitly.domain.product.product.entity.ProductCategory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Optional;
+import com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto
+import com.mysite.knitly.domain.product.product.entity.Product
+import com.mysite.knitly.domain.product.product.entity.ProductCategory
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
+import org.springframework.stereotype.Repository
+import java.util.*
 
 @Repository
-public interface ProductRepository extends JpaRepository<Product, Long> {
-
+interface ProductRepository : JpaRepository<Product, Long> {
     // 전체 상품 조회 (삭제되지 않은 것만)
-    Page<Product> findByIsDeletedFalse(Pageable pageable);
-
-//    // 카테고리별 조회
-//    Page<Product> findByProductCategoryAndIsDeletedFalse(
-//            ProductCategory category, Pageable pageable);
-//
-//    // 무료 상품 조회 (price = 0)
-//    Page<Product> findByPriceAndIsDeletedFalse(Double price, Pageable pageable);
-//
-//    // 한정판매 조회 (stockQuantity != null)
-//    Page<Product> findByStockQuantityIsNotNullAndIsDeletedFalse(Pageable pageable);
+    fun findByIsDeletedFalse(pageable: Pageable): Page<Product>
 
     // productId로 여러 개 조회 (인기순용 - Redis에서 받은 ID로 조회)
-    List<Product> findByProductIdInAndIsDeletedFalse(List<Long> productIds);
+    fun findByProductIdInAndIsDeletedFalse(productIds: List<Long>): List<Product>
 
-    Optional<Product> findByProductIdAndIsDeletedFalse(Long productId);
+    fun findByProductIdAndIsDeletedFalse(productId: Long): Product?
 
     /**
      * userId로 판매 상품 조회 (대표 이미지 포함)
@@ -40,82 +27,80 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * sortOrder = 1인 대표 이미지만 LEFT JOIN
      * DTO 프로젝션으로 한 번의 쿼리로 조회
      */
-    @Query(value = """
-        SELECT new com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto(
-            p.productId,
-            p.title,
-            p.productCategory,
-            p.price,
-            p.purchaseCount,
-            p.likeCount,
-            p.stockQuantity,
-            p.avgReviewRating,
-            p.createdAt,
-            pi.productImageUrl,
-            p.user.userId
-        )
-        FROM Product p
-        LEFT JOIN ProductImage pi ON pi.product.productId = p.productId 
-            AND pi.sortOrder = 1
-        WHERE p.user.userId = :userId
-        AND p.isDeleted = false
-        ORDER BY p.createdAt DESC
+    @Query(
+        value = """
+            SELECT new com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto(
+                p.productId,
+                p.title,
+                p.productCategory,
+                p.price,
+                p.purchaseCount,
+                p.likeCount,
+                p.stockQuantity,
+                p.avgReviewRating,
+                p.createdAt,
+                pi.productImageUrl,
+                p.user.userId
+            )
+            FROM Product p
+            LEFT JOIN ProductImage pi ON pi.product.productId = p.productId 
+                AND pi.sortOrder = 1
+            WHERE p.user.userId = :userId
+            AND p.isDeleted = false
+            ORDER BY p.createdAt DESC
         """,
-            countQuery = """
-        SELECT COUNT(DISTINCT p.productId)
-        FROM Product p
-        WHERE p.user.userId = :userId
-        AND p.isDeleted = false
-        """)
-    Page<ProductWithThumbnailDto> findByUserIdWithThumbnail(@Param("userId") Long userId, Pageable pageable);
-
-
-    /**
-     * 전체 상품 조회 (이미지 포함, N+1 방지)
-     */
-    @Query("SELECT DISTINCT p FROM Product p " +
-            "LEFT JOIN FETCH p.productImages " +
-            "WHERE p.isDeleted = false")
-    Page<Product> findAllWithImagesAndNotDeleted(Pageable pageable);
+        countQuery = """
+            SELECT COUNT(DISTINCT p.productId)
+            FROM Product p
+            WHERE p.user.userId = :userId
+            AND p.isDeleted = false
+        """
+    )
+    fun findByUserIdWithThumbnail(
+        @Param("userId") userId: Long,
+        pageable: Pageable
+    ): Page<ProductWithThumbnailDto>
 
     /**
-     * 카테고리별 조회 (이미지 포함, N+1 방지)
+     * 전체 상품 조회 (batch size로 N+1 방지)
+     * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
      */
-    @Query("SELECT DISTINCT p FROM Product p " +
-            "LEFT JOIN FETCH p.productImages " +
-            "WHERE p.productCategory = :category AND p.isDeleted = false")
-    Page<Product> findByCategoryWithImagesAndNotDeleted(
-            @Param("category") ProductCategory category,
-            Pageable pageable
-    );
+    @Query("SELECT p FROM Product p WHERE p.isDeleted = false")
+    fun findAllWithImagesAndNotDeleted(pageable: Pageable): Page<Product>
 
     /**
-     * 무료 상품 조회 (이미지 포함, N+1 방지)
+     * 카테고리별 조회 (batch size로 N+1 방지)
+     * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
      */
-    @Query("SELECT DISTINCT p FROM Product p " +
-            "LEFT JOIN FETCH p.productImages " +
-            "WHERE p.price = :price AND p.isDeleted = false")
-    Page<Product> findByPriceWithImagesAndNotDeleted(
-            @Param("price") Double price,
-            Pageable pageable
-    );
+    @Query("SELECT p FROM Product p WHERE p.productCategory = :category AND p.isDeleted = false")
+    fun findByCategoryWithImagesAndNotDeleted(
+        @Param("category") category: ProductCategory,
+        pageable: Pageable
+    ): Page<Product>
 
     /**
-     * 한정판매 조회 (이미지 포함, N+1 방지)
+     * 무료 상품 조회 (batch size로 N+1 방지)
+     * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
      */
-    @Query("SELECT DISTINCT p FROM Product p " +
-            "LEFT JOIN FETCH p.productImages " +
-            "WHERE p.stockQuantity IS NOT NULL AND p.isDeleted = false")
-    Page<Product> findLimitedWithImagesAndNotDeleted(Pageable pageable);
+    @Query("SELECT p FROM Product p WHERE p.price = :price AND p.isDeleted = false")
+    fun findByPriceWithImagesAndNotDeleted(
+        @Param("price") price: Double,
+        pageable: Pageable
+    ): Page<Product>
 
     /**
-     * productId 리스트로 여러 개 조회 (이미지 포함, N+1 방지)
+     * 한정판매 조회 (batch size로 N+1 방지)
+     * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
      */
-    @Query("SELECT DISTINCT p FROM Product p " +
-            "LEFT JOIN FETCH p.productImages " +
-            "WHERE p.productId IN :productIds AND p.isDeleted = false")
-    List<Product> findByProductIdInWithImagesAndNotDeleted(
-            @Param("productIds") List<Long> productIds
-    );
+    @Query("SELECT p FROM Product p WHERE p.stockQuantity IS NOT NULL AND p.isDeleted = false")
+    fun findLimitedWithImagesAndNotDeleted(pageable: Pageable): Page<Product>
 
+    /**
+     * productId 리스트로 여러 개 조회 (batch size로 N+1 방지)
+     * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
+     */
+    @Query("SELECT p FROM Product p WHERE p.productId IN :productIds AND p.isDeleted = false")
+    fun findByProductIdInWithImagesAndNotDeleted(
+        @Param("productIds") productIds: List<Long>
+    ): List<Product>
 }
