@@ -1,7 +1,9 @@
 // ========== path: src/test/java/com/mysite/knitly/domain/community/post/service/PostServiceTest.java ==========
 package com.mysite.knitly.domain.community.post.service;
 
-import com.mysite.knitly.domain.community.post.dto.*;
+import com.mysite.knitly.domain.community.post.dto.PostCreateRequest;
+import com.mysite.knitly.domain.community.post.dto.PostResponse;
+import com.mysite.knitly.domain.community.post.dto.PostUpdateRequest;
 import com.mysite.knitly.domain.community.post.entity.PostCategory;
 import com.mysite.knitly.domain.community.post.repository.PostRepository;
 import com.mysite.knitly.domain.user.entity.Provider;
@@ -19,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -66,11 +69,11 @@ class PostServiceTest {
         PostResponse res = postService.create(req, author);
 
         // then
-        assertThat(res.id()).isNotNull();
-        assertThat(res.title()).isEqualTo("첫 글");
-        assertThat(res.authorId()).isEqualTo(author.getUserId());
-        assertThat(res.mine()).isTrue();
-        assertThat(res.imageUrls()).containsExactly("https://example.com/a.jpg");
+        assertThat(res.getId()).isNotNull();
+        assertThat(res.getTitle()).isEqualTo("첫 글");
+        assertThat(res.getAuthorId()).isEqualTo(author.getUserId());
+        assertThat(res.getMine()).isTrue();
+        assertThat(res.getImageUrls()).containsExactly("https://example.com/a.jpg");
     }
 
     @Test
@@ -159,7 +162,7 @@ class PostServiceTest {
         );
 
         // expect
-        assertThatThrownBy(() -> postService.update(created.id(), update, other))
+        assertThatThrownBy(() -> postService.update(created.getId(), update, other))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining(ErrorCode.POST_UPDATE_FORBIDDEN.getMessage());
     }
@@ -175,7 +178,7 @@ class PostServiceTest {
         );
 
         // expect
-        assertThatThrownBy(() -> postService.delete(created.id(), other))
+        assertThatThrownBy(() -> postService.delete(created.getId(), other))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining(ErrorCode.POST_DELETE_FORBIDDEN.getMessage());
     }
