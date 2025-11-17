@@ -1,26 +1,26 @@
-package com.mysite.knitly.domain.user.repository;
+package com.mysite.knitly.domain.user.repository
 
-import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.entity.Provider;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-import java.util.Optional;
+import com.mysite.knitly.domain.user.entity.Provider
+import com.mysite.knitly.domain.user.entity.User
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
+import java.util.*
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+interface UserRepository : JpaRepository<User, Long> {
 
     /**
      * socialId와 provider로 사용자 조회
      * 예: Google의 sub 값과 GOOGLE로 검색
      */
-    Optional<User> findBySocialIdAndProvider(String socialId, Provider provider);
+    fun findBySocialIdAndProvider(socialId: String, provider: Provider): Optional<User>
 
     /**
      * 이메일로 사용자 존재 여부 확인 --> 추후 이메일중복 가입 방지 기능으로 확장가능
      */
-    boolean existsByEmail(String email);
+    fun existsByEmail(email: String): Boolean
 
-    Optional<User> findById(Long userId);
-    Optional<User> findBySocialId(String socialId);
+    override fun findById(userId: Long): Optional<User>
+
+    fun findBySocialId(socialId: String): Optional<User>
 }

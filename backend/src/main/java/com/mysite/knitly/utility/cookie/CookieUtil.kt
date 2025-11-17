@@ -1,21 +1,19 @@
-package com.mysite.knitly.utility.cookie;
+package com.mysite.knitly.utility.cookie
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
-import java.util.Arrays;
-import java.util.Optional;
+import jakarta.servlet.http.Cookie
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 
 /**
  * HTTP Cookie 유틸리티 클래스
  * - HTTP-only 쿠키 생성, 조회, 삭제 기능 제공
  */
-@Slf4j
 @Component
-public class CookieUtil {
+class CookieUtil {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     /**
      * HTTP-only 쿠키 생성
@@ -25,25 +23,22 @@ public class CookieUtil {
      * @param maxAge 만료 시간 (초 단위)
      * @return Cookie 객체
      */
-    public Cookie createCookie(String name, String value, int maxAge) {
-        Cookie cookie = new Cookie(name, value);
-        cookie.setHttpOnly(true);  // JavaScript 접근 차단
-        cookie.setPath("/");       // 모든 경로에서 접근 가능
-        cookie.setMaxAge(maxAge);  // 만료 시간 설정
+    fun createCookie(name: String, value: String, maxAge: Int): Cookie {
+        return Cookie(name, value).apply {
+            isHttpOnly = true  // JavaScript 접근 차단
+            path = "/"         // 모든 경로에서 접근 가능
+            this.maxAge = maxAge  // 만료 시간 설정
 
-        // HTTPS 환경에서만 전송 (개발 환경에서는 false)
-        // 프로덕션에서는 true로 변경 필요
-        cookie.setSecure(false);
+            // HTTPS 환경에서만 전송 (개발 환경에서는 false)
+            // 프로덕션에서는 true로 변경 필요
+            secure = false
 
-        // TODO : 지금은 알아만 둘 것 (지금 중요한 내용은 아님)
-        // 안전한 요청에만 쿠키 전송 (개발 환경 권장)
-        // None: 모든 크로스 도메인 요청에 쿠키 전송 (Secure=true 필수)
-        // 참고: Cookie 객체는 SameSite를 직접 지원하지 않으므로
-        // ResponseCookie를 사용하거나 Set-Cookie 헤더를 직접 작성해야 함
-        // 예시)
-
-        log.debug("Cookie created - name: {}, maxAge: {} seconds", name, maxAge);
-        return cookie;
+            // TODO : 지금은 알아만 둘 것 (지금 중요한 내용은 아님)
+            // 안전한 요청에만 쿠키 전송 (개발 환경 권장)
+            // None: 모든 크로스 도메인 요청에 쿠키 전송 (Secure=true 필수)
+        }.also {
+            log.debug("Cookie created - name: {}, maxAge: {} seconds", name, maxAge)
+        }
     }
 
     /**
@@ -54,10 +49,10 @@ public class CookieUtil {
      * @param value 쿠키 값
      * @param maxAge 만료 시간 (초 단위)
      */
-    public void addCookie(HttpServletResponse response, String name, String value, int maxAge) {
-        Cookie cookie = createCookie(name, value, maxAge);
-        response.addCookie(cookie);
-        log.info("Cookie added to response - name: {}", name);
+    fun addCookie(response: HttpServletResponse, name: String, value: String, maxAge: Int) {
+        val cookie = createCookie(name, value, maxAge)
+        response.addCookie(cookie)
+        log.info("Cookie added to response - name: {}", name)
     }
 
     /**
@@ -65,20 +60,19 @@ public class CookieUtil {
      *
      * @param request HttpServletRequest
      * @param name 쿠키 이름
-     * @return Optional<String> 쿠키 값 (없으면 empty)
+     * @return 쿠키 값 (없으면 null)
      */
-    public Optional<String> getCookie(HttpServletRequest request, String name) {
-        Cookie[] cookies = request.getCookies();
+    fun getCookie(request: HttpServletRequest, name: String): String? {
+        val cookies = request.cookies
 
         if (cookies == null) {
-            log.debug("No cookies found in request");
-            return Optional.empty();
+            log.debug("No cookies found in request")
+            return null
         }
 
-        return Arrays.stream(cookies)
-                .filter(cookie -> name.equals(cookie.getName()))
-                .map(Cookie::getValue)
-                .findFirst();
+        return cookies
+            .firstOrNull { it.name == name }
+            ?.value
     }
 
     /**
@@ -87,14 +81,15 @@ public class CookieUtil {
      * @param response HttpServletResponse
      * @param name 삭제할 쿠키 이름
      */
-    public void deleteCookie(HttpServletResponse response, String name) {
-        Cookie cookie = new Cookie(name, null);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);  // 즉시 만료
-        cookie.setSecure(false);
+    fun deleteCookie(response: HttpServletResponse, name: String) {
+        val cookie = Cookie(name, null).apply {
+            isHttpOnly = true
+            path = "/"
+            maxAge = 0  // 즉시 만료
+            secure = false
+        }
 
-        response.addCookie(cookie);
-        log.info("Cookie deleted - name: {}", name);
+        response.addCookie(cookie)
+        log.info("Cookie deleted - name: {}", name)
     }
 }

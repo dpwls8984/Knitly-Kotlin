@@ -1,90 +1,85 @@
-package com.mysite.knitly.utility.jwt;
+package com.mysite.knitly.utility.jwt
 
-import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.service.UserService;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-import org.springframework.web.filter.OncePerRequestFilter;
+import com.mysite.knitly.domain.user.service.UserService
+import jakarta.servlet.FilterChain
+import jakarta.servlet.ServletException
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
+import org.springframework.stereotype.Component
+import org.springframework.util.StringUtils
+import org.springframework.web.filter.OncePerRequestFilter
+import java.io.IOException
 
-import java.io.IOException;
-import java.util.Collections;
-
-@Slf4j
 @Component
-@RequiredArgsConstructor
-public class JwtAuthenticationFilter extends OncePerRequestFilter {
+class JwtAuthenticationFilter(
+    private val jwtProvider: JwtProvider,
+    private val userService: UserService
+) : OncePerRequestFilter() {
 
-    private final JwtProvider jwtProvider;
-    private final UserService userService;
+    private val log = LoggerFactory.getLogger(javaClass)
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
-
+    @Throws(ServletException::class, IOException::class)
+    override fun doFilterInternal(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        filterChain: FilterChain
+    ) {
         try {
             // 1. 요청 헤더에서 JWT 토큰 추출
-            String token = extractTokenFromRequest(request);
+            val token = extractTokenFromRequest(request)
 
-            log.info("===> JWT Filter: token = {}", token != null ? "EXISTS" : "NULL");
+            log.info("===> JWT Filter: token = {}", if (token != null) "EXISTS" else "NULL")
 
             if (token != null && jwtProvider.validateToken(token)) {
-                log.info("===> JWT Valid!");
+                log.info("===> JWT Valid!")
+
                 // 2. 토큰에서 userId 추출
-                Long userId = jwtProvider.getUserIdFromToken(token);
+                val userId = jwtProvider.getUserIdFromToken(token)
 
                 // 3. userId로 사용자 조회
-                User user = userService.findById(userId);
+                val user = userService.findById(userId)
 
                 // 4. Spring Security 인증 객체 생성
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                user,                    // principal
-                                null,                    // credentials
-                                Collections.emptyList()  // authorities
-                        );
+                val authentication = UsernamePasswordAuthenticationToken(
+                    user,           // principal
+                    null,           // credentials
+                    emptyList()     // authorities
+                )
 
-                authentication.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
+                authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
 
                 // 5. SecurityContext에 인증 정보 저장
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                SecurityContextHolder.getContext().authentication = authentication
 
-                log.debug("JWT authenticated - userId: {}", userId);
+                log.debug("JWT authenticated - userId: {}", userId)
             } else {
-                log.warn("===> JWT Invalid or null!");
+                log.warn("===> JWT Invalid or null!")
             }
 
-        } catch (Exception e) {
-            log.error("JWT authentication failed: {}", e.getMessage());
+        } catch (e: Exception) {
+            log.error("JWT authentication failed: {}", e.message)
             // 인증 실패해도 다음 필터로 진행 (Spring Security가 처리)
         }
 
         // 다음 필터로 진행
-        filterChain.doFilter(request, response);
+        filterChain.doFilter(request, response)
     }
 
     /**
      * 요청 헤더에서 Bearer 토큰 추출
      * Authorization: Bearer {token}
      */
-    private String extractTokenFromRequest(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
+    private fun extractTokenFromRequest(request: HttpServletRequest): String? {
+        val bearerToken = request.getHeader("Authorization")
 
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7); // "Bearer " 제거
+        return if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            bearerToken.substring(7) // "Bearer " 제거
+        } else {
+            null
         }
-
-        return null;
     }
 }

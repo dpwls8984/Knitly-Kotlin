@@ -1,170 +1,161 @@
-package com.mysite.knitly.domain.product.product.entity;
+package com.mysite.knitly.domain.product.product.entity
 
-import com.mysite.knitly.domain.design.entity.Design;
-import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.global.exception.ErrorCode;
-import com.mysite.knitly.global.exception.ServiceException;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import com.mysite.knitly.domain.design.entity.Design
+import com.mysite.knitly.domain.user.entity.User
+import com.mysite.knitly.global.exception.ErrorCode
+import com.mysite.knitly.global.exception.ServiceException
+import jakarta.persistence.*
+import lombok.Builder
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import org.springframework.data.annotation.CreatedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
+import java.time.LocalDateTime
+import java.util.function.Consumer
 
 @Entity
-@Getter
-@NoArgsConstructor
 @Table(name = "products")
-@AllArgsConstructor
-@Builder
-@EntityListeners(AuditingEntityListener.class)
-public class Product {
-
+@EntityListeners(
+    AuditingEntityListener::class
+)
+class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long productId;
+    var productId: Long? = null
 
     @Column(nullable = false, length = 30)
-    private String title;
+     var title: String? = null
 
     @Column(nullable = false, columnDefinition = "TEXT")
-    private String description;
+     var description: String? = null
 
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProductCategory productCategory; // 'TOP', 'BOTTOM', 'OUTER', 'BAG', 'ETC'
+     var productCategory: ProductCategory? = null // 'TOP', 'BOTTOM', 'OUTER', 'BAG', 'ETC'
 
     @Column(nullable = false)
-    private String sizeInfo;
+     var sizeInfo: String? = null
 
     @Column(nullable = false, columnDefinition = "DECIMAL(10,2)")
-    private Double price; // DECIMAL(10,2)
+     var price: Double? = null // DECIMAL(10,2)
 
     @Column(nullable = false)
     @CreatedDate
-    private LocalDateTime createdAt; // DATETIME
+     var createdAt: LocalDateTime? = null // DATETIME
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user; // 판매자
+     var user: User? = null // 판매자
 
     @Column(nullable = false)
-    private Integer purchaseCount; // 누적수
+     var purchaseCount: Int? = null // 누적수
 
     @Column(nullable = false)
-    private Boolean isDeleted; // 소프트 딜리트
+     var isDeleted: Boolean? = null // 소프트 딜리트
 
     @Column
-    private Integer stockQuantity; // null 이면 상시 판매 / 0~숫자 는 한정판매
+     var stockQuantity: Int? = null // null 이면 상시 판매 / 0~숫자 는 한정판매
 
     @Column(nullable = false)
-    private Integer likeCount;
+     var likeCount: Int? = null
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "design_id", nullable = false)
-    private Design design;
+     var design: Design? = null
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "product", cascade = [CascadeType.ALL], orphanRemoval = true)
     @Builder.Default
-    private List<ProductImage> productImages = new ArrayList<>();
+     val productImages: MutableList<ProductImage> = ArrayList()
 
     @Column
-    private Double avgReviewRating; // DECIMAL(3,2)
+     var avgReviewRating: Double? = null // DECIMAL(3,2)
 
     @Column
-    private Integer reviewCount;
+     var reviewCount: Int? = null
 
     //상품 수정하는 로직 추가
-    public void update(String description, ProductCategory productCategory, String sizeInfo, Integer stockQuantity) {
-        this.description = description;
-        this.productCategory = productCategory;
-        this.sizeInfo = sizeInfo;
-        this.stockQuantity = stockQuantity;
+    fun update(description: String?, productCategory: ProductCategory?, sizeInfo: String?, stockQuantity: Int?) {
+        this.description = description
+        this.productCategory = productCategory
+        this.sizeInfo = sizeInfo
+        this.stockQuantity = stockQuantity
     }
 
     //소프트 딜리트 로직 추가
-    public void softDelete() {
-        this.isDeleted = true;
+    fun softDelete() {
+        this.isDeleted = true
     }
 
     //재판매를 위한 메서드 (isDeleted 를 false 로 변경)
-    public void relist() {
-        if (!this.isDeleted) {
-            throw new ServiceException(ErrorCode.DESIGN_NOT_STOPPED);
+    fun relist() {
+        if (!isDeleted!!) {
+            throw ServiceException(ErrorCode.DESIGN_NOT_STOPPED)
         }
-        this.isDeleted = false;
+        this.isDeleted = false
     }
 
     //재고 수량 감소 메서드 추가
-    public void decreaseStock(int quantity) {
+    fun decreaseStock(quantity: Int) {
         // 1. 상시 판매 상품(재고가 null)인 경우는 로직을 실행하지 않음
         if (this.stockQuantity == null) {
-            return;
+            return
         }
 
         // 2. 남은 재고보다 많은 수량을 주문하면 예외 발생
-        int restStock = this.stockQuantity - quantity;
+        val restStock = stockQuantity!! - quantity
         if (restStock < 0) {
-            throw new ServiceException(ErrorCode.PRODUCT_STOCK_INSUFFICIENT);
+            throw ServiceException(ErrorCode.PRODUCT_STOCK_INSUFFICIENT)
         }
 
         // 3. 재고 차감
-        this.stockQuantity = restStock;
+        this.stockQuantity = restStock
     }
 
     // 상품 이미지 설정 메서드
-    public void addProductImages(List<ProductImage> images) {
-        this.productImages.clear();
+    fun addProductImages(images: List<ProductImage>?) {
+        productImages.clear()
         if (images != null) {
-            this.productImages.addAll(images);
-            images.forEach(image -> image.setProduct(this)); // 양방향 연관관계 설정
+            productImages.addAll(images)
+            images.forEach(Consumer { image: ProductImage -> image.product = this }) // 양방향 연관관계 설정
         }
     }
 
-    public void increaseLikeCount() {
+    fun increaseLikeCount() {
         if (this.likeCount == null) {
-            this.likeCount = 0;
+            this.likeCount = 0
         }
-        this.likeCount += 1;
+        this.likeCount = likeCount!! + 1
     }
 
-    public void decreaseLikeCount() {
-        if (this.likeCount == null || this.likeCount <= 0) {
-            this.likeCount = 0;
+    fun decreaseLikeCount() {
+        if (this.likeCount == null || likeCount!! <= 0) {
+            this.likeCount = 0
         } else {
-            this.likeCount -= 1;
+            this.likeCount = likeCount!! - 1
         }
     }
 
-    // 리뷰 개수 설정 메서드
-    public void setReviewCount(Integer reviewCount) {
-        this.reviewCount = reviewCount;
-    }
+//    // 리뷰 개수 설정 메서드
+//    fun setReviewCount(reviewCount: Int?) {
+//        this.reviewCount = reviewCount
+//    }
 
     // 구매 횟수 증가
-    public void increasePurchaseCount() {
+    fun increasePurchaseCount() {
         if (this.purchaseCount == null) {
-            this.purchaseCount = 0;
+            this.purchaseCount = 0
         }
-        this.purchaseCount += 1;
+        this.purchaseCount = purchaseCount!! + 1
     }
 
     // 구매 횟수 증가 (수량 지정)
-    public void increasePurchaseCount(int quantity) {
+    fun increasePurchaseCount(quantity: Int) {
         if (this.purchaseCount == null) {
-            this.purchaseCount = 0;
+            this.purchaseCount = 0
         }
-        this.purchaseCount += quantity;
+        this.purchaseCount = purchaseCount!! + quantity
     }
-}
-
-//CREATE TABLE `products` (
+} //CREATE TABLE `products` (
 //        `product_id`	BIGINT	NOT NULL	DEFAULT AUTO_INCREMENT,
 //        `title`	VARCHAR(30)	NOT NULL,
 //	`description`	TEXT	NOT NULL,
@@ -180,3 +171,4 @@ public class Product {
 //        `design_id`	BIGINT	NOT NULL	DEFAULT AUTO_INCREMENT,
 //        `avg_review_rating`	DECIMAL(3,2)	NULL
 //);
+

@@ -1,63 +1,58 @@
-package com.mysite.knitly.utility.handler;
+package com.mysite.knitly.utility.handler
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.OAuth2Error;
-import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
-import org.springframework.stereotype.Component;
+import jakarta.servlet.ServletException
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.security.core.AuthenticationException
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler
+import org.springframework.stereotype.Component
+import java.io.IOException
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
-@Slf4j
 @Component
-public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler {
+class OAuth2FailureHandler : SimpleUrlAuthenticationFailureHandler() {
 
-    @Value("${frontend.url}")
-    private String frontendUrl;
+    private val log = LoggerFactory.getLogger(javaClass)
 
-    @Override
-    public void onAuthenticationFailure(HttpServletRequest request,
-                                        HttpServletResponse response,
-                                        AuthenticationException exception) throws IOException, ServletException {
+    @Value("\${frontend.url}")
+    private lateinit var frontendUrl: String
 
-        log.error("=== OAuth2 Login Failed ===");
-        log.error("Exception Type: {}", exception.getClass().getName());
-        log.error("Error Message: {}", exception.getMessage());
+    @Throws(IOException::class, ServletException::class)
+    override fun onAuthenticationFailure(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        exception: AuthenticationException
+    ) {
+        log.error("=== OAuth2 Login Failed ===")
+        log.error("Exception Type: {}", exception.javaClass.name)
+        log.error("Error Message: {}", exception.message)
 
-        String errorMessage = "로그인에 실패했습니다.";
+        var errorMessage = "로그인에 실패했습니다."
 
         // OAuth2 관련 에러인 경우 상세 정보 출력
-        if (exception instanceof OAuth2AuthenticationException) {
-            OAuth2AuthenticationException oauth2Exception = (OAuth2AuthenticationException) exception;
-            OAuth2Error error = oauth2Exception.getError();
+        if (exception is OAuth2AuthenticationException) {
+            val error = exception.error
 
-            log.error("OAuth2 Error Code: {}", error.getErrorCode());
-            log.error("OAuth2 Error Description: {}", error.getDescription());
+            log.error("OAuth2 Error Code: {}", error.errorCode)
+            log.error("OAuth2 Error Description: {}", error.description)
 
-            errorMessage = error.getDescription() != null ? error.getDescription() : errorMessage;
+            errorMessage = error.description ?: errorMessage
         }
 
         // 스택 트레이스 출력 (개발 환경용)
-        log.error("Stack Trace: ", exception);
+        log.error("Stack Trace: ", exception)
 
-        // TODO : 프론트페이지로 리다이랙트할것(수정해야함)
+        // TODO : 프론트페이지로 리다이렉트할것(수정해야함)
         // 에러 페이지로 리다이렉트
-        String encodedMessage = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
-        //String targetUrl = "http://localhost:8080/login/error?message=" + encodedMessage;
+        val encodedMessage = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8)
 
-        // 프론트엔드로 리다이렉트 (에러 파라미터 포함)
-        //String targetUrl = String.format("%s/?error=%s", frontendUrl, encodedMessage);
+        // 프론트 메인으로 리디렉션
+        val targetUrl = "$frontendUrl/?loginError=true"
 
-        // 프론트 메인으로 리디랙션
-        String targetUrl = frontendUrl + "/?loginError=true";
-
-        getRedirectStrategy().sendRedirect(request, response, targetUrl);
+        redirectStrategy.sendRedirect(request, response, targetUrl)
     }
 }

@@ -1,40 +1,36 @@
-package com.mysite.knitly.domain.userstore.entity;
+package com.mysite.knitly.domain.userstore.entity
 
-import com.mysite.knitly.domain.user.entity.User;
-import jakarta.persistence.*;
-import lombok.*;
+import com.mysite.knitly.domain.user.entity.User
+import jakarta.persistence.*
 
 @Entity
 @Table(name = "user_stores")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
-@Builder
-public class UserStore {
-
+class UserStore(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "store_id", nullable = false)
-    private Long storeId;
+    val storeId: Long = 0,
 
     // store_detail - TEXT, NULL
     @Lob
     @Column(name = "store_detail")
-    private String storeDetail;
+    var storeDetail: String? = null,
 
     // 1:1 관계 매핑: user_id 컬럼을 통해 User 엔티티와 연결
     // UserStore가 관계의 주인(Owning Side)이 됩니다.
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    var user: User? = null
+) {
+    // 편의 생성자 - User.kt의 @PostPersist에서 사용
+    constructor(user: User, storeDetail: String) : this(
+        storeId = 0,
+        user = user,
+        storeDetail = storeDetail
+    )
 
-    // 업데이트 메서드 추가
-    public void updateStoreDetail(String storeDetail) {
-        this.storeDetail = storeDetail;
-    }
-
-    public UserStore(User user, String storeDetail) {
-        this.user = user;
-        this.storeDetail = storeDetail;
+    // 업데이트 메서드
+    fun updateStoreDetail(storeDetail: String) {
+        this.storeDetail = storeDetail
     }
 }

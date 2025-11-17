@@ -1,25 +1,18 @@
-package com.mysite.knitly.utility.jwt;
+package com.mysite.knitly.utility.jwt
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-
-@Getter
-@Builder
-@AllArgsConstructor
-public class TokenResponse {
-
-    private String accessToken;
-    private String refreshToken;
-    private String tokenType;
-    private long expiresIn; // Access Token 만료 시간 (초)
-
-    public static TokenResponse of(String accessToken, String refreshToken, long expiresIn) {
-        return TokenResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .tokenType("Bearer")
-                .expiresIn(expiresIn)
-                .build();
+data class TokenResponse(
+        val accessToken: String,
+        val refreshToken: String,
+        val tokenType: String = "Bearer",
+        val expiresIn: Long  // Access Token 만료 시간 (초)
+) {
+    companion object {
+        fun of(accessToken: String, refreshToken: String, expiresIn: Long): TokenResponse {
+            return TokenResponse(
+                    accessToken = accessToken,
+                    refreshToken = refreshToken,
+                    expiresIn = expiresIn
+            )
+        }
     }
 }

@@ -1,76 +1,72 @@
-package com.mysite.knitly.utility.auth.service;
+package com.mysite.knitly.utility.auth.service
 
-import com.mysite.knitly.domain.design.repository.DesignRepository;
-import com.mysite.knitly.domain.product.product.service.ProductService;
-import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.user.repository.UserRepository;
-import com.mysite.knitly.domain.user.service.UserService;
-import com.mysite.knitly.utility.auth.dto.TokenRefreshResponse;
-import com.mysite.knitly.utility.jwt.JwtProperties;
-import com.mysite.knitly.utility.jwt.JwtProvider;
-import com.mysite.knitly.utility.redis.RefreshTokenService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import com.mysite.knitly.domain.design.repository.DesignRepository
+import com.mysite.knitly.domain.product.product.service.ProductService
+import com.mysite.knitly.domain.user.repository.UserRepository
+import com.mysite.knitly.domain.user.service.UserService
+import com.mysite.knitly.utility.auth.dto.TokenRefreshResponse
+import com.mysite.knitly.utility.jwt.JwtProperties
+import com.mysite.knitly.utility.jwt.JwtProvider
+import com.mysite.knitly.utility.redis.RefreshTokenService
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
-
-@Slf4j
 @Service
-@RequiredArgsConstructor
-public class AuthService {
-
-    private final JwtProvider jwtProvider;
-    private final RefreshTokenService refreshTokenService;
-    private final JwtProperties jwtProperties;
-    private final UserService userService;
-    private final UserRepository userRepository;
-    private final ProductService productService;
-    private final DesignRepository designRepository;
+class AuthService(
+    private val jwtProvider: JwtProvider,
+    private val refreshTokenService: RefreshTokenService,
+    private val jwtProperties: JwtProperties,
+    private val userService: UserService,
+    private val userRepository: UserRepository,
+    private val productService: ProductService,
+    private val designRepository: DesignRepository
+) {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     /**
      * Refresh Token으로 Access Token 갱신
      */
-    public TokenRefreshResponse refreshAccessToken(String refreshToken) {
+    fun refreshAccessToken(refreshToken: String): TokenRefreshResponse {
         // 1. Refresh Token 유효성 검증
         if (!jwtProvider.validateToken(refreshToken)) {
-            log.info("유효하지 않은 Refresh Token입니다.");
-            throw new IllegalArgumentException("유효하지 않은 Refresh Token입니다.");
+            log.info("유효하지 않은 Refresh Token입니다.")
+            throw IllegalArgumentException("유효하지 않은 Refresh Token입니다.")
         }
 
         // 2. Refresh Token에서 userId 추출
-        Long userId = jwtProvider.getUserIdFromToken(refreshToken);
-        log.info("Token refresh requested - userId: {}", userId);
+        val userId = jwtProvider.getUserIdFromToken(refreshToken)
+        log.info("Token refresh requested - userId: {}", userId)
 
         // 3. Redis에 저장된 Refresh Token과 비교
         if (!refreshTokenService.validateRefreshToken(userId, refreshToken)) {
-            throw new IllegalArgumentException("Refresh Token이 일치하지 않습니다.");
+            throw IllegalArgumentException("Refresh Token이 일치하지 않습니다.")
         }
 
         // 4. 새로운 Access Token 생성
-        String newAccessToken = jwtProvider.createAccessToken(userId);
+        val newAccessToken = jwtProvider.createAccessToken(userId)
 
         // 5. 새로운 Refresh Token 생성 (RTR - Refresh Token Rotation)
-        String newRefreshToken = jwtProvider.createRefreshToken(userId);
+        val newRefreshToken = jwtProvider.createRefreshToken(userId)
 
         // 6. 새로운 Refresh Token을 Redis에 저장 (기존 토큰 덮어쓰기)
-        refreshTokenService.saveRefreshToken(userId, newRefreshToken);
+        refreshTokenService.saveRefreshToken(userId, newRefreshToken)
 
-        log.info("Token refreshed successfully - userId: {}", userId);
+        log.info("Token refreshed successfully - userId: {}", userId)
 
         return TokenRefreshResponse.of(
-                newAccessToken,
-                newRefreshToken,
-                jwtProperties.getAccessTokenExpireSeconds()
-        );
+            accessToken = newAccessToken,
+            refreshToken = newRefreshToken,
+            expiresIn = jwtProperties.accessTokenExpireSeconds
+        )
     }
 
     /**
      * 로그아웃
      */
-    public void logout(Long userId) {
-        refreshTokenService.deleteRefreshToken(userId);
-        log.info("User logged out - userId: {}", userId);
+    fun logout(userId: Long) {
+        refreshTokenService.deleteRefreshToken(userId)
+        log.info("User logged out - userId: {}", userId)
     }
 
     /**
@@ -78,31 +74,19 @@ public class AuthService {
      * 1. Refresh Token 삭제 (Redis)
      * 2. User 삭제 (DB)
      */
-//    @Transactional
-//    public void deleteAccount(Long userId) {
-//        // 1. Redis에서 Refresh Token 삭제
-//        refreshTokenService.deleteRefreshToken(userId);
-//
-//        // 2. DB에서 사용자 삭제
-//        userService.deleteUser(userId);
-//
-//        log.info("Account deleted - userId: {}", userId);
-//    }
-
-
     @Transactional
-    public void deleteAccount(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+    fun deleteAccount(userId: Long) {
+        val user = userRepository.findById(userId)
+            .orElseThrow { RuntimeException("사용자를 찾을 수 없습니다.") }
 
-        log.info("회원 탈퇴 시작 - userId: {}", userId);
+        log.info("회원 탈퇴 시작 - userId: {}", userId)
 
         // 1. Redis에서 Refresh Token 삭제
-        refreshTokenService.deleteRefreshToken(userId);
-        log.info("Redis에서 Refresh Token 삭제 완료 - userId: {}", userId);
+        refreshTokenService.deleteRefreshToken(userId)
+        log.info("Redis에서 Refresh Token 삭제 완료 - userId: {}", userId)
 
         // 2. 사용자 삭제 (Cascade로 자동으로 연관 데이터 모두 삭제됨!)
-        userRepository.delete(user);
-        log.info("사용자 및 모든 연관 데이터 삭제 완료 - userId: {}", userId);
+        userRepository.delete(user)
+        log.info("사용자 및 모든 연관 데이터 삭제 완료 - userId: {}", userId)
     }
 }

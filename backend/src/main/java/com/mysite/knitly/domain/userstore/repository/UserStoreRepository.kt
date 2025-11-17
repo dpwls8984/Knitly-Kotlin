@@ -1,17 +1,16 @@
-package com.mysite.knitly.domain.userstore.repository;
+package com.mysite.knitly.domain.userstore.repository
 
-import com.mysite.knitly.domain.user.entity.User;
-import com.mysite.knitly.domain.userstore.entity.UserStore;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.mysite.knitly.domain.user.entity.User
+import com.mysite.knitly.domain.userstore.entity.UserStore
+import org.springframework.data.jpa.repository.JpaRepository
+import java.util.*
 
-import java.util.Optional;
-
-public interface UserStoreRepository extends JpaRepository<UserStore, Long> {
+interface UserStoreRepository : JpaRepository<UserStore, Long> {
 
     /**
      * userId로 UserStore 조회
      */
-    Optional<UserStore> findByUser_UserId(Long userId);
+    fun findByUser_UserId(userId: Long): Optional<UserStore>
 
-    boolean existsByUser(User user);
+    fun existsByUser(user: User): Boolean
 }

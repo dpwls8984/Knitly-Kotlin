@@ -1,11 +1,11 @@
-package com.mysite.knitly.domain.product.product.entity;
+package com.mysite.knitly.domain.product.product.entity
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import jakarta.persistence.*
+import lombok.AllArgsConstructor
+import lombok.Builder
+import lombok.Getter
+import lombok.NoArgsConstructor
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 
 @Entity
 @Getter
@@ -13,22 +13,23 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Table(name = "product_images")
 @AllArgsConstructor
 @Builder
-@EntityListeners(AuditingEntityListener.class)
-public class ProductImage {
-
+@EntityListeners(
+    AuditingEntityListener::class
+)
+class ProductImage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long productImageId;
+    var productImageId: Long? = null
 
-    private String productImageUrl;
+    var productImageUrl: String? = null
 
-    private Long sortOrder;
+    var sortOrder: Long? = null
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    var product: Product? = null
 
-    public void setProduct(Product product) {
-        this.product = product;
-    }
+//    fun setProduct(product: Product?) {
+//        this.product = product
+//    }
 }
