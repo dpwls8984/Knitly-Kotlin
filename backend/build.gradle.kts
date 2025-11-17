@@ -76,6 +76,8 @@ dependencies {
 
     implementation("me.paulschwarz:spring-dotenv:3.0.0")
 
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+
 }
 
 kotlin {

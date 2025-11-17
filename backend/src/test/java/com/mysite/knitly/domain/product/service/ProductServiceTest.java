@@ -197,7 +197,7 @@ class ProductServiceTest {
         assertThat(design.getDesignState()).isEqualTo(DesignState.ON_SALE);
 
         assertThat(response).isNotNull();
-        assertThat(response.productId()).isEqualTo(4L);
+        assertThat(response.productId).isEqualTo(4L);
     }
 
     @Test
@@ -295,10 +295,10 @@ class ProductServiceTest {
         verify(valueOperations).set(eq(cacheKey), eq(expectedJson), any(Duration.class));
 
         assertThat(response).isNotNull();
-        assertThat(response.title()).isEqualTo("테스트 상품");
-        assertThat(response.isLikedByUser()).isTrue();
-        assertThat(response.reviewCount()).isEqualTo(5);
-        assertThat(response.createdAt()).isEqualTo(product4.getCreatedAt().toString());
+        assertThat(response.title).isEqualTo("테스트 상품");
+        assertThat(response.isLikedByUser).isTrue();
+        assertThat(response.reviewCount).isEqualTo(5);
+        assertThat(response.createdAt).isEqualTo(product4.getCreatedAt().toString());
     }
 
     @Test
@@ -313,10 +313,10 @@ class ProductServiceTest {
         ProductDetailResponse cachedDto = ProductDetailResponse.from(product4, imageUrls, isLiked);
 
         cachedDto = new ProductDetailResponse(
-                cachedDto.productId(), cachedDto.title(), cachedDto.description(), cachedDto.productCategory(),
-                cachedDto.sizeInfo(), cachedDto.price(), cachedDto.createdAt(), cachedDto.stockQuantity(),
-                cachedDto.likeCount(), cachedDto.isLikedByUser(), cachedDto.avgReviewRating(),
-                cachedDto.productImageUrls(), 5
+                cachedDto.productId, cachedDto.title, cachedDto.description, cachedDto.productCategory,
+                cachedDto.sizeInfo, cachedDto.price, cachedDto.createdAt, cachedDto.stockQuantity,
+                cachedDto.likeCount, cachedDto.isLikedByUser, cachedDto.avgReviewRating,
+                cachedDto.productImageUrls, 5
         );
 
         String cachedJson = objectMapper.writeValueAsString(cachedDto);
@@ -332,9 +332,9 @@ class ProductServiceTest {
         verify(valueOperations, never()).set(anyString(), anyString(), any(Duration.class));
 
         assertThat(response).isNotNull();
-        assertThat(response.title()).isEqualTo("테스트 상품");
-        assertThat(response.isLikedByUser()).isTrue();
-        assertThat(response.reviewCount()).isEqualTo(5);
+        assertThat(response.title).isEqualTo("테스트 상품");
+        assertThat(response.isLikedByUser).isTrue();
+        assertThat(response.reviewCount).isEqualTo(5);
     }
 
     @Test
