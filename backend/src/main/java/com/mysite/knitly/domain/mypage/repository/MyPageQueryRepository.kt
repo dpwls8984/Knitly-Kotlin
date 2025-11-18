@@ -1,26 +1,23 @@
-package com.mysite.knitly.domain.mypage.repository;
+package com.mysite.knitly.domain.mypage.repository
 
-import com.mysite.knitly.domain.mypage.dto.*;
-import jakarta.persistence.EntityManager;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Repository;
-
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import com.mysite.knitly.domain.mypage.dto.MyCommentListItem
+import com.mysite.knitly.domain.mypage.dto.MyPostListItemResponse
+import com.mysite.knitly.domain.mypage.dto.OrderCardResponse
+import com.mysite.knitly.domain.mypage.dto.OrderLine
+import jakarta.persistence.EntityManager
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.Pageable
+import org.springframework.stereotype.Repository
+import java.time.LocalDateTime
 
 @Repository
-@RequiredArgsConstructor
-public class MyPageQueryRepository {
+class MyPageQueryRepository(
+    private val em: EntityManager
+) {
 
-    private final EntityManager em;
-
-    // 주문 내역 조회
-    public Page<OrderCardResponse> findOrderCards(Long userId, Pageable pageable) {
-        String jpql = """
+    fun findOrderCards(userId: Long, pageable: Pageable): Page<OrderCardResponse> {
+        val jpql = """
             select o.orderId, o.createdAt, o.totalPrice,
                    p.productId, p.title,
                    oi.quantity, oi.orderPrice,
@@ -32,78 +29,95 @@ public class MyPageQueryRepository {
             where o.user.userId = :uid
             and pay.paymentStatus = 'DONE'
             order by o.createdAt desc
-        """;
+        """.trimIndent()
 
-        List<Object[]> rows = em.createQuery(jpql, Object[].class)
-                .setParameter("uid", userId)
-                .setFirstResult((int) pageable.getOffset())
-                .setMaxResults(pageable.getPageSize())
-                .getResultList();
+        val rows: List<Array<Any>> = em.createQuery(jpql, Array<Any>::class.java)
+            .setParameter("uid", userId)
+            .setFirstResult(pageable.offset.toInt())
+            .setMaxResults(pageable.pageSize)
+            .resultList
 
-        long total = em.createQuery("select count(o) from Order o where o.user.userId = :uid", Long.class)
-                .setParameter("uid", userId)
-                .getSingleResult();
+        val total: Long = em.createQuery(
+            "select count(o) from Order o where o.user.userId = :uid",
+            java.lang.Long::class.java
+        )
+            .setParameter("uid", userId)
+            .singleResult
+            .toLong()
 
         if (rows.isEmpty()) {
-            return new PageImpl<>(List.of(), pageable, total);
+            return PageImpl(emptyList(), pageable, total)
         }
 
-        Set<Long> productIdsInOrders = rows.stream()
-                .map(r -> (Long) r[3])
-                .collect(Collectors.toSet());
+        val productIdsInOrders: Set<Long?> = rows
+            .map { it[3] as Long? }
+            .toSet()
 
-        Set<Long> orderItemIds = rows.stream()
-                .map(r -> (Long) r[7])
-                .collect(Collectors.toSet());
+        val orderItemIds: Set<Long> = rows
+            .map { (it[7] as Number).toLong() }
+            .toSet()
 
-        Set<Long> reviewedOrderItemIds = new HashSet<>(em.createQuery("""
+        val reviewedOrderItemIds: Set<Long> =
+            em.createQuery(
+                """
                     select r.orderItem.orderItemId from Review r
                     where r.user.userId = :userId 
                       and r.orderItem.orderItemId in :orderItemIds
-                    """, Long.class)
+                """.trimIndent(),
+                java.lang.Long::class.java
+            )
                 .setParameter("userId", userId)
                 .setParameter("orderItemIds", orderItemIds)
-                .getResultList());
+                .resultList
+                .map { it.toLong() }
+                .toSet()
 
-        Map<Long, LocalDateTime> orderedAtMap = new LinkedHashMap<>();
-        Map<Long, Double> totalMap = new LinkedHashMap<>();
-        Map<Long, List<OrderLine>> itemsMap = new LinkedHashMap<>();
+        val orderedAtMap = LinkedHashMap<Long, LocalDateTime>()
+        val totalMap = LinkedHashMap<Long, Double>()
+        val itemsMap = LinkedHashMap<Long, MutableList<OrderLine>>()
 
-        for (Object[] r : rows) {
-            Long oId = (Long) r[0];
-            LocalDateTime orderedAt = (LocalDateTime) r[1];
-            Double totalPrice = (r[2] == null) ? 0d : ((Number) r[2]).doubleValue();
-            Long productId = (Long) r[3];
-            String productTitle = (String) r[4];
-            Integer quantity = (Integer) r[5];
-            Double orderPrice = (r[6] == null) ? 0d : ((Number) r[6]).doubleValue();
-            Long orderItemId = (Long) r[7];
+        for (r in rows) {
+            val oId = (r[0] as Number).toLong()
+            val orderedAt = r[1] as LocalDateTime
+            val totalPrice = (r[2] as? Number)?.toDouble() ?: 0.0
+            val productId = (r[3] as Number).toLong()
+            val productTitle = r[4] as String
+            val quantity = (r[5] as Number).toInt()
+            val orderPrice = (r[6] as? Number)?.toDouble() ?: 0.0
+            val orderItemId = (r[7] as Number).toLong()
 
-            orderedAtMap.putIfAbsent(oId, orderedAt);
-            totalMap.putIfAbsent(oId, totalPrice);
+            orderedAtMap.putIfAbsent(oId, orderedAt)
+            totalMap.putIfAbsent(oId, totalPrice)
 
-            boolean isReviewed = reviewedOrderItemIds.contains(orderItemId);
+            val isReviewed = reviewedOrderItemIds.contains(orderItemId)
 
-            itemsMap.computeIfAbsent(oId, k -> new ArrayList<>())
-                    .add(new OrderLine(orderItemId, productId, productTitle, quantity, orderPrice, isReviewed));
+            val lines = itemsMap.getOrPut(oId) { mutableListOf() }
+            lines.add(
+                OrderLine(
+                    orderItemId = orderItemId,
+                    productId = productId,
+                    productTitle = productTitle,
+                    quantity = quantity,
+                    orderPrice = orderPrice,
+                    isReviewed = isReviewed
+                )
+            )
         }
 
-        List<OrderCardResponse> cards = new ArrayList<>();
-        for (Long id : itemsMap.keySet()) {
-            cards.add(new OrderCardResponse(
-                    id,
-                    orderedAtMap.get(id),
-                    totalMap.get(id),
-                    Collections.unmodifiableList(itemsMap.get(id))
-            ));
+        val cards: List<OrderCardResponse> = itemsMap.keys.map { id ->
+            OrderCardResponse(
+                orderId = id,
+                orderedAt = orderedAtMap[id]!!,
+                totalPrice = totalMap[id]!!,
+                items = itemsMap[id]!!.toList()
+            )
         }
 
-        return new PageImpl<>(cards, pageable, total);
+        return PageImpl(cards, pageable, total)
     }
 
-    // 수정: 내가 쓴 글 조회 - CAST를 사용하여 CLOB → VARCHAR 변환
-    public Page<MyPostListItemResponse> findMyPosts(Long userId, String query, Pageable pageable) {
-        String base = """
+    fun findMyPosts(userId: Long, query: String?, pageable: Pageable): Page<MyPostListItemResponse> {
+        var base = """
                 SELECT new com.mysite.knitly.domain.mypage.dto.MyPostListItemResponse(
                     p.id,
                     p.title,
@@ -117,43 +131,46 @@ public class MyPageQueryRepository {
                 FROM Post p
                 WHERE p.author.userId = :uid
                   AND p.deleted = false
-                """;
+                """.trimIndent()
 
-        if (query != null && !query.isBlank()) {
-            base += " AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(CAST(p.content AS string)) LIKE LOWER(CONCAT('%', :q, '%')))";
+        if (query != null && query.isNotBlank()) {
+            base += " AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(CAST(p.content AS string)) LIKE LOWER(CONCAT('%', :q, '%')))"
         }
 
-        var q = em.createQuery(base + " ORDER BY p.createdAt DESC", MyPostListItemResponse.class)
-                .setParameter("uid", userId);
+        val q = em.createQuery("$base ORDER BY p.createdAt DESC", MyPostListItemResponse::class.java)
+            .setParameter("uid", userId)
 
-        if (query != null && !query.isBlank()) {
-            q.setParameter("q", query.trim());
+        if (query != null && query.isNotBlank()) {
+            q.setParameter("q", query.trim())
         }
 
-        List<MyPostListItemResponse> list = q
-                .setFirstResult((int) pageable.getOffset())
-                .setMaxResults(pageable.getPageSize())
-                .getResultList();
+        val list: List<MyPostListItemResponse> = q
+            .setFirstResult(pageable.offset.toInt())
+            .setMaxResults(pageable.pageSize)
+            .resultList
 
-        long total = em.createQuery("""
+        val total: Long = em.createQuery(
+            """
                         SELECT COUNT(p.id)
                         FROM Post p
                         WHERE p.author.userId = :uid AND p.deleted = false
-                        """, Long.class)
-                .setParameter("uid", userId)
-                .getSingleResult();
+            """.trimIndent(),
+            java.lang.Long::class.java
+        )
+            .setParameter("uid", userId)
+            .singleResult
+            .toLong()
 
-        return new PageImpl<>(list, pageable, total);
+        return PageImpl(list, pageable, total)
     }
 
-    // 최종 수정: 내가 쓴 댓글 조회 - LocalDate로 CAST
-    public Page<MyCommentListItem> findMyComments(Long userId, String query, Pageable pageable) {
-        String base = """
+    fun findMyComments(userId: Long, query: String?, pageable: Pageable): Page<MyCommentListItem> {
+        var base = """
                 SELECT new com.mysite.knitly.domain.mypage.dto.MyCommentListItem(
                     c.id,
                     c.post.id,
                     c.createdAt,
-                    CASE WHEN LENGTH(CAST(c.content AS string)) > 30\s
+                    CASE WHEN LENGTH(CAST(c.content AS string)) > 30
                          THEN CONCAT(SUBSTRING(CAST(c.content AS string), 1, 30), '...')
                          ELSE CAST(c.content AS string)
                     END
@@ -162,32 +179,36 @@ public class MyPageQueryRepository {
                 WHERE c.author.userId = :uid
                   AND c.deleted = false
                   AND c.post.deleted = false
-                """;
+                """.trimIndent()
 
-        if (query != null && !query.isBlank()) {
-            base += " AND LOWER(CAST(c.content AS string)) LIKE LOWER(CONCAT('%', :q, '%'))";
+        if (query != null && query.isNotBlank()) {
+            base += " AND LOWER(CAST(c.content AS string)) LIKE LOWER(CONCAT('%', :q, '%'))"
         }
 
-        var q = em.createQuery(base + " ORDER BY c.createdAt DESC", MyCommentListItem.class)
-                .setParameter("uid", userId);
+        val q = em.createQuery("$base ORDER BY c.createdAt DESC", MyCommentListItem::class.java)
+            .setParameter("uid", userId)
 
-        if (query != null && !query.isBlank()) {
-            q.setParameter("q", query.trim());
+        if (query != null && query.isNotBlank()) {
+            q.setParameter("q", query.trim())
         }
 
-        List<MyCommentListItem> list = q
-                .setFirstResult((int) pageable.getOffset())
-                .setMaxResults(pageable.getPageSize())
-                .getResultList();
+        val list: List<MyCommentListItem> = q
+            .setFirstResult(pageable.offset.toInt())
+            .setMaxResults(pageable.pageSize)
+            .resultList
 
-        long total = em.createQuery("""
+        val total: Long = em.createQuery(
+            """
                         SELECT COUNT(c.id)
                         FROM Comment c
                         WHERE c.author.userId = :uid AND c.deleted = false
-                        """, Long.class)
-                .setParameter("uid", userId)
-                .getSingleResult();
+            """.trimIndent(),
+            java.lang.Long::class.java
+        )
+            .setParameter("uid", userId)
+            .singleResult
+            .toLong()
 
-        return new PageImpl<>(list, pageable, total);
+        return PageImpl(list, pageable, total)
     }
 }
