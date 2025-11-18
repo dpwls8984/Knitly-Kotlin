@@ -1,33 +1,36 @@
-package com.mysite.knitly.global.exception;
+package com.mysite.knitly.global.exception
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.slf4j.LoggerFactory
+import org.springframework.core.Ordered
+import org.springframework.core.annotation.Order
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@Slf4j
-public class GlobalExceptionHandler {
+class GlobalExceptionHandler {
 
-    @ExceptionHandler(ServiceException.class)
-    public ResponseEntity<ErrorResponse> handleServiceException(ServiceException e) {
-        ErrorCode errorCode = e.getErrorCode();
-        log.error("[ServiceException] code={}, message={}", errorCode, e.getMessage(), e);
+    @ExceptionHandler(ServiceException::class)
+    fun handleServiceException(e: ServiceException): ResponseEntity<ErrorResponse> {
+        val errorCode = e.errorCode
+        log.error("[ServiceException] code={}, message={}", errorCode, e.message, e)
         return ResponseEntity
-                .status(errorCode.getStatus())
-                .body(ErrorResponse.errorResponse(errorCode));
+            .status(errorCode.status)
+            .body(ErrorResponse.errorResponse(errorCode))
     }
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
-        BindingResult bindingResult = e.getBindingResult();
+
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun handleMethodArgumentNotValid(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
+        val bindingResult = e.bindingResult
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.validationError(bindingResult));
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.validationError(bindingResult))
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
     }
 }

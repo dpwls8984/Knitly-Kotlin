@@ -1,12 +1,22 @@
-package com.mysite.knitly.global.util;
+package com.mysite.knitly.global.util
 
-public class FileNameUtils {
-    public static String sanitize(String input) {
-        if (input == null || input.isBlank()) return "design";
-        String s = input.trim()
-                .replaceAll("[\\\\/:*?\"<>|]", "_")
-                .replaceAll("\\s+", " ");
-        if (!s.toLowerCase().endsWith(".pdf")) s += ".pdf";
-        return s.length() > 80 ? s.substring(0, 80) : s;
+object FileNameUtils {
+
+    fun sanitize(input: String?): String {
+        if (input.isNullOrBlank()) return "design"
+
+        val sanitized = input.trim()
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            .replace(Regex("\\s+"), " ")
+
+        val withExtension = when {
+            sanitized.lowercase().endsWith(".pdf") -> sanitized
+            else -> "$sanitized.pdf"
+        }
+
+        return when {
+            withExtension.length > 80 -> withExtension.substring(0, 80)
+            else -> withExtension
+        }
     }
 }

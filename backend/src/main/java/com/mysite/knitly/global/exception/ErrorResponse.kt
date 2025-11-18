@@ -1,39 +1,34 @@
-package com.mysite.knitly.global.exception;
+package com.mysite.knitly.global.exception
 
-import lombok.Builder;
-import lombok.Getter;
-import org.springframework.http.HttpStatus;
-import org.springframework.validation.BindingResult;
+import org.springframework.http.HttpStatus
+import org.springframework.validation.BindingResult
 
-@Getter
-@Builder
-public class ErrorResponse {
-    private final ErrorBody error;
+data class ErrorResponse(
+    val error: ErrorBody
+) {
+    data class ErrorBody(
+        val code: String,
+        val status: String,
+        val message: String
+    )
 
-    @Getter
-    @Builder
-    public static class ErrorBody{
-        private final String code;
-        private final String status;
-        private final String message;
-    }
+    companion object {
+        fun errorResponse(errorCode: ErrorCode): ErrorResponse =
+            ErrorResponse(
+                error = ErrorBody(
+                    code = errorCode.name,
+                    status = errorCode.status.value().toString(),
+                    message = errorCode.message
+                )
+            )
 
-    public static ErrorResponse errorResponse(ErrorCode errorCode) {
-        return ErrorResponse.builder()
-                .error(ErrorBody.builder()
-                        .code(errorCode.name())
-                        .status(String.valueOf(errorCode.getStatus().value()))
-                        .message(errorCode.getMessage())
-                        .build())
-                .build();
-    }
-    public static ErrorResponse validationError(BindingResult bindingResult) {
-        return ErrorResponse.builder()
-                .error(ErrorBody.builder()
-                        .code(ErrorCode.VALIDATION_ERROR.name())
-                        .status(String.valueOf(HttpStatus.BAD_REQUEST.value()))
-                        .message("요청 값이 올바르지 않습니다.")
-                        .build())
-                .build();
+        fun validationError(bindingResult: BindingResult): ErrorResponse =
+            ErrorResponse(
+                error = ErrorBody(
+                    code = ErrorCode.VALIDATION_ERROR.name,
+                    status = HttpStatus.BAD_REQUEST.value().toString(),
+                    message = "요청 값이 올바르지 않습니다."
+                )
+            )
     }
 }
