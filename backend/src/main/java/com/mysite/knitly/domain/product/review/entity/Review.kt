@@ -4,14 +4,9 @@ import com.mysite.knitly.domain.order.entity.OrderItem
 import com.mysite.knitly.domain.product.product.entity.Product
 import com.mysite.knitly.domain.user.entity.User
 import jakarta.persistence.*
-import lombok.AllArgsConstructor
-import lombok.Builder
-import lombok.Getter
-import lombok.NoArgsConstructor
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
-import java.util.function.Consumer
 
 @Entity
 @Table(name = "reviews")
@@ -29,7 +24,7 @@ open class Review (
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
-    val product: Product,
+    val product: Product?,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

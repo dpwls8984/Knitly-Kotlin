@@ -219,6 +219,6 @@ class UserController(
     ): ResponseEntity<Page<ProductListResponse>> {
         val response = productService.findProductsByUserId(userId, pageable)
         log.info("getProductsWithUserId response: {}", response)
-        return ResponseEntity.ok(response)
+        return ResponseEntity.ok(response) as ResponseEntity<Page<ProductListResponse>>
     }
 }

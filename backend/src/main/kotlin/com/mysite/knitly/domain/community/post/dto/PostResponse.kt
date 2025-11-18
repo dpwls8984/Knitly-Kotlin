@@ -11,7 +11,7 @@ data class PostResponse(
     val imageUrls: List<String>,
     val authorId: Long,
     val authorDisplay: String,
-    val createdAt: LocalDateTime,
+    val createdAt: LocalDateTime?,
     val updatedAt: LocalDateTime?,
     val commentCount: Long,
     val mine: Boolean

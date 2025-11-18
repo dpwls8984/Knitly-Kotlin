@@ -11,7 +11,7 @@ data class ProductRegisterResponse(
     val productCategory: ProductCategory,
     val sizeInfo: String,
     val price: Double,
-    val createdAt: LocalDateTime,
+    val createdAt: LocalDateTime?,
     val stockQuantity: Int,
     val designId: Long,
     val productImageUrls: List<String>

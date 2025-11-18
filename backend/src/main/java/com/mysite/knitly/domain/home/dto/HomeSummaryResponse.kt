@@ -1,10 +1,9 @@
-package com.mysite.knitly.domain.home.dto;
+package com.mysite.knitly.domain.home.dto
 
-import com.mysite.knitly.domain.product.product.dto.ProductListResponse;
-import java.util.List;
+import com.mysite.knitly.domain.product.product.dto.ProductListResponse
 
-public record HomeSummaryResponse(
-        List<ProductListResponse> popularProducts, // 인기 상품 Top5
-        List<LatestReviewItem> latestReviews,      // 최신 리뷰
-        List<LatestPostItem> latestPosts           // 최신 커뮤니티 글
-) {}
+data class HomeSummaryResponse(
+    val popularProducts: List<ProductListResponse>, // 인기 상품 Top5
+    val latestReviews: List<LatestReviewItem>,      // 최신 리뷰
+    val latestPosts: List<LatestPostItem>           // 최신 커뮤니티 글
+)

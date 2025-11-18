@@ -1,41 +1,38 @@
-package com.mysite.knitly.domain.design.util;
+package com.mysite.knitly.domain.design.util
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
+import java.nio.file.Path
 
-import java.lang.reflect.Field;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
-public class LocalFileStorageTest {
+class LocalFileStorageTest {
     @TempDir
-    Path tempDir;
+    lateinit var tempDir: Path
 
     @Test
     @DisplayName("로컬 저장 - URL 반환 및 URL → 실경로 복원 성공")
-    void savePdfFile_and_resolve_ok() throws Exception {
-        LocalFileStorage storage = new LocalFileStorage();
-        setField(storage, "uploadDir", tempDir.toString());
-        setField(storage, "publicPrefix", "/files");
+    fun savePdfFile_and_resolve_ok() {
+        val storage = LocalFileStorage()
+        setField(storage, "uploadDir", tempDir.toString())
+        setField(storage, "publicPrefix", "/files")
 
-        byte[] pdfBytes = new byte[]{1,2,3};
+        val pdfBytes = byteArrayOf(1, 2, 3)
 
-        String url = storage.savePdfFile(pdfBytes, "testFile");
+        val url = storage.savePdfFile(pdfBytes, "testFile")
 
-        assertThat(url).startsWith("/files/");
+        assertThat(url).startsWith("/files/")
 
         // URL -> 실제 경로 복원
-        Path abs = storage.toAbsolutePathFromUrl(url);
-        assertThat(Files.exists(abs)).isTrue();
-        assertThat(Files.size(abs)).isEqualTo(3);
+        val abs = storage.toAbsolutePathFromUrl(url)
+        assertThat(Files.exists(abs)).isTrue()
+        assertThat(Files.size(abs)).isEqualTo(3)
     }
 
-    private static void setField(Object target, String name, Object value) throws Exception {
-        Field f = target.getClass().getDeclaredField(name);
-        f.setAccessible(true);
-        f.set(target, value);
+    private fun setField(target: Any, name: String, value: Any) {
+        val field = target.javaClass.getDeclaredField(name)
+        field.isAccessible = true
+        field.set(target, value)
     }
 }

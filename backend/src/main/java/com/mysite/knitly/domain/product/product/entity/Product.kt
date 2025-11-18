@@ -8,12 +8,11 @@ import jakarta.persistence.*
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
-import java.util.function.Consumer
 
 @Entity
 @Table(name = "products")
 @EntityListeners(AuditingEntityListener::class)
-class Product (
+open class Product (
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val productId: Long? = null,
@@ -72,14 +71,20 @@ class Product (
 
     //상품 수정하는 로직 추가
     fun update(
-        description: String,
-        productCategory: ProductCategory,
-        sizeInfo: String,
+        description: String?,
+        productCategory: ProductCategory?,
+        sizeInfo: String?,
         stockQuantity: Int?
     ) {
-        this.description = description
-        this.productCategory = productCategory
-        this.sizeInfo = sizeInfo
+        if (description != null) {
+            this.description = description
+        }
+        if (productCategory != null) {
+            this.productCategory = productCategory
+        }
+        if (sizeInfo != null) {
+            this.sizeInfo = sizeInfo
+        }
         this.stockQuantity = stockQuantity
     }
 
@@ -110,9 +115,9 @@ class Product (
     // 상품 이미지 설정 메서드
     fun addProductImages(images: List<ProductImage>?) {
         _productImages.clear()
-        images?.forEach {
-            _productImages.add(it)
-            it.setProduct(this)
+        images?.forEach { image ->
+            _productImages.add(image)
+            image.product = this  // setter 필요 없음 (private set 가능)
         }
     }
 
@@ -134,11 +139,6 @@ class Product (
     // 구매 횟수 증가 (수량 지정)
     fun increasePurchaseCount(quantity: Int) {
         this.purchaseCount += quantity
-    }
-
-    // TODO : 시현 - 리뷰 개수 설정 메서드
-    fun setReviewCount(reviewCount: Int?) {
-        this.reviewCount = reviewCount
     }
 
 

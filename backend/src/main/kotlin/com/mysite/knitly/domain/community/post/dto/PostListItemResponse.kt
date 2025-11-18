@@ -9,7 +9,7 @@ data class PostListItemResponse(
     val title: String,
     val excerpt: String,
     val authorDisplay: String,
-    val createdAt: LocalDateTime,
+    val createdAt: LocalDateTime?,
     val commentCount: Long,
     val thumbnailUrl: String? = null
 )

@@ -29,7 +29,7 @@ class EmailService(
     fun sendOrderConfirmationEmail(emailDto: EmailNotificationDto) {
         log.info("[EmailService] [Send] 이메일 발송 처리 시작 - to={}", emailDto.userEmail)
 
-        val order = orderRepository.findById(emailDto.orderId)
+        val order = orderRepository.findById(emailDto.orderId?.toLong() ?: 0L)
             .orElseThrow {
                 log.error("[EmailService] [Send] DB에서 Order 엔티티 조회 실패. orderId={}", emailDto.orderId)
                 IllegalArgumentException("Order not found: " + emailDto.orderId)
@@ -44,7 +44,6 @@ class EmailService(
             mimeMessageHelper.setSubject("[Knitly] 주문하신 도안이 도착했습니다.")
 
             val payment = paymentRepository.findByOrder_OrderId(order.orderId!!)
-                .orElse(null)
 
             val paymentMethod = when (payment?.paymentMethod) {
                 PaymentMethod.CARD -> "카드 결제"
