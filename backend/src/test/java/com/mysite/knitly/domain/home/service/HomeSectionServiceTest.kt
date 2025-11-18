@@ -69,8 +69,6 @@ class HomeSectionServiceTest {
 
     @BeforeEach
     fun setUp() {
-        val now = LocalDateTime.now()
-
         product1 = createProduct(
             id = 1L,
             title = "상의 패턴 1",
@@ -79,7 +77,6 @@ class HomeSectionServiceTest {
             purchaseCount = 100,
             likeCount = 50,
             isDeleted = false,
-            createdAt = now.minusDays(1),
         )
 
         product2 = createProduct(
@@ -90,7 +87,6 @@ class HomeSectionServiceTest {
             purchaseCount = 200,
             likeCount = 80,
             isDeleted = false,
-            createdAt = now.minusDays(2),
         )
 
         product3 = createProduct(
@@ -101,7 +97,6 @@ class HomeSectionServiceTest {
             purchaseCount = 150,
             likeCount = 60,
             isDeleted = false,
-            createdAt = now.minusDays(3),
             stockQuantity = 10,
         )
 
@@ -254,7 +249,6 @@ class HomeSectionServiceTest {
         purchaseCount: Int,
         likeCount: Int,
         isDeleted: Boolean,
-        createdAt: LocalDateTime,
         stockQuantity: Int? = null,
     ): Product {
         val user: User = mock()
@@ -267,7 +261,6 @@ class HomeSectionServiceTest {
             productCategory = category,
             sizeInfo = "FREE",
             price = price,
-            createdAt = createdAt,
             user = user,
             purchaseCount = purchaseCount,
             isDeleted = isDeleted,

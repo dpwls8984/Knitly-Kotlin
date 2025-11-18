@@ -94,7 +94,6 @@ class ReviewControllerTest {
                 designName = "테스트 도안",
                 designState = DesignState.BEFORE_SALE,
                 gridData = "{}",
-                createdAt = LocalDateTime.now()
             )
         )
 
