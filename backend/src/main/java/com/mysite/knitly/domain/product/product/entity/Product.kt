@@ -20,54 +20,71 @@ open class Product (
     @Column(nullable = false, length = 30)
     val title: String,
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    var description: String,
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    var productCategory: ProductCategory,
-
-    @Column(nullable = false)
-    var sizeInfo: String,
+    description: String,
+    productCategory: ProductCategory,
+    sizeInfo: String,
 
     @Column(nullable = false, columnDefinition = "DECIMAL(10,2)")
     val price: Double,
-
-    @Column(nullable = false)
-    @CreatedDate
-    var createdAt: LocalDateTime? = null,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     val user: User,
 
-    @Column(nullable = false)
-    var purchaseCount: Int = 0,
-
-    @Column(nullable = false)
-    var isDeleted: Boolean = false,
-
-    @Column
-    var stockQuantity: Int? = null,
-
-    @Column(nullable = false)
-    var likeCount: Int = 0,
+    purchaseCount: Int = 0,
+    isDeleted: Boolean = false,
+    stockQuantity: Int? = null,
+    likeCount: Int = 0,
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "design_id", nullable = false)
-    val design: Design,
+    val design: Design
 
-    @OneToMany(mappedBy = "product", cascade = [CascadeType.ALL], orphanRemoval = true)
-    val _productImages: MutableList<ProductImage> = mutableListOf(),
+) {
+    @Column(nullable = false, columnDefinition = "TEXT")
+    var description: String = description
+        private set
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    var productCategory: ProductCategory = productCategory
+        private set
+
+    @Column(nullable = false)
+    var sizeInfo: String = sizeInfo
+        private set
+
+    @Column(nullable = false)
+    @CreatedDate
+    lateinit var createdAt: LocalDateTime
+        private set
+
+    @Column(nullable = false)
+    var purchaseCount: Int = purchaseCount
+        private set
+
+    @Column(nullable = false)
+    var isDeleted: Boolean = isDeleted
+        private set
 
     @Column
-    var avgReviewRating: Double? = null,
+    var stockQuantity: Int? = stockQuantity
+        private set
+
+    @Column(nullable = false)
+    var likeCount: Int = likeCount
+        private set
+
+    @OneToMany(mappedBy = "product", cascade = [CascadeType.ALL], orphanRemoval = true)
+    private val _productImages: MutableList<ProductImage> = mutableListOf()
+    val productImages: List<ProductImage>
+        get() = _productImages.toList()
+
+    @Column
+    var avgReviewRating: Double? = null
 
     @Column
     var reviewCount: Int? = null
-) {
-    val productImages: List<ProductImage>
-        get() = _productImages
 
     //상품 수정하는 로직 추가
     fun update(
