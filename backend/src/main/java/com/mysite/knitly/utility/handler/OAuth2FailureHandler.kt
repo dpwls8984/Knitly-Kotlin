@@ -46,7 +46,6 @@ class OAuth2FailureHandler : SimpleUrlAuthenticationFailureHandler() {
         // 스택 트레이스 출력 (개발 환경용)
         log.error("Stack Trace: ", exception)
 
-        // TODO : 프론트페이지로 리다이렉트할것(수정해야함)
         // 에러 페이지로 리다이렉트
         val encodedMessage = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8)
 

@@ -593,7 +593,7 @@ class ProductService (
      * @return 상품 목록 (대표 이미지 포함)
      */
     // TODO: 웅철 - 특정 유저의 판매 상품 목록 조회
-    fun findProductsByUserId(userId: Long, pageable: Pageable): Page<ProductListResponse?> {
+    fun findProductsByUserId(userId: Long, pageable: Pageable): Page<ProductListResponse> {
         val user = userRepository!!.findById(userId).orElseThrow<ServiceException?>(Supplier {
             ServiceException(
                 ErrorCode.USER_NOT_FOUND
@@ -605,8 +605,8 @@ class ProductService (
 
         // DTO -> Response 변환
         val responsePage = dtoPage.map<ProductListResponse?>(
-            Function { dto: ProductWithThumbnailDto? ->
-                dto!!.toResponse(
+            Function { dto: ProductWithThumbnailDto ->
+                dto.toResponse(
                     true,
                     sellerName
                 )
