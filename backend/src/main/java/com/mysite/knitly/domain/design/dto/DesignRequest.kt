@@ -17,10 +17,6 @@ data class DesignRequest(
     val fileName: String? = null // (선택) 파일 이름
 ) {
     // 유효성 검증 메서드 (10x10 크기인지 확인)
-    fun isValidGridSize(): Boolean {
-        if (gridData.size != 10) {
-            return false
-        }
-        return gridData.all { row -> row.size == 10 }
-    }
+    fun isValidGridSize(): Boolean =
+        gridData.size == 10 && gridData.all { it.size == 10 }
 }

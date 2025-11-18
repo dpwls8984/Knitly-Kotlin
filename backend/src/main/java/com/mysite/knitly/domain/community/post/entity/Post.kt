@@ -94,6 +94,6 @@ class Post(
     }
 
     fun isAuthor(user: User?): Boolean {
-        return user != null && user == author
+        return user != null && author.userId == user.userId
     }
 }
