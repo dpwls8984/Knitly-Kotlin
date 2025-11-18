@@ -1,15 +1,15 @@
-package com.mysite.knitly.global.util;
+package com.mysite.knitly.global.util
 
-import java.util.regex.Pattern;
+import java.util.regex.Pattern
 
-public final class ImageValidator {
-    private static final Pattern ALLOWED
-            = Pattern.compile("(?i).+\\.(png|jpg|jpeg)(\\?.*)?$");
+object ImageValidator {
 
-    private ImageValidator() {}
+    private val ALLOWED: Pattern =
+        Pattern.compile("(?i).+\\.(png|jpg|jpeg)(\\?.*)?$")
 
-    public static boolean isAllowedImageUrl(String url) {
-        if (url == null || url.isBlank()) return true; // 이미지 미첨부는 통과
-        return ALLOWED.matcher(url).matches();
+    @JvmStatic
+    fun isAllowedImageUrl(url: String?): Boolean {
+        if (url.isNullOrBlank()) return true  // 이미지 미첨부는 통과
+        return ALLOWED.matcher(url).matches()
     }
 }
