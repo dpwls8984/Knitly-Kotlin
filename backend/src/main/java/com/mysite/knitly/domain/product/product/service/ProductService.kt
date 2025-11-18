@@ -46,257 +46,257 @@ class ProductService (
         private const val POPULAR_LIST_CACHE_PREFIX = "product:list:popular:"
     }
 
-    // TODO : 예진 - 상품 등록
-    @Transactional
-    fun registerProduct(seller: User, designId: Long, request: ProductRegisterRequest): ProductRegisterResponse {
-        log.info(
-            "[Product] [Register] 상품 등록 시작 - sellerId={}, designId={}, title={}",
-            seller.userId, designId, request.title
-        )
-
-        try {
-            val design = designRepository!!.findById(designId)
-                .orElseThrow<ServiceException?>(Supplier { ServiceException(ErrorCode.DESIGN_NOT_FOUND) })
-            log.debug("[Product] [Register] 도안 조회 완료 - designId={}", designId)
-
-            design.startSale()
-            log.debug("[Product] [Register] design.startSale() 호출")
-
-            val product: Product = Product.builder()
-                .title(request.title)
-                .description(request.description)
-                .productCategory(request.productCategory)
-                .sizeInfo(request.sizeInfo)
-                .price(request.price)
-                .stockQuantity(request.stockQuantity)
-                .user(seller) // 판매자 정보 연결
-                .design(design) // 도안 정보 연결
-                .isDeleted(false) // 초기 상태: 판매 중
-                .purchaseCount(0) // 초기값 설정
-                .likeCount(0) // 초기값 설정
-                .build()
-            log.debug("[Product] [Register] Product 엔티티 빌드 완료")
-
-            val productImages = saveProductImages(request.productImageUrls)
-            product.addProductImages(productImages)
-
-            val savedProduct = productRepository!!.save<Product>(product)
-            log.debug("[Product] [Register] DB 상품 저장 완료")
-
-            val imageUrls = savedProduct.productImages.map { it.productImageUrl }
-
-            log.info("[Product] [Register] 상품 등록 성공 - new productId={}", savedProduct.productId)
-
-            return ProductRegisterResponse.from(savedProduct, imageUrls)
-        } catch (e: Exception) {
-            log.error(
-                "[Product] [Register] 상품 등록 실패 - sellerId={}, designId={}",
-                seller.getUserId(), designId, e
-            )
-            throw e
-        }
-    }
-
-
-    // TODO : 예진 - 상품 수정
-    @Transactional
-    fun modifyProduct(currentUser: User, productId: Long, request: ProductModifyRequest): ProductModifyResponse {
-        log.info(
-            "[Product] [Modify] 상품 수정 시작 - userId={}, productId={}",
-            currentUser.getUserId(), productId
-        )
-
-        try {
-            val product = findProductById(productId)
-            log.debug("[Product] [Modify] 상품 조회 완료 - productId={}", productId)
-
-            if (product.getIsDeleted()) {
-                log.warn("[Product] [Modify] 실패: 이미 삭제된 상품 - productId={}", productId)
-                throw ServiceException(ErrorCode.PRODUCT_ALREADY_DELETED)
-            }
-
-            if (product.user.getUserId() != currentUser.getUserId()) {
-                log.warn(
-                    "[Product] [Modify] 실패: 권한 없음 - userId={}, sellerId={}",
-                    currentUser.getUserId(), product.user.getUserId()
-                )
-                throw ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED)
-            }
-
-            product.update(
-                request.description,
-                request.productCategory,
-                request.sizeInfo,
-                request.stockQuantity
-            )
-            log.debug("[Product] [Modify] 상품 엔티티 필드 업데이트 완료")
-
-            // 1. 기존 이미지 URL 전체
-            val oldImageUrls = product.productImages.stream()
-                .map<String?> { obj: ProductImage? -> obj!!.getProductImageUrl() }
-                .collect(Collectors.toList())
-
-            // 2. 유지할 기존 이미지 URL 목록 (프론트에서 전달된 값)
-            val existingImageUrls = if (request.existingImageUrls != null)
-                request.existingImageUrls
-            else
-                ArrayList<String?>()
-
-            // 3. 삭제할 이미지 = oldImageUrls - existingImageUrls
-            val deletedImageUrls = oldImageUrls.stream()
-                .filter { url: String? -> !existingImageUrls.contains(url) }
-                .collect(Collectors.toList())
-
-            log.debug(
-                "[Product] [Modify] 이미지 계산 - Old: {}, Existing: {}, To Delete: {}",
-                oldImageUrls.size, existingImageUrls.size, deletedImageUrls.size
-            )
-
-            // 4. 새로운 이미지 파일을 저장
-            val newProductImages = saveProductImages(request.productImageUrls)
-            log.debug("[Product] [Modify] 새 이미지 {}개 임시 저장 완료.", newProductImages.size)
-
-            // 5. 유지할 기존 이미지 + 새 이미지 합치기
-            val mergedImages: MutableList<ProductImage?> = ArrayList<ProductImage?>()
-
-            // 기존 이미지 중 유지 대상만 다시 추가
-            for (oldImg in product.productImages) {
-                if (existingImageUrls.contains(oldImg.getProductImageUrl())) {
-                    mergedImages.add(oldImg)
-                }
-            }
-
-            // 새 이미지 추가
-            mergedImages.addAll(newProductImages)
-            log.debug("[Product] [Modify] 병합된 이미지 리스트 크기: {}", mergedImages.size)
-
-            // 6. 엔티티 반영 (기존 이미지 중 유지 대상은 그대로, 삭제 대상은 orphanRemoval로 DB에서 제거)
-            product.addProductImages(mergedImages)
-            log.debug("[Product] [Modify] product.addProductImages (orphanRemoval) 호출")
-
-            // 7. 삭제할 이미지 파일 실제 삭제
-            if (!deletedImageUrls.isEmpty()) {
-                log.debug("[Product] [Modify] 스토리지에서 {}개의 이미지 파일 삭제 시작...", deletedImageUrls.size)
-                deletedImageUrls.forEach(Consumer { fileUrl: String? -> localFileStorage!!.deleteProductImage(fileUrl) })
-                log.debug("[Product] [Modify] 스토리지 이미지 삭제 완료")
-            }
-
-            val currentImageUrls = product.productImages.stream()
-                .map<String?> { obj: ProductImage? -> obj!!.getProductImageUrl() }
-                .collect(Collectors.toList())
-
-            log.info("[Product] [Modify] 상품 수정 성공 - productId={}", product.productId)
-
-            return ProductModifyResponse.from(product, currentImageUrls)
-        } catch (e: Exception) {
-            log.error(
-                "[Product] [Modify] 상품 수정 실패 - userId={}, productId={}",
-                currentUser.getUserId(), productId, e
-            )
-            throw e
-        }
-    }
-
-    // TODO : 예진 - 상품 삭제 (Soft Delete)
-    @Transactional
-    fun deleteProduct(currentUser: User, productId: Long) {
-        log.info(
-            "[Product] [Delete] 상품 삭제 시작 - userId={}, productId={}",
-            currentUser.getUserId(), productId
-        )
-
-        try {
-            val product = findProductById(productId)
-
-            if (product.user.getUserId() != currentUser.getUserId()) {
-                log.warn(
-                    "[Product] [Delete] 실패: 권한 없음 - userId={}, sellerId={}",
-                    currentUser.getUserId(), product.user.getUserId()
-                )
-                throw ServiceException(ErrorCode.PRODUCT_DELETE_UNAUTHORIZED)
-            }
-
-            product.softDelete()
-            log.debug("[Product] [Delete] 상품 softDelete() 호출")
-
-            product.design.stopSale()
-            log.debug("[Product] [Delete] design.stopSale() 호출")
-
-            log.info("[Product] [Delete] 상품 삭제(Soft) 성공 - productId={}", productId)
-        } catch (e: Exception) {
-            log.error(
-                "[Product] [Delete] 상품 삭제 실패 - userId={}, productId={}",
-                currentUser.getUserId(), productId, e
-            )
-            throw e
-        }
-    }
-
-    // TODO : 예진 - 상품 재판매
-    @Transactional
-    fun relistProduct(currentUser: User, productId: Long) {
-        log.info(
-            "[Product] [Relist] 상품 재판매 시작 - userId={}, productId={}",
-            currentUser.getUserId(), productId
-        )
-
-        try {
-            val product = findProductById(productId)
-
-            if (product.user.getUserId() != currentUser.getUserId()) {
-                log.warn(
-                    "[Product] [Relist] 실패: 권한 없음 - userId={}, sellerId={}",
-                    currentUser.getUserId(), product.user.getUserId()
-                )
-                throw ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED)
-            }
-
-            product.relist()
-            log.debug("[Product] [Relist] product.relist() 호출")
-            product.design.relist()
-            log.debug("[Product] [Relist] design.relist() 호출")
-
-            log.info("[Product] [Relist] 상품 재판매 성공 - productId={}", productId)
-        } catch (e: Exception) {
-            log.error(
-                "[Product] [Relist] 상품 재판매 실패 - userId={}, productId={}",
-                currentUser.getUserId(), productId, e
-            )
-            throw e
-        }
-    }
-
-    // TODO : 예진 - 상품 이미지 저장
-    private fun saveProductImages(imageFiles: MutableList<MultipartFile>?): MutableList<ProductImage?> {
-        if (imageFiles == null || imageFiles.isEmpty()) {
-            log.debug("[Product] [ImageSave] 저장할 이미지 파일 없음.")
-            return ArrayList<ProductImage?>()
-        }
-
-        val fileCount = imageFiles.stream().filter { f: MultipartFile? -> !f!!.isEmpty() }.count().toInt()
-        log.debug("[Product] [ImageSave] 이미지 저장 시작 - fileCount={}", fileCount)
-
-        try {
-            val productImages: MutableList<ProductImage?> = ArrayList<ProductImage?>()
-            for (file in imageFiles) {
-                if (file.isEmpty()) continue
-
-                log.trace("[Product] [ImageSave] 파일 처리 중: {}", file.getOriginalFilename())
-                val url = localFileStorage!!.saveProductImage(file)
-                log.trace("[Product] [ImageSave] 스토리지 저장 완료 - URL: {}", url)
-
-                val productImage = ProductImage.builder()
-                    .productImageUrl(url)
-                    .build()
-                productImages.add(productImage)
-            }
-            log.debug("[Product] [ImageSave] 이미지 저장 완료 - savedCount={}", productImages.size)
-            return productImages
-        } catch (e: Exception) {
-            log.error("[Product] [ImageSave] 이미지 저장 실패 - fileCount={}", fileCount, e)
-            throw ServiceException(ErrorCode.FILE_STORAGE_FAILED) // 예외 전환
-        }
-    }
+//    // TODO : 예진 - 상품 등록
+//    @Transactional
+//    fun registerProduct(seller: User, designId: Long, request: ProductRegisterRequest): ProductRegisterResponse {
+//        log.info(
+//            "[Product] [Register] 상품 등록 시작 - sellerId={}, designId={}, title={}",
+//            seller.userId, designId, request.title
+//        )
+//
+//        try {
+//            val design = designRepository!!.findById(designId)
+//                .orElseThrow<ServiceException?>(Supplier { ServiceException(ErrorCode.DESIGN_NOT_FOUND) })
+//            log.debug("[Product] [Register] 도안 조회 완료 - designId={}", designId)
+//
+//            design.startSale()
+//            log.debug("[Product] [Register] design.startSale() 호출")
+//
+//            val product: Product = Product.builder()
+//                .title(request.title)
+//                .description(request.description)
+//                .productCategory(request.productCategory)
+//                .sizeInfo(request.sizeInfo)
+//                .price(request.price)
+//                .stockQuantity(request.stockQuantity)
+//                .user(seller) // 판매자 정보 연결
+//                .design(design) // 도안 정보 연결
+//                .isDeleted(false) // 초기 상태: 판매 중
+//                .purchaseCount(0) // 초기값 설정
+//                .likeCount(0) // 초기값 설정
+//                .build()
+//            log.debug("[Product] [Register] Product 엔티티 빌드 완료")
+//
+//            val productImages = saveProductImages(request.productImageUrls)
+//            product.addProductImages(productImages)
+//
+//            val savedProduct = productRepository!!.save<Product>(product)
+//            log.debug("[Product] [Register] DB 상품 저장 완료")
+//
+//            val imageUrls = savedProduct.productImages.map { it.productImageUrl }
+//
+//            log.info("[Product] [Register] 상품 등록 성공 - new productId={}", savedProduct.productId)
+//
+//            return ProductRegisterResponse.from(savedProduct, imageUrls)
+//        } catch (e: Exception) {
+//            log.error(
+//                "[Product] [Register] 상품 등록 실패 - sellerId={}, designId={}",
+//                seller.getUserId(), designId, e
+//            )
+//            throw e
+//        }
+//    }
+//
+//
+//    // TODO : 예진 - 상품 수정
+//    @Transactional
+//    fun modifyProduct(currentUser: User, productId: Long, request: ProductModifyRequest): ProductModifyResponse {
+//        log.info(
+//            "[Product] [Modify] 상품 수정 시작 - userId={}, productId={}",
+//            currentUser.getUserId(), productId
+//        )
+//
+//        try {
+//            val product = findProductById(productId)
+//            log.debug("[Product] [Modify] 상품 조회 완료 - productId={}", productId)
+//
+//            if (product.getIsDeleted()) {
+//                log.warn("[Product] [Modify] 실패: 이미 삭제된 상품 - productId={}", productId)
+//                throw ServiceException(ErrorCode.PRODUCT_ALREADY_DELETED)
+//            }
+//
+//            if (product.user.getUserId() != currentUser.getUserId()) {
+//                log.warn(
+//                    "[Product] [Modify] 실패: 권한 없음 - userId={}, sellerId={}",
+//                    currentUser.getUserId(), product.user.getUserId()
+//                )
+//                throw ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED)
+//            }
+//
+//            product.update(
+//                request.description,
+//                request.productCategory,
+//                request.sizeInfo,
+//                request.stockQuantity
+//            )
+//            log.debug("[Product] [Modify] 상품 엔티티 필드 업데이트 완료")
+//
+//            // 1. 기존 이미지 URL 전체
+//            val oldImageUrls = product.productImages.stream()
+//                .map<String?> { obj: ProductImage? -> obj!!.getProductImageUrl() }
+//                .collect(Collectors.toList())
+//
+//            // 2. 유지할 기존 이미지 URL 목록 (프론트에서 전달된 값)
+//            val existingImageUrls = if (request.existingImageUrls != null)
+//                request.existingImageUrls
+//            else
+//                ArrayList<String?>()
+//
+//            // 3. 삭제할 이미지 = oldImageUrls - existingImageUrls
+//            val deletedImageUrls = oldImageUrls.stream()
+//                .filter { url: String? -> !existingImageUrls.contains(url) }
+//                .collect(Collectors.toList())
+//
+//            log.debug(
+//                "[Product] [Modify] 이미지 계산 - Old: {}, Existing: {}, To Delete: {}",
+//                oldImageUrls.size, existingImageUrls.size, deletedImageUrls.size
+//            )
+//
+//            // 4. 새로운 이미지 파일을 저장
+//            val newProductImages = saveProductImages(request.productImageUrls)
+//            log.debug("[Product] [Modify] 새 이미지 {}개 임시 저장 완료.", newProductImages.size)
+//
+//            // 5. 유지할 기존 이미지 + 새 이미지 합치기
+//            val mergedImages: MutableList<ProductImage?> = ArrayList<ProductImage?>()
+//
+//            // 기존 이미지 중 유지 대상만 다시 추가
+//            for (oldImg in product.productImages) {
+//                if (existingImageUrls.contains(oldImg.getProductImageUrl())) {
+//                    mergedImages.add(oldImg)
+//                }
+//            }
+//
+//            // 새 이미지 추가
+//            mergedImages.addAll(newProductImages)
+//            log.debug("[Product] [Modify] 병합된 이미지 리스트 크기: {}", mergedImages.size)
+//
+//            // 6. 엔티티 반영 (기존 이미지 중 유지 대상은 그대로, 삭제 대상은 orphanRemoval로 DB에서 제거)
+//            product.addProductImages(mergedImages)
+//            log.debug("[Product] [Modify] product.addProductImages (orphanRemoval) 호출")
+//
+//            // 7. 삭제할 이미지 파일 실제 삭제
+//            if (!deletedImageUrls.isEmpty()) {
+//                log.debug("[Product] [Modify] 스토리지에서 {}개의 이미지 파일 삭제 시작...", deletedImageUrls.size)
+//                deletedImageUrls.forEach(Consumer { fileUrl: String? -> localFileStorage!!.deleteProductImage(fileUrl) })
+//                log.debug("[Product] [Modify] 스토리지 이미지 삭제 완료")
+//            }
+//
+//            val currentImageUrls = product.productImages.stream()
+//                .map<String?> { obj: ProductImage? -> obj!!.getProductImageUrl() }
+//                .collect(Collectors.toList())
+//
+//            log.info("[Product] [Modify] 상품 수정 성공 - productId={}", product.productId)
+//
+//            return ProductModifyResponse.from(product, currentImageUrls)
+//        } catch (e: Exception) {
+//            log.error(
+//                "[Product] [Modify] 상품 수정 실패 - userId={}, productId={}",
+//                currentUser.getUserId(), productId, e
+//            )
+//            throw e
+//        }
+//    }
+//
+//    // TODO : 예진 - 상품 삭제 (Soft Delete)
+//    @Transactional
+//    fun deleteProduct(currentUser: User, productId: Long) {
+//        log.info(
+//            "[Product] [Delete] 상품 삭제 시작 - userId={}, productId={}",
+//            currentUser.getUserId(), productId
+//        )
+//
+//        try {
+//            val product = findProductById(productId)
+//
+//            if (product.user.getUserId() != currentUser.getUserId()) {
+//                log.warn(
+//                    "[Product] [Delete] 실패: 권한 없음 - userId={}, sellerId={}",
+//                    currentUser.getUserId(), product.user.getUserId()
+//                )
+//                throw ServiceException(ErrorCode.PRODUCT_DELETE_UNAUTHORIZED)
+//            }
+//
+//            product.softDelete()
+//            log.debug("[Product] [Delete] 상품 softDelete() 호출")
+//
+//            product.design.stopSale()
+//            log.debug("[Product] [Delete] design.stopSale() 호출")
+//
+//            log.info("[Product] [Delete] 상품 삭제(Soft) 성공 - productId={}", productId)
+//        } catch (e: Exception) {
+//            log.error(
+//                "[Product] [Delete] 상품 삭제 실패 - userId={}, productId={}",
+//                currentUser.getUserId(), productId, e
+//            )
+//            throw e
+//        }
+//    }
+//
+//    // TODO : 예진 - 상품 재판매
+//    @Transactional
+//    fun relistProduct(currentUser: User, productId: Long) {
+//        log.info(
+//            "[Product] [Relist] 상품 재판매 시작 - userId={}, productId={}",
+//            currentUser.getUserId(), productId
+//        )
+//
+//        try {
+//            val product = findProductById(productId)
+//
+//            if (product.user.getUserId() != currentUser.getUserId()) {
+//                log.warn(
+//                    "[Product] [Relist] 실패: 권한 없음 - userId={}, sellerId={}",
+//                    currentUser.getUserId(), product.user.getUserId()
+//                )
+//                throw ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED)
+//            }
+//
+//            product.relist()
+//            log.debug("[Product] [Relist] product.relist() 호출")
+//            product.design.relist()
+//            log.debug("[Product] [Relist] design.relist() 호출")
+//
+//            log.info("[Product] [Relist] 상품 재판매 성공 - productId={}", productId)
+//        } catch (e: Exception) {
+//            log.error(
+//                "[Product] [Relist] 상품 재판매 실패 - userId={}, productId={}",
+//                currentUser.getUserId(), productId, e
+//            )
+//            throw e
+//        }
+//    }
+//
+//    // TODO : 예진 - 상품 이미지 저장
+//    private fun saveProductImages(imageFiles: MutableList<MultipartFile>?): MutableList<ProductImage?> {
+//        if (imageFiles == null || imageFiles.isEmpty()) {
+//            log.debug("[Product] [ImageSave] 저장할 이미지 파일 없음.")
+//            return ArrayList<ProductImage?>()
+//        }
+//
+//        val fileCount = imageFiles.stream().filter { f: MultipartFile? -> !f!!.isEmpty() }.count().toInt()
+//        log.debug("[Product] [ImageSave] 이미지 저장 시작 - fileCount={}", fileCount)
+//
+//        try {
+//            val productImages: MutableList<ProductImage?> = ArrayList<ProductImage?>()
+//            for (file in imageFiles) {
+//                if (file.isEmpty()) continue
+//
+//                log.trace("[Product] [ImageSave] 파일 처리 중: {}", file.getOriginalFilename())
+//                val url = localFileStorage!!.saveProductImage(file)
+//                log.trace("[Product] [ImageSave] 스토리지 저장 완료 - URL: {}", url)
+//
+//                val productImage = ProductImage.builder()
+//                    .productImageUrl(url)
+//                    .build()
+//                productImages.add(productImage)
+//            }
+//            log.debug("[Product] [ImageSave] 이미지 저장 완료 - savedCount={}", productImages.size)
+//            return productImages
+//        } catch (e: Exception) {
+//            log.error("[Product] [ImageSave] 이미지 저장 실패 - fileCount={}", fileCount, e)
+//            throw ServiceException(ErrorCode.FILE_STORAGE_FAILED) // 예외 전환
+//        }
+//    }
 
     private fun findProductById(productId: Long): Product {
         return productRepository!!.findById(productId)
@@ -304,129 +304,129 @@ class ProductService (
     }
 
 
-    // 상품 목록 조회
-    // 상품 목록 조회
-    @Transactional(readOnly = true)
-    fun getProducts(
-        user: User?,
-        category: ProductCategory?,
-        filterType: ProductFilterType?,
-        sortType: ProductSortType?,
-        pageable: Pageable
-    ): Page<ProductListResponse> {
-        val startTime = System.currentTimeMillis()
-        val userId = user?.userId
-
-        log.info(
-            "[Product] [List] 상품 목록 조회 시작 - userId={}, category={}, filter={}, sort={}, page={}, size={}",
-            userId, category, filterType, sortType, pageable.pageNumber, pageable.pageSize
-        )
-
-        return try {
-            val effectiveFilter = filterType ?: ProductFilterType.ALL
-            val effectiveCategory = if (effectiveFilter == ProductFilterType.ALL) category else null
-
-            // 캐시 대상 여부 (비로그인 + 인기순만 캐시)
-            val cacheable = (user == null) && (sortType == ProductSortType.POPULAR)
-
-            var popularCacheKey: String? = null
-            if (cacheable) {
-                popularCacheKey = buildPopularListCacheKey(effectiveCategory, effectiveFilter, pageable)
-
-                try {
-                    val cachedJson = redisTemplate.opsForValue().get(popularCacheKey)
-                    if (cachedJson != null) {
-                        val cached = objectMapper.readValue(cachedJson, ProductListPageCache::class.java)
-
-                        log.info("[Product] [List] [Popular] 캐시 히트 - key={}", popularCacheKey)
-
-                        return PageImpl(cached.content, pageable, cached.totalElements)
-                    }
-                } catch (e: Exception) {
-                    log.error(
-                        "[Product] [List] [Popular] 캐시 읽기 실패 - key={}, error={}",
-                        popularCacheKey, e.message, e
-                    )
-                }
-            }
-
-            val dbStartTime = System.currentTimeMillis()
-
-            val productPage = when (sortType) {
-                ProductSortType.POPULAR -> {
-                    log.debug(
-                        "[Product] [List] 인기순 조회 시작 - effectiveCategory={}, effectiveFilter={}",
-                        effectiveCategory, effectiveFilter
-                    )
-                    getProductsByPopular(effectiveCategory, effectiveFilter, pageable)
-                }
-                else -> {
-                    log.debug(
-                        "[Product] [List] 일반 조회 시작 - effectiveCategory={}, effectiveFilter={}, sort={}",
-                        effectiveCategory, effectiveFilter, sortType
-                    )
-                    val sortedPageable = createPageable(pageable, sortType)
-                    getFilteredProducts(effectiveCategory, effectiveFilter, sortedPageable)
-                }
-            }
-
-            val dbDuration = System.currentTimeMillis() - dbStartTime
-            log.debug(
-                "[Product] [List] DB 조회 완료 - resultCount={}, dbDuration={}ms",
-                productPage.totalElements, dbDuration
-            )
-
-            // TODO: 시현
-            // '좋아요' 누른 상품 ID 목록을 한 번에 조회
-            val likeStartTime = System.currentTimeMillis()
-            val likedProductIds = getLikedProductIds(user, productPage.content)
-            val likeDuration = System.currentTimeMillis() - likeStartTime
-
-            log.debug(
-                "[Product] [List] 좋아요 정보 조회 완료 - likedCount={}, likeDuration={}ms",
-                likedProductIds.size, likeDuration
-            )
-
-            // DTO 변환
-            val response = productPage.map { product ->
-                ProductListResponse.from(
-                    product,
-                    product.productId in likedProductIds
-                )
-            }
-
-            // 캐시 쓰기
-            if (cacheable && popularCacheKey != null) {
-                try {
-                    val cache = ProductListPageCache(response.content, response.totalElements)
-                    val jsonData = objectMapper.writeValueAsString(cache)
-                    redisTemplate.opsForValue().set(popularCacheKey, jsonData, Duration.ofSeconds(60))
-
-                    log.info("[Product] [List] [Popular] 캐시 쓰기 완료 - key={}", popularCacheKey)
-                } catch (e: Exception) {
-                    log.error(
-                        "[Product] [List] [Popular] 캐시 쓰기 실패 - key={}, error={}",
-                        popularCacheKey, e.message, e
-                    )
-                }
-            }
-
-            val totalDuration = System.currentTimeMillis() - startTime
-            log.info(
-                "[Product] [List] 상품 목록 조회 완료 - userId={}, totalCount={}, returnedCount={}, totalDuration={}ms",
-                userId, response.totalElements, response.numberOfElements, totalDuration
-            )
-
-            response
-        } catch (e: Exception) {
-            val duration = System.currentTimeMillis() - startTime
-            log.error(
-                "[Product] [List] 상품 목록 조회 실패 - userId={}, category={}, duration={}ms",
-                userId, category, duration, e
-            )
-            throw e
-        }
-    }
+//    // 상품 목록 조회
+//    // 상품 목록 조회
+//    @Transactional(readOnly = true)
+//    fun getProducts(
+//        user: User?,
+//        category: ProductCategory?,
+//        filterType: ProductFilterType?,
+//        sortType: ProductSortType?,
+//        pageable: Pageable
+//    ): Page<ProductListResponse> {
+//        val startTime = System.currentTimeMillis()
+//        val userId = user?.userId
+//
+//        log.info(
+//            "[Product] [List] 상품 목록 조회 시작 - userId={}, category={}, filter={}, sort={}, page={}, size={}",
+//            userId, category, filterType, sortType, pageable.pageNumber, pageable.pageSize
+//        )
+//
+//        return try {
+//            val effectiveFilter = filterType ?: ProductFilterType.ALL
+//            val effectiveCategory = if (effectiveFilter == ProductFilterType.ALL) category else null
+//
+//            // 캐시 대상 여부 (비로그인 + 인기순만 캐시)
+//            val cacheable = (user == null) && (sortType == ProductSortType.POPULAR)
+//
+//            var popularCacheKey: String? = null
+//            if (cacheable) {
+//                popularCacheKey = buildPopularListCacheKey(effectiveCategory, effectiveFilter, pageable)
+//
+//                try {
+//                    val cachedJson = redisTemplate.opsForValue().get(popularCacheKey)
+//                    if (cachedJson != null) {
+//                        val cached = objectMapper.readValue(cachedJson, ProductListPageCache::class.java)
+//
+//                        log.info("[Product] [List] [Popular] 캐시 히트 - key={}", popularCacheKey)
+//
+//                        return PageImpl(cached.content, pageable, cached.totalElements)
+//                    }
+//                } catch (e: Exception) {
+//                    log.error(
+//                        "[Product] [List] [Popular] 캐시 읽기 실패 - key={}, error={}",
+//                        popularCacheKey, e.message, e
+//                    )
+//                }
+//            }
+//
+//            val dbStartTime = System.currentTimeMillis()
+//
+//            val productPage = when (sortType) {
+//                ProductSortType.POPULAR -> {
+//                    log.debug(
+//                        "[Product] [List] 인기순 조회 시작 - effectiveCategory={}, effectiveFilter={}",
+//                        effectiveCategory, effectiveFilter
+//                    )
+//                    getProductsByPopular(effectiveCategory, effectiveFilter, pageable)
+//                }
+//                else -> {
+//                    log.debug(
+//                        "[Product] [List] 일반 조회 시작 - effectiveCategory={}, effectiveFilter={}, sort={}",
+//                        effectiveCategory, effectiveFilter, sortType
+//                    )
+//                    val sortedPageable = createPageable(pageable, sortType)
+//                    getFilteredProducts(effectiveCategory, effectiveFilter, sortedPageable)
+//                }
+//            }
+//
+//            val dbDuration = System.currentTimeMillis() - dbStartTime
+//            log.debug(
+//                "[Product] [List] DB 조회 완료 - resultCount={}, dbDuration={}ms",
+//                productPage.totalElements, dbDuration
+//            )
+//
+//            // TODO: 시현
+//            // '좋아요' 누른 상품 ID 목록을 한 번에 조회
+//            val likeStartTime = System.currentTimeMillis()
+//            val likedProductIds = getLikedProductIds(user, productPage.content)
+//            val likeDuration = System.currentTimeMillis() - likeStartTime
+//
+//            log.debug(
+//                "[Product] [List] 좋아요 정보 조회 완료 - likedCount={}, likeDuration={}ms",
+//                likedProductIds.size, likeDuration
+//            )
+//
+//            // DTO 변환
+//            val response = productPage.map { product ->
+//                ProductListResponse.from(
+//                    product,
+//                    product.productId in likedProductIds
+//                )
+//            }
+//
+//            // 캐시 쓰기
+//            if (cacheable && popularCacheKey != null) {
+//                try {
+//                    val cache = ProductListPageCache(response.content, response.totalElements)
+//                    val jsonData = objectMapper.writeValueAsString(cache)
+//                    redisTemplate.opsForValue().set(popularCacheKey, jsonData, Duration.ofSeconds(60))
+//
+//                    log.info("[Product] [List] [Popular] 캐시 쓰기 완료 - key={}", popularCacheKey)
+//                } catch (e: Exception) {
+//                    log.error(
+//                        "[Product] [List] [Popular] 캐시 쓰기 실패 - key={}, error={}",
+//                        popularCacheKey, e.message, e
+//                    )
+//                }
+//            }
+//
+//            val totalDuration = System.currentTimeMillis() - startTime
+//            log.info(
+//                "[Product] [List] 상품 목록 조회 완료 - userId={}, totalCount={}, returnedCount={}, totalDuration={}ms",
+//                userId, response.totalElements, response.numberOfElements, totalDuration
+//            )
+//
+//            response
+//        } catch (e: Exception) {
+//            val duration = System.currentTimeMillis() - startTime
+//            log.error(
+//                "[Product] [List] 상품 목록 조회 실패 - userId={}, category={}, duration={}ms",
+//                userId, category, duration, e
+//            )
+//            throw e
+//        }
+//    }
 
     // TODO: 시현
     private fun getLikedProductIds(user: User?, products: List<Product>): Set<Long> {
@@ -595,20 +595,20 @@ class ProductService (
      * @return 상품 목록 (대표 이미지 포함)
      */
     // TODO: 웅철 - 특정 유저의 판매 상품 목록 조회
-    fun findProductsByUserId(userId: Long, pageable: Pageable): Page<ProductListResponse?> {
+    fun findProductsByUserId(userId: Long, pageable: Pageable): Page<ProductListResponse> {
         val user = userRepository!!.findById(userId).orElseThrow<ServiceException?>(Supplier {
             ServiceException(
                 ErrorCode.USER_NOT_FOUND
             )
         })
-        val sellerName = user.getName()
+        val sellerName = user.name
         // Repository에서 DTO로 조회
         val dtoPage = productRepository.findByUserIdWithThumbnail(userId, pageable)
 
         // DTO -> Response 변환
         val responsePage = dtoPage.map<ProductListResponse?>(
-            Function { dto: ProductWithThumbnailDto? ->
-                dto!!.toResponse(
+            Function { dto: ProductWithThumbnailDto ->
+                dto.toResponse(
                     true,
                     sellerName
                 )
@@ -664,81 +664,81 @@ class ProductService (
 
 
 
-    // TODO : 예진 - 상품 상세 조회 로직 추가
-    @Transactional(readOnly = true)
-    fun getProductDetail(user: User?, productId: Long): ProductDetailResponse? {
-        val cacheKey: String = CACHE_KEY_PREFIX + productId
-        val userId = if (user != null) user.getUserId() else null
-        log.info("[Product] [Detail] 상품 상세 조회 시작 - cacheKey={}, userId={}", cacheKey, userId)
-
-        try {
-            val cachedData = redisTemplate!!.opsForValue().get(cacheKey)
-            if (cachedData != null) {
-                log.info("[Service] [Cache] 캐시 히트 - key={}", cacheKey)
-                return objectMapper!!.readValue<ProductDetailResponse?>(cachedData, ProductDetailResponse::class.java)
-            }
-        } catch (e: Exception) {
-            log.error("[Service] [Cache] 캐시 읽기 실패 - key={}, error={}", cacheKey, e.message, e)
-        }
-
-
-        // 판매 중지된 상품은 조회 불가
-        try {
-            log.info("[Service] [DB] 캐시 미스(Miss) - DB 조회 - key={}", cacheKey)
-            val product: Product = productRepository!!.findByProductIdAndIsDeletedFalse(productId)
-                .orElseThrow({ ServiceException(ErrorCode.PRODUCT_NOT_FOUND) })
-
-           log.debug("[Product] [Detail] [DB] 상품 조회 완료")
-
-            if (product.getIsDeleted()) {
-                log.warn("[Product] [Detail] [DB] 실패: 삭제된 상품 - productId={}", productId)
-                throw ServiceException(ErrorCode.PRODUCT_NOT_FOUND)
-            }
-
-            val imageUrls = product.productImages.stream()
-                .map<String?> { obj: ProductImage? -> obj!!.getProductImageUrl() }
-                .collect(Collectors.toList())
-
-            // TODO: 시현
-            var isLiked = false
-            if (user != null) {
-                isLiked = productLikeRepository!!.existsByUser_UserIdAndProduct_ProductId(userId, productId)
-                log.debug("[Product] [Detail] [DB] '좋아요' 상태 확인 완료 - isLiked={}", isLiked)
-            }
-
-            val reviewCount = reviewRepository!!.countByProductAndIsDeletedFalse(product)
-            product.setReviewCount(reviewCount.toInt())
-            log.debug("[Product] [Detail] [DB] 리뷰 개수 카운트 완료 - count={}", reviewCount)
-            val response = ProductDetailResponse.from(product, imageUrls, isLiked)
-
-            try {
-                val jsonData = objectMapper!!.writeValueAsString(response)
-                redisTemplate!!.opsForValue().set(cacheKey, jsonData, Duration.ofHours(1))
-                log.info("[Service] [Cache] 캐시 쓰기(Write) 완료 - key={}", cacheKey)
-            } catch (e: Exception) {
-                log.error("[Service] [Cache] 캐시 쓰기 실패 - key={}, error={}", cacheKey, e.message, e)
-            }
-
-            log.info("[Product] [Detail] [DB] 상품 상세 조회 완료 - productId={}", productId)
-            return response
-        } catch (e: Exception) {
-            log.error("[Product] [Detail] 상품 상세 조회 실패 - productId={}", productId, e)
-            throw e
-        }
-    }
-
-    private fun buildPopularListCacheKey(
-        category: ProductCategory?,
-        filterType: ProductFilterType?,
-        pageable: Pageable
-    ): String {
-        val categoryPart = category?.name ?: "ALL"
-        val filterPart = filterType?.name ?: "ALL"
-
-        return POPULAR_LIST_CACHE_PREFIX +
-                "category=$categoryPart" +
-                ":filter=$filterPart" +
-                ":page=${pageable.pageNumber}" +
-                ":size=${pageable.pageSize}"
-    }
+//    // TODO : 예진 - 상품 상세 조회 로직 추가
+//    @Transactional(readOnly = true)
+//    fun getProductDetail(user: User?, productId: Long): ProductDetailResponse? {
+//        val cacheKey: String = CACHE_KEY_PREFIX + productId
+//        val userId = if (user != null) user.getUserId() else null
+//        log.info("[Product] [Detail] 상품 상세 조회 시작 - cacheKey={}, userId={}", cacheKey, userId)
+//
+//        try {
+//            val cachedData = redisTemplate!!.opsForValue().get(cacheKey)
+//            if (cachedData != null) {
+//                log.info("[Service] [Cache] 캐시 히트 - key={}", cacheKey)
+//                return objectMapper!!.readValue<ProductDetailResponse?>(cachedData, ProductDetailResponse::class.java)
+//            }
+//        } catch (e: Exception) {
+//            log.error("[Service] [Cache] 캐시 읽기 실패 - key={}, error={}", cacheKey, e.message, e)
+//        }
+//
+//
+//        // 판매 중지된 상품은 조회 불가
+//        try {
+//            log.info("[Service] [DB] 캐시 미스(Miss) - DB 조회 - key={}", cacheKey)
+//            val product: Product = productRepository!!.findByProductIdAndIsDeletedFalse(productId)
+//                .orElseThrow({ ServiceException(ErrorCode.PRODUCT_NOT_FOUND) })
+//
+//           log.debug("[Product] [Detail] [DB] 상품 조회 완료")
+//
+//            if (product.getIsDeleted()) {
+//                log.warn("[Product] [Detail] [DB] 실패: 삭제된 상품 - productId={}", productId)
+//                throw ServiceException(ErrorCode.PRODUCT_NOT_FOUND)
+//            }
+//
+//            val imageUrls = product.productImages.stream()
+//                .map<String?> { obj: ProductImage? -> obj!!.getProductImageUrl() }
+//                .collect(Collectors.toList())
+//
+//            // TODO: 시현
+//            var isLiked = false
+//            if (user != null) {
+//                isLiked = productLikeRepository!!.existsByUser_UserIdAndProduct_ProductId(userId, productId)
+//                log.debug("[Product] [Detail] [DB] '좋아요' 상태 확인 완료 - isLiked={}", isLiked)
+//            }
+//
+//            val reviewCount = reviewRepository!!.countByProductAndIsDeletedFalse(product)
+//            product.setReviewCount(reviewCount.toInt())
+//            log.debug("[Product] [Detail] [DB] 리뷰 개수 카운트 완료 - count={}", reviewCount)
+//            val response = ProductDetailResponse.from(product, imageUrls, isLiked)
+//
+//            try {
+//                val jsonData = objectMapper!!.writeValueAsString(response)
+//                redisTemplate!!.opsForValue().set(cacheKey, jsonData, Duration.ofHours(1))
+//                log.info("[Service] [Cache] 캐시 쓰기(Write) 완료 - key={}", cacheKey)
+//            } catch (e: Exception) {
+//                log.error("[Service] [Cache] 캐시 쓰기 실패 - key={}, error={}", cacheKey, e.message, e)
+//            }
+//
+//            log.info("[Product] [Detail] [DB] 상품 상세 조회 완료 - productId={}", productId)
+//            return response
+//        } catch (e: Exception) {
+//            log.error("[Product] [Detail] 상품 상세 조회 실패 - productId={}", productId, e)
+//            throw e
+//        }
+//    }
+//
+//    private fun buildPopularListCacheKey(
+//        category: ProductCategory?,
+//        filterType: ProductFilterType?,
+//        pageable: Pageable
+//    ): String {
+//        val categoryPart = category?.name ?: "ALL"
+//        val filterPart = filterType?.name ?: "ALL"
+//
+//        return POPULAR_LIST_CACHE_PREFIX +
+//                "category=$categoryPart" +
+//                ":filter=$filterPart" +
+//                ":page=${pageable.pageNumber}" +
+//                ":size=${pageable.pageSize}"
+//    }
 }
