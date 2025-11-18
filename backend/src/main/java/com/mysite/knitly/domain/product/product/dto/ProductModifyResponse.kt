@@ -15,7 +15,6 @@ data class ProductModifyResponse(
     companion object {
         fun from(product: Product, imageUrls: List<String>): ProductModifyResponse {
             return ProductModifyResponse(
-                // 1. Null 방어
                 productId = product.productId
                     ?: throw IllegalStateException("Product ID가 null입니다."),
                 title = product.title,
@@ -23,7 +22,6 @@ data class ProductModifyResponse(
                 productCategory = product.productCategory,
                 sizeInfo = product.sizeInfo,
 
-                // 2. Elvis 연산자
                 stockQuantity = product.stockQuantity ?: 0,
 
                 productImageUrls = imageUrls
