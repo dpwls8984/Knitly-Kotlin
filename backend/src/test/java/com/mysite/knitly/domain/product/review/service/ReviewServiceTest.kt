@@ -23,6 +23,7 @@ import org.springframework.data.domain.*
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.mock.web.MockMultipartFile
 import java.time.LocalDateTime
+import java.util.Optional
 
 internal class ReviewServiceTest {
 
@@ -70,7 +71,7 @@ internal class ReviewServiceTest {
         }
         whenever(product.productImages).thenReturn(mutableListOf(thumbnail))
 
-        whenever(orderItemRepository.findByIdOrNull(orderItemId)).thenReturn(orderItem)
+        whenever(orderItemRepository.findById(orderItemId)).thenReturn(Optional.of(orderItem))
 
         val response = reviewService.getReviewFormInfo(orderItemId)
 
@@ -82,7 +83,8 @@ internal class ReviewServiceTest {
     @Test
     @DisplayName("리뷰 폼 조회: OrderItem 없음")
     fun getReviewFormInfo_OrderItemNotFound_ShouldThrowException() {
-        whenever(orderItemRepository.findByIdOrNull(orderItemId)).thenReturn(null)
+        whenever(orderItemRepository.findById(orderItemId))
+            .thenReturn(Optional.empty())
 
         val ex = assertThrows<ServiceException> {
             reviewService.getReviewFormInfo(orderItemId)
@@ -95,7 +97,7 @@ internal class ReviewServiceTest {
     fun createReview_ValidInputNoImages_ShouldSaveReview() {
         val request = ReviewCreateRequest(5, "좋아요", emptyList())
 
-        whenever(orderItemRepository.findByIdOrNull(orderItemId)).thenReturn(orderItem)
+        whenever(orderItemRepository.findById(orderItemId)).thenReturn(Optional.of(orderItem))
 
         val reviewCaptor = argumentCaptor<Review>()
 
@@ -123,7 +125,7 @@ internal class ReviewServiceTest {
 
         val savedImageUrl = "/static/review/saved_image.jpg"
 
-        whenever(orderItemRepository.findByIdOrNull(orderItemId)).thenReturn(orderItem)
+        whenever(orderItemRepository.findById(orderItemId)).thenReturn(Optional.of(orderItem))
         whenever(localFileStorage.saveReviewImage(mockFile)).thenReturn(savedImageUrl)
 
         val reviewCaptor = argumentCaptor<Review>()
@@ -149,7 +151,7 @@ internal class ReviewServiceTest {
         val review = spy(
             Review(rating = 5, content = "test", orderItem = orderItem, product = product, user = user)
         )
-        whenever(reviewRepository.findByIdOrNull(reviewId)).thenReturn(review)
+        whenever(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review))
 
         reviewService.deleteReview(reviewId, user)
         assertThat(review.isDeleted).isTrue()
@@ -163,7 +165,7 @@ internal class ReviewServiceTest {
         val requester = user
 
         val review = Review(rating = 5, content = "test", orderItem = orderItem, product = product, user = owner)
-        whenever(reviewRepository.findByIdOrNull(reviewId)).thenReturn(review)
+        whenever(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review))
 
         val ex = assertThrows<ServiceException> {
             reviewService.deleteReview(reviewId, requester)

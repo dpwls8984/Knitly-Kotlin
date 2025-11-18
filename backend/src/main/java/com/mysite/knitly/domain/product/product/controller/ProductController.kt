@@ -17,41 +17,41 @@ class ProductController(
     private val productService: ProductService
 ) {
 
-//    @PostMapping("/{designId}/sale")
-//    fun registerProduct(
-//        @AuthenticationPrincipal user: User,
-//        @PathVariable designId: Long,
-//        @ModelAttribute @Valid request: ProductRegisterRequest
-//    ): ResponseEntity<ProductRegisterResponse> {
-//        val response = productService.registerProduct(user, designId, request)
-//        return ResponseEntity.ok(response)
-//    }
-//
-//    @PatchMapping("/{productId}/modify")
-//    fun modifyProduct(
-//        @AuthenticationPrincipal user: User,
-//        @PathVariable productId: Long,
-//        @ModelAttribute @Valid request: ProductModifyRequest
-//    ): ResponseEntity<ProductModifyResponse> {
-//        val response = productService.modifyProduct(user, productId, request)
-//        return ResponseEntity.ok(response)
-//    }
-//
-//    @DeleteMapping("/{productId}")
-//    fun deleteProduct(
-//        @AuthenticationPrincipal user: User,
-//        @PathVariable productId: Long
-//    ): ResponseEntity<Void> {
-//        productService.deleteProduct(user, productId)
-//        return ResponseEntity.noContent().build()
-//    }
-//
-//    @PostMapping("/{productId}/relist")
-//    fun relistProduct(
-//        @AuthenticationPrincipal user: User,
-//        @PathVariable productId: Long
-//    ): ResponseEntity<Void> {
-//        productService.relistProduct(user, productId)
-//        return ResponseEntity.ok().build()
-//    }
+    @PostMapping("/{designId}/sale")
+    fun registerProduct(
+        @AuthenticationPrincipal user: User,
+        @PathVariable designId: Long,
+        @ModelAttribute @Valid request: ProductRegisterRequest
+    ): ResponseEntity<ProductRegisterResponse> {
+        val response = productService.registerProduct(user, designId, request)
+        return ResponseEntity.ok(response)
+    }
+
+    @PatchMapping("/{productId}/modify")
+    fun modifyProduct(
+        @AuthenticationPrincipal user: User,
+        @PathVariable productId: Long,
+        @ModelAttribute @Valid request: ProductModifyRequest
+    ): ResponseEntity<ProductModifyResponse> {
+        val response = productService.modifyProduct(user, productId, request)
+        return ResponseEntity.ok(response)
+    }
+
+    @DeleteMapping("/{productId}")
+    fun deleteProduct(
+        @AuthenticationPrincipal user: User,
+        @PathVariable productId: Long
+    ): ResponseEntity<Void> {
+        productService.deleteProduct(user, productId)
+        return ResponseEntity.noContent().build()
+    }
+
+    @PostMapping("/{productId}/relist")
+    fun relistProduct(
+        @AuthenticationPrincipal user: User,
+        @PathVariable productId: Long
+    ): ResponseEntity<Void> {
+        productService.relistProduct(user, productId)
+        return ResponseEntity.ok().build()
+    }
 }
