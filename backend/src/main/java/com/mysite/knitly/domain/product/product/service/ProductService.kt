@@ -350,7 +350,6 @@ class ProductService (
                 productPage.totalElements, dbDuration
             )
 
-            // TODO: 시현
             // '좋아요' 누른 상품 ID 목록을 한 번에 조회
             val likeStartTime = System.currentTimeMillis()
             val likedProductIds = getLikedProductIds(user, productPage.content)
@@ -402,15 +401,13 @@ class ProductService (
         }
     }
 
-    // TODO: 시현
     private fun getLikedProductIds(user: User?, products: List<Product>): Set<Long> {
         // 1. 비로그인 사용자이거나 상품 목록이 비어있으면 빈 Set 반환
-        if (user == null || products.isEmpty()) {
-            return emptySet()
-        }
+        if (user == null || products.isEmpty()) return emptySet()
 
         // 2. 상품 ID 목록 추출
         val productIds = products.mapNotNull { it.productId }
+        if (productIds.isEmpty()) return emptySet()
 
         // 3. 좋아요한 상품 ID 조회
         return productLikeRepository.findLikedProductIdsByUserId(user.userId, productIds)
@@ -668,13 +665,9 @@ class ProductService (
 
             val imageUrls = product.productImages.map { it.productImageUrl }
 
-            // TODO: 시현
-            var isLiked = false
-            if (user != null) {
-                // [개선] !! 제거
-                isLiked = productLikeRepository.existsByUser_UserIdAndProduct_ProductId(userId, productId)
-                log.debug("[Product] [Detail] [DB] '좋아요' 상태 확인 완료 - isLiked={}", isLiked)
-            }
+            val isLiked = user?.let {
+                productLikeRepository.existsByUser_UserIdAndProduct_ProductId(it.userId, productId)
+            } ?: false
 
             val reviewCount = reviewRepository.countByProductAndIsDeletedFalse(product)
             product.reviewCount = reviewCount?.toInt()
