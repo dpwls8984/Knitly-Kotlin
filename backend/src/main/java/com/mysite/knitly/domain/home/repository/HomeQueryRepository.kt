@@ -1,22 +1,23 @@
-package com.mysite.knitly.domain.home.repository;
+package com.mysite.knitly.domain.home.repository
 
-import com.mysite.knitly.domain.home.dto.LatestPostItem;
-import com.mysite.knitly.domain.home.dto.LatestReviewItem;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
+import com.mysite.knitly.domain.home.dto.LatestPostItem
+import com.mysite.knitly.domain.home.dto.LatestReviewItem
+import jakarta.persistence.EntityManager
+import jakarta.persistence.PersistenceContext
+import org.springframework.stereotype.Repository
 
 @Repository
-public class HomeQueryRepository {
+class HomeQueryRepository(
 
     @PersistenceContext
-    private EntityManager em;
+    private val em: EntityManager
+
+) {
 
     // 최신 리뷰 N개
-    public List<LatestReviewItem> findLatestReviews(int limit) {
-        return em.createQuery("""
+    fun findLatestReviews(limit: Int): List<LatestReviewItem> {
+        return em.createQuery(
+            """
                 SELECT new com.mysite.knitly.domain.home.dto.LatestReviewItem(
                     r.reviewId,
                     p.productId,
@@ -30,14 +31,17 @@ public class HomeQueryRepository {
                 JOIN r.product p
                 WHERE r.isDeleted = false
                 ORDER BY r.createdAt DESC
-                """, LatestReviewItem.class)
-                .setMaxResults(limit)
-                .getResultList();
+            """.trimIndent(),
+            LatestReviewItem::class.java
+        )
+            .setMaxResults(limit)
+            .resultList
     }
 
     // 최신 커뮤니티 글 N개 (deleted=false, 최신순)
-    public List<LatestPostItem> findLatestPosts(int limit) {
-        return em.createQuery("""
+    fun findLatestPosts(limit: Int): List<LatestPostItem> {
+        return em.createQuery(
+            """
                 SELECT new com.mysite.knitly.domain.home.dto.LatestPostItem(
                     p.id,
                     p.title,
@@ -48,8 +52,10 @@ public class HomeQueryRepository {
                 FROM Post p
                 WHERE p.deleted = false
                 ORDER BY p.createdAt DESC
-                """, LatestPostItem.class)
-                .setMaxResults(limit)
-                .getResultList();
+            """.trimIndent(),
+            LatestPostItem::class.java
+        )
+            .setMaxResults(limit)
+            .resultList
     }
 }
