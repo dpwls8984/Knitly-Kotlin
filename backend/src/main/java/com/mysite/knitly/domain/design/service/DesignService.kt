@@ -34,7 +34,6 @@ class DesignService(
     private val log = LoggerFactory.getLogger(DesignService::class.java)
 
     // 도안 생성
-    @Transactional
     fun createDesign(user: User, request: DesignRequest): DesignResponse {
         val userId = user.userId
         MDC.put("userId", userId.toString())
@@ -172,22 +171,23 @@ class DesignService(
                     ServiceException(ErrorCode.DESIGN_NOT_FOUND)
                 }
 
-            // 본인 도안인지 확인
-            if (!design.isOwnedBy(userId)) {
-                log.warn(
-                    "[Design] [Delete] 권한 없음 - ownerId={}",
-                    design.user.userId
-                )
-                throw ServiceException(ErrorCode.DESIGN_UNAUTHORIZED_DELETE)
-            }
+            // 권한 및 상태 확인
+            when {
+                !design.isOwnedBy(userId) -> {
+                    log.warn(
+                        "[Design] [Delete] 권한 없음 - ownerId={}",
+                        design.user.userId
+                    )
+                    throw ServiceException(ErrorCode.DESIGN_UNAUTHORIZED_DELETE)
+                }
 
-            // 삭제 가능 상태인지 확인
-            if (!design.isDeletable()) {
-                log.warn(
-                    "[Design] [Delete] 삭제 불가능한 상태 - state={}",
-                    design.designState
-                )
-                throw ServiceException(ErrorCode.DESIGN_NOT_DELETABLE)
+                !design.isDeletable() -> {
+                    log.warn(
+                        "[Design] [Delete] 삭제 불가능한 상태 - state={}",
+                        design.designState
+                    )
+                    throw ServiceException(ErrorCode.DESIGN_NOT_DELETABLE)
+                }
             }
 
             // 파일 삭제 시도
@@ -222,22 +222,17 @@ class DesignService(
                     ServiceException(ErrorCode.DESIGN_NOT_FOUND)
                 }
 
-            // 본인 도안인지 확인
-            if (!design.isOwnedBy(userId)) {
-                log.warn(
-                    "[Design] [Stop] 권한 없음 - ownerId={}",
-                    design.user.userId
-                )
-                throw ServiceException(ErrorCode.DESIGN_UNAUTHORIZED_ACCESS)
-            }
+            // 권한 및 상태 확인
+            when {
+                !design.isOwnedBy(userId) -> {
+                    log.warn("[Design] [Stop] 권한 없음 - ownerId={}", design.user.userId)
+                    throw ServiceException(ErrorCode.DESIGN_UNAUTHORIZED_ACCESS)
+                }
 
-            // 판매 중인지 확인
-            if (design.designState != DesignState.ON_SALE) {
-                log.warn(
-                    "[Design] [Stop] 판매 중인 상품이 아님 - state={}",
-                    design.designState
-                )
-                throw ServiceException(ErrorCode.DESIGN_NOT_ON_SALE)
+                design.designState != DesignState.ON_SALE -> {
+                    log.warn("[Design] [Stop] 판매 중인 상품이 아님 - state={}", design.designState)
+                    throw ServiceException(ErrorCode.DESIGN_NOT_ON_SALE)
+                }
             }
 
             design.stopSale()
@@ -262,23 +257,19 @@ class DesignService(
                     ServiceException(ErrorCode.DESIGN_NOT_FOUND)
                 }
 
-            // 권한 확인
-            if (!design.isOwnedBy(userId)) {
-                log.warn(
-                    "[Design] [Relist] 권한 없음 - ownerId={}",
-                    design.user.userId
-                )
-                throw ServiceException(ErrorCode.DESIGN_UNAUTHORIZED_ACCESS)
+            // 권한 및 상태 확인
+            when {
+                !design.isOwnedBy(userId) -> {
+                    log.warn("[Design] [Relist] 권한 없음 - ownerId={}", design.user.userId)
+                    throw ServiceException(ErrorCode.DESIGN_UNAUTHORIZED_ACCESS)
+                }
+
+                design.designState != DesignState.STOPPED -> {
+                    log.warn("[Design] [Relist] 중지 상태가 아님 - state={}", design.designState)
+                    throw ServiceException(ErrorCode.DESIGN_NOT_STOPPED)
+                }
             }
 
-            // 중지 상태인지 확인
-            if (design.designState != DesignState.STOPPED) {
-                log.warn(
-                    "[Design] [Relist] 중지 상태가 아님 - state={}",
-                    design.designState
-                )
-                throw ServiceException(ErrorCode.DESIGN_NOT_STOPPED)
-            }
 
             design.relist()
             log.info("[Design] [Relist] 판매 재개 완료")
@@ -287,7 +278,7 @@ class DesignService(
         }
     }
 
-    private fun convertGridDataToJson(gridData: Any): String {
+    private fun convertGridDataToJson(gridData: List<List<String>>): String {
         return try {
             objectMapper.writeValueAsString(gridData)
         } catch (e: JsonProcessingException) {

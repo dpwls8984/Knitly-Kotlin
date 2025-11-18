@@ -77,6 +77,7 @@ dependencies {
     implementation("me.paulschwarz:spring-dotenv:3.0.0")
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
 
+    implementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

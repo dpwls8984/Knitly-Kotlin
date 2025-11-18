@@ -1,5 +1,6 @@
 package com.mysite.knitly.domain.home.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.mysite.knitly.domain.design.entity.Design
 import com.mysite.knitly.domain.home.dto.HomeSummaryResponse
 import com.mysite.knitly.domain.home.dto.LatestPostItem
@@ -21,17 +22,21 @@ import org.mockito.Mock
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.junit.jupiter.MockitoSettings
+import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.whenever
+import org.mockito.quality.Strictness
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.ValueOperations
 import java.time.LocalDate
 import java.time.LocalDateTime
-import kotlin.collections.emptySet
-import org.mockito.kotlin.any
 
 @ExtendWith(MockitoExtension::class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class HomeSectionServiceTest {
 
     @Mock
@@ -45,6 +50,15 @@ class HomeSectionServiceTest {
 
     @Mock
     private lateinit var productLikeRepository: ProductLikeRepository
+
+    @Mock
+    private lateinit var stringRedisTemplate: StringRedisTemplate
+
+    @Mock
+    private lateinit var objectMapper: ObjectMapper
+
+    @Mock
+    private lateinit var valueOperations: ValueOperations<String, String>
 
     @InjectMocks
     private lateinit var homeSectionService: HomeSectionService
@@ -90,6 +104,9 @@ class HomeSectionServiceTest {
             createdAt = now.minusDays(3),
             stockQuantity = 10,
         )
+
+        whenever(stringRedisTemplate.opsForValue()).thenReturn(valueOperations)
+        whenever(valueOperations.get(any())).thenReturn(null)
     }
 
     @Test
@@ -110,7 +127,7 @@ class HomeSectionServiceTest {
         assertThat(result).hasSize(3)
         assertThat(result)
             .extracting<Long> { it.productId }
-            .containsExactly(2L, 3L, 1L) // redis ZSET 순서 보존 검증
+            .containsExactly(2L, 3L, 1L)
 
         verify(redisProductService).getTopNPopularProducts(5)
         verify(productRepository).findByProductIdInAndIsDeletedFalse(top5Ids)
@@ -138,7 +155,6 @@ class HomeSectionServiceTest {
             .extracting<Long> { it.productId }
             .containsExactly(2L, 3L, 1L)
 
-        // 내부 구현이 바뀌어도 핵심만 검증: page=0, size=5, purchaseCount DESC
         val captor = argumentCaptor<Pageable>()
         verify(productRepository).findByIsDeletedFalse(captor.capture())
         val captured = captor.firstValue
@@ -197,7 +213,6 @@ class HomeSectionServiceTest {
     @Test
     @DisplayName("홈 요약 조회 - 인기 Top5 + 최신 리뷰3 + 최신 글3")
     fun getHomeSummary_AggregatesAllSections() {
-        // popular
         val ids = listOf(2L, 3L, 1L)
         whenever(redisProductService.getTopNPopularProducts(5)).thenReturn(ids)
         whenever(productRepository.findByProductIdInAndIsDeletedFalse(ids))
@@ -205,24 +220,20 @@ class HomeSectionServiceTest {
         whenever(productLikeRepository.findLikedProductIdsByUserId(any(), any()))
             .thenReturn(emptySet())
 
-        // latest reviews
         val r1 = LatestReviewItem(101L, 10L, "니트 스웨터", null, 5, "굿", LocalDate.now())
         val r2 = LatestReviewItem(102L, 11L, "울 머플러", null, 4, "따뜻", LocalDate.now())
         val r3 = LatestReviewItem(103L, 12L, "가디건", null, 5, "부드러움", LocalDate.now())
         whenever(homeQueryRepository.findLatestReviews(3))
             .thenReturn(listOf(r1, r2, r3))
 
-        // latest posts
         val p1 = LatestPostItem(201L, "첫 글", "FREE", null, LocalDateTime.now())
         val p2 = LatestPostItem(202L, "둘째 글", "QUESTION", null, LocalDateTime.now())
         val p3 = LatestPostItem(203L, "셋째 글", "TIP", null, LocalDateTime.now())
         whenever(homeQueryRepository.findLatestPosts(3))
             .thenReturn(listOf(p1, p2, p3))
 
-        // when
         val response: HomeSummaryResponse = homeSectionService.getHomeSummary(null)
 
-        // then
         assertThat(response.popularProducts).hasSize(3)
         assertThat(response.latestReviews).hasSize(3)
         assertThat(response.latestPosts).hasSize(3)
@@ -234,8 +245,6 @@ class HomeSectionServiceTest {
         assertThat(response.latestReviews[0].rating).isEqualTo(5)
         assertThat(response.latestPosts[1].category).isEqualTo("QUESTION")
     }
-
-    // ---------- 헬퍼 메서드 ----------
 
     private fun createProduct(
         id: Long,
