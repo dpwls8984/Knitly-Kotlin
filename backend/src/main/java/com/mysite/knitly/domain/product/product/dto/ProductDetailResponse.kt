@@ -11,7 +11,7 @@ data class ProductDetailResponse(
     val productCategory: ProductCategory,
     val sizeInfo: String,
     val price: Double,
-    val createdAt: LocalDateTime, // 3. String -> LocalDateTime
+    val createdAt: LocalDateTime?, // 3. String -> LocalDateTime
     val stockQuantity: Int,
     val likeCount: Int,
     val isLikedByUser: Boolean,

@@ -1,3 +1,5 @@
+package com.mysite.knitly.domain.design.util
+
 import com.mysite.knitly.global.exception.ErrorCode
 import com.mysite.knitly.global.exception.ServiceException
 import org.slf4j.LoggerFactory

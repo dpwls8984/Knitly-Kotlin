@@ -7,7 +7,7 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(name = "email_outbox")
-class EmailOutbox {
+open class EmailOutbox {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,7 +25,7 @@ class EmailOutbox {
     @Column(nullable = false)
     var retryCount: Int = 0
 
-    protected constructor()
+    constructor()
 
     @Column(updatable = false, nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()

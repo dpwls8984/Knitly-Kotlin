@@ -7,7 +7,7 @@ data class CommentTreeResponse(
     val content: String,
     val authorId: Long,
     val authorDisplay: String,
-    val createdAt: LocalDateTime,
+    val createdAt: LocalDateTime?,
     val mine: Boolean,
     val parentId: Long?,
     val children: List<CommentTreeResponse>

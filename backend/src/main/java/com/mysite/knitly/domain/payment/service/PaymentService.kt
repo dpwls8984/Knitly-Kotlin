@@ -3,7 +3,6 @@ package com.mysite.knitly.domain.payment.service
 import PaymentConfirmResponse
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.mysite.knitly.domain.order.dto.EmailNotificationDto
 import com.mysite.knitly.domain.order.entity.Order
 import com.mysite.knitly.domain.order.repository.OrderRepository
 import com.mysite.knitly.domain.payment.client.TossApiClient
@@ -14,12 +13,10 @@ import com.mysite.knitly.domain.payment.entity.PaymentStatus
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
 import com.mysite.knitly.domain.product.product.service.RedisProductService
 import com.mysite.knitly.domain.user.entity.User
-import com.mysite.knitly.global.email.entity.EmailOutbox
 import com.mysite.knitly.global.email.repository.EmailOutboxRepository
 import com.mysite.knitly.global.exception.ErrorCode
 import com.mysite.knitly.global.exception.ServiceException
 import org.slf4j.LoggerFactory
-import org.slf4j.MDC
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.io.IOException
@@ -65,7 +62,7 @@ class PaymentService(
                     throw ServiceException(ErrorCode.ORDER_NOT_FOUND)
                 }
 
-            val userId = order.user.userId
+            val userId = order.user?.userId
             log.debug(
                 "[Payment] [Confirm] 주문 정보 조회 완료 - orderId={}, userId={}, orderAmount={}",
                 orderId, userId, order.totalPrice
@@ -134,30 +131,30 @@ class PaymentService(
             incrementProductPopularity(order)
 
             // 8. EmailOutbox 생성
-            MDC.put("orderId", order.orderId.toString())
-            MDC.put("userId", order.user.userId.toString())
-
-            try {
-                log.info("[Payment] [Outbox] EmailOutbox 작업 생성 시작")
-
-                val user = order.user
-                val emailDto = EmailNotificationDto(order.orderId, user.userId, user.email)
-                val payload = objectMapper.writeValueAsString(emailDto)
-
-                val emailJob = EmailOutbox(payload = payload)
-                emailOutboxRepository.save(emailJob)
-                MDC.put("outboxId", emailJob.id.toString())
-
-                log.info("[Payment] [Outbox] EmailOutbox 작업 생성 완료")
-            } catch (e: Exception) {
-                // 페이로드 생성/저장 실패 시, 결제 트랜잭션 전체를 롤백
-                log.error("[Payment] [Outbox] EmailOutbox 작업 저장 실패. 결제 트랜잭션을 롤백합니다.", e)
-                throw ServiceException(ErrorCode.PAYMENT_CONFIRM_FAILED)
-            } finally {
-                MDC.remove("outboxId")
-                MDC.remove("orderId")
-                MDC.remove("userId")
-            }
+//            MDC.put("orderId", order.orderId.toString())
+//            MDC.put("userId", order.user.userId.toString())
+//
+//            try {
+//                log.info("[Payment] [Outbox] EmailOutbox 작업 생성 시작")
+//
+//                val user = order.user
+//                val emailDto = EmailNotificationDto(order.orderId, user?.userId ?: , user.email)
+//                val payload = objectMapper.writeValueAsString(emailDto)
+//
+//                val emailJob = EmailOutbox(payload = payload)
+//                emailOutboxRepository.save(emailJob)
+//                MDC.put("outboxId", emailJob.id.toString())
+//
+//                log.info("[Payment] [Outbox] EmailOutbox 작업 생성 완료")
+//            } catch (e: Exception) {
+//                // 페이로드 생성/저장 실패 시, 결제 트랜잭션 전체를 롤백
+//                log.error("[Payment] [Outbox] EmailOutbox 작업 저장 실패. 결제 트랜잭션을 롤백합니다.", e)
+//                throw ServiceException(ErrorCode.PAYMENT_CONFIRM_FAILED)
+//            } finally {
+//                MDC.remove("outboxId")
+//                MDC.remove("orderId")
+//                MDC.remove("userId")
+//            }
 
             // 9. 응답 데이터 생성
             val response = buildPaymentConfirmResponse(savedPayment, tossResponse)
@@ -354,7 +351,7 @@ class PaymentService(
         val payment = paymentRepository.findByOrder_OrderId(orderId)
             ?: throw ServiceException(ErrorCode.PAYMENT_NOT_FOUND)
 
-        if (payment.buyer.userId != user.userId) {
+        if (payment.buyer?.userId != user.userId) {
             throw ServiceException(ErrorCode.PAYMENT_UNAUTHORIZED_ACCESS)
         }
         return PaymentDetailResponse.from(payment)
@@ -372,11 +369,11 @@ class PaymentService(
 
             order.orderItems.forEach { orderItem ->
                 val product = orderItem.product
-                val productId = product.productId
+                val productId = product?.productId
                 val quantity = orderItem.quantity
 
                 try {
-                    product.increasePurchaseCount(quantity)
+                    product?.increasePurchaseCount(quantity)
 
                     repeat(quantity) {
                         redisProductService.incrementPurchaseCount(requireNotNull(productId) { "productId is null" })
@@ -386,7 +383,7 @@ class PaymentService(
 
                     log.debug(
                         "[Payment] [Popularity] 상품 인기도 증가 완료 - productId={}, quantity={}, newPurchaseCount={}",
-                        productId, quantity, product.purchaseCount
+                        productId, quantity, product?.purchaseCount
                     )
                 } catch (e: Exception) {
                     failCount++

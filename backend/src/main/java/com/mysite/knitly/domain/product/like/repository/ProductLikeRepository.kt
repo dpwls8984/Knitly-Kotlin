@@ -26,5 +26,5 @@ interface ProductLikeRepository : JpaRepository<ProductLike, ProductLikeId> {
         @Param("productIds") productIds: List<Long>
     ): Set<Long>
 
-    fun existsByUser_UserIdAndProduct_ProductId(userId: Long, productId: Long): Boolean
+    fun existsByUser_UserIdAndProduct_ProductId(userId: Long?, productId: Long): Boolean
 }

@@ -1,58 +1,50 @@
 package com.mysite.knitly.domain.order.event
 
+import mu.KotlinLogging
 import com.mysite.knitly.domain.product.product.entity.Product
-import com.mysite.knitly.domain.product.product.service.RedisProductService
-import org.slf4j.LoggerFactory
+import lombok.RequiredArgsConstructor
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
+
+private val log = KotlinLogging.logger {}
+
 @Component
-class OrderEventListener(
-    private val redisTemplate: StringRedisTemplate,
-    private val redisProductService: RedisProductService
-) {
+@RequiredArgsConstructor
+class OrderEventListener {
+    private val redisTemplate: StringRedisTemplate? = null
 
-    companion object {
-        private val log = LoggerFactory.getLogger(OrderEventListener::class.java)
-    }
-
+    /**
+     * 주문 생성 후 상품 상세 캐시 무효화
+     * - 재고 정보가 변경되었으므로 캐시 삭제 필요
+     * - 인기도는 결제 승인 시에만 증가해야하므로 메서드 삭제했음
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handleOrderCreatedEvent(event: OrderCreatedEvent) {
-        deleteProductCache(event.orderedProducts)
-        incrementPopularityScore(event.orderedProducts)
+        deleteProductCache(event.orderedProducts as MutableList<Product?>?)
     }
 
-    private fun deleteProductCache(products: List<Product>?) {
-        if (products.isNullOrEmpty()) return
+    private fun deleteProductCache(products: MutableList<Product?>?) {
+        if (products == null || products.isEmpty()) {
+            log.debug("[Event] [Cache] 캐시 삭제할 상품 없음")
+            return
+        }
 
-        val cacheKeys = products.map { "product:detail:" + it.productId }
+        val cacheKeys = products.stream()
+            .map<String?> { product: Product? -> "product:detail:" + product!!.productId }
+            .toList()
 
-        if (cacheKeys.isNotEmpty()) {
+        if (!cacheKeys.isEmpty()) {
             try {
-                redisTemplate.delete(cacheKeys)
-                log.info("[Event] [Cache] 캐시 삭제(Invalidate) 완료 - keyCount={}", cacheKeys.size)
+                redisTemplate!!.delete(cacheKeys)
+                log.info("[Event] [Cache] 상품 상세 캐시 삭제 완료 - keyCount={}", cacheKeys.size)
             } catch (e: Exception) {
                 log.error(
                     "[Event] [Cache] 캐시 삭제 실패 - keyCount={}, error={}",
                     cacheKeys.size, e.message, e
                 )
             }
-        }
-    }
-
-    //TODO: incrementPopularityScore 개선
-    private fun incrementPopularityScore(products: List<Product>?) {
-        if (products.isNullOrEmpty()) return
-
-        try {
-            for (product in products) {
-                // 10. 'redisProductService'가 Non-null이므로 '!!' 제거
-                redisProductService.incrementPurchaseCount(product.productId)
-            }
-            log.info("[Event] [Redis] 인기도(ZSet) 점수 증가 완료 - productCount={}", products.size)
-        } catch (e: Exception) {
-            log.error("[Event] [Redis] 인기도 점수 증가 실패 - error={}", e.message, e)
         }
     }
 }

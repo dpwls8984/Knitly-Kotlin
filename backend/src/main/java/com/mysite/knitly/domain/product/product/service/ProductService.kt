@@ -62,23 +62,23 @@ class ProductService (
             design.startSale()
             log.debug("[Product] [Register] design.startSale() 호출")
 
-            val product: Product = Product.builder()
-                .title(request.title)
-                .description(request.description)
-                .productCategory(request.productCategory)
-                .sizeInfo(request.sizeInfo)
-                .price(request.price)
-                .stockQuantity(request.stockQuantity)
-                .user(seller) // 판매자 정보 연결
-                .design(design) // 도안 정보 연결
-                .isDeleted(false) // 초기 상태: 판매 중
-                .purchaseCount(0) // 초기값 설정
-                .likeCount(0) // 초기값 설정
-                .build()
+            val product = Product(
+                title = request.title,
+                description = request.description,
+                productCategory = request.productCategory,
+                sizeInfo = request.sizeInfo,
+                price = request.price,
+                stockQuantity = request.stockQuantity,
+                user = seller,
+                design = design,
+                isDeleted = false,
+                purchaseCount = 0,
+                likeCount = 0
+            )
             log.debug("[Product] [Register] Product 엔티티 빌드 완료")
 
-            val productImages = saveProductImages(request.productImageUrls)
-            product.addProductImages(productImages)
+            val productImages = saveProductImages(request.productImageUrls as MutableList<MultipartFile>?)
+            product.addProductImages(productImages as List<ProductImage>?)
 
             val savedProduct = productRepository!!.save<Product>(product)
             log.debug("[Product] [Register] DB 상품 저장 완료")
@@ -91,7 +91,7 @@ class ProductService (
         } catch (e: Exception) {
             log.error(
                 "[Product] [Register] 상품 등록 실패 - sellerId={}, designId={}",
-                seller.getUserId(), designId, e
+                seller.userId, e
             )
             throw e
         }
@@ -103,22 +103,22 @@ class ProductService (
     fun modifyProduct(currentUser: User, productId: Long, request: ProductModifyRequest): ProductModifyResponse {
         log.info(
             "[Product] [Modify] 상품 수정 시작 - userId={}, productId={}",
-            currentUser.getUserId(), productId
+            currentUser.userId, productId
         )
 
         try {
             val product = findProductById(productId)
             log.debug("[Product] [Modify] 상품 조회 완료 - productId={}", productId)
 
-            if (product.getIsDeleted()) {
+            if (product.isDeleted) {
                 log.warn("[Product] [Modify] 실패: 이미 삭제된 상품 - productId={}", productId)
                 throw ServiceException(ErrorCode.PRODUCT_ALREADY_DELETED)
             }
 
-            if (product.user.getUserId() != currentUser.getUserId()) {
+            if (product.user.userId != currentUser.userId) {
                 log.warn(
                     "[Product] [Modify] 실패: 권한 없음 - userId={}, sellerId={}",
-                    currentUser.getUserId(), product.user.getUserId()
+                    currentUser.userId, product.user.userId
                 )
                 throw ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED)
             }
@@ -133,7 +133,7 @@ class ProductService (
 
             // 1. 기존 이미지 URL 전체
             val oldImageUrls = product.productImages.stream()
-                .map<String?> { obj: ProductImage? -> obj!!.getProductImageUrl() }
+                .map<String?> { obj: ProductImage? -> obj!!.productImageUrl }
                 .collect(Collectors.toList())
 
             // 2. 유지할 기존 이미지 URL 목록 (프론트에서 전달된 값)
@@ -153,7 +153,7 @@ class ProductService (
             )
 
             // 4. 새로운 이미지 파일을 저장
-            val newProductImages = saveProductImages(request.productImageUrls)
+            val newProductImages = saveProductImages(request.productImageUrls as MutableList<MultipartFile>?)
             log.debug("[Product] [Modify] 새 이미지 {}개 임시 저장 완료.", newProductImages.size)
 
             // 5. 유지할 기존 이미지 + 새 이미지 합치기
@@ -161,7 +161,7 @@ class ProductService (
 
             // 기존 이미지 중 유지 대상만 다시 추가
             for (oldImg in product.productImages) {
-                if (existingImageUrls.contains(oldImg.getProductImageUrl())) {
+                if (existingImageUrls.contains(oldImg.productImageUrl)) {
                     mergedImages.add(oldImg)
                 }
             }
@@ -171,7 +171,7 @@ class ProductService (
             log.debug("[Product] [Modify] 병합된 이미지 리스트 크기: {}", mergedImages.size)
 
             // 6. 엔티티 반영 (기존 이미지 중 유지 대상은 그대로, 삭제 대상은 orphanRemoval로 DB에서 제거)
-            product.addProductImages(mergedImages)
+            product.addProductImages(mergedImages as List<ProductImage>?)
             log.debug("[Product] [Modify] product.addProductImages (orphanRemoval) 호출")
 
             // 7. 삭제할 이미지 파일 실제 삭제
@@ -182,7 +182,7 @@ class ProductService (
             }
 
             val currentImageUrls = product.productImages.stream()
-                .map<String?> { obj: ProductImage? -> obj!!.getProductImageUrl() }
+                .map<String?> { obj: ProductImage? -> obj!!.productImageUrl }
                 .collect(Collectors.toList())
 
             log.info("[Product] [Modify] 상품 수정 성공 - productId={}", product.productId)
@@ -191,7 +191,7 @@ class ProductService (
         } catch (e: Exception) {
             log.error(
                 "[Product] [Modify] 상품 수정 실패 - userId={}, productId={}",
-                currentUser.getUserId(), productId, e
+                currentUser.userId, productId, e
             )
             throw e
         }
@@ -202,16 +202,16 @@ class ProductService (
     fun deleteProduct(currentUser: User, productId: Long) {
         log.info(
             "[Product] [Delete] 상품 삭제 시작 - userId={}, productId={}",
-            currentUser.getUserId(), productId
+            currentUser.userId, productId
         )
 
         try {
             val product = findProductById(productId)
 
-            if (product.user.getUserId() != currentUser.getUserId()) {
+            if (product.user.userId != currentUser.userId) {
                 log.warn(
                     "[Product] [Delete] 실패: 권한 없음 - userId={}, sellerId={}",
-                    currentUser.getUserId(), product.user.getUserId()
+                    currentUser.userId, product.user.userId
                 )
                 throw ServiceException(ErrorCode.PRODUCT_DELETE_UNAUTHORIZED)
             }
@@ -226,7 +226,7 @@ class ProductService (
         } catch (e: Exception) {
             log.error(
                 "[Product] [Delete] 상품 삭제 실패 - userId={}, productId={}",
-                currentUser.getUserId(), productId, e
+                currentUser.userId, productId, e
             )
             throw e
         }
@@ -237,16 +237,16 @@ class ProductService (
     fun relistProduct(currentUser: User, productId: Long) {
         log.info(
             "[Product] [Relist] 상품 재판매 시작 - userId={}, productId={}",
-            currentUser.getUserId(), productId
+            currentUser.userId, productId
         )
 
         try {
             val product = findProductById(productId)
 
-            if (product.user.getUserId() != currentUser.getUserId()) {
+            if (product.user.userId != currentUser.userId) {
                 log.warn(
                     "[Product] [Relist] 실패: 권한 없음 - userId={}, sellerId={}",
-                    currentUser.getUserId(), product.user.getUserId()
+                    currentUser.userId, product.user.userId
                 )
                 throw ServiceException(ErrorCode.PRODUCT_MODIFY_UNAUTHORIZED)
             }
@@ -260,7 +260,7 @@ class ProductService (
         } catch (e: Exception) {
             log.error(
                 "[Product] [Relist] 상품 재판매 실패 - userId={}, productId={}",
-                currentUser.getUserId(), productId, e
+                currentUser.userId, productId, e
             )
             throw e
         }
@@ -285,9 +285,7 @@ class ProductService (
                 val url = localFileStorage!!.saveProductImage(file)
                 log.trace("[Product] [ImageSave] 스토리지 저장 완료 - URL: {}", url)
 
-                val productImage = ProductImage.builder()
-                    .productImageUrl(url)
-                    .build()
+                val productImage = ProductImage(productImageUrl = url)
                 productImages.add(productImage)
             }
             log.debug("[Product] [ImageSave] 이미지 저장 완료 - savedCount={}", productImages.size)
@@ -601,7 +599,7 @@ class ProductService (
                 ErrorCode.USER_NOT_FOUND
             )
         })
-        val sellerName = user.getName()
+        val sellerName = user.name
         // Repository에서 DTO로 조회
         val dtoPage = productRepository.findByUserIdWithThumbnail(userId, pageable)
 
@@ -668,7 +666,7 @@ class ProductService (
     @Transactional(readOnly = true)
     fun getProductDetail(user: User?, productId: Long): ProductDetailResponse? {
         val cacheKey: String = CACHE_KEY_PREFIX + productId
-        val userId = if (user != null) user.getUserId() else null
+        val userId = if (user != null) user.userId else null
         log.info("[Product] [Detail] 상품 상세 조회 시작 - cacheKey={}, userId={}", cacheKey, userId)
 
         try {
@@ -685,18 +683,19 @@ class ProductService (
         // 판매 중지된 상품은 조회 불가
         try {
             log.info("[Service] [DB] 캐시 미스(Miss) - DB 조회 - key={}", cacheKey)
-            val product: Product = productRepository!!.findByProductIdAndIsDeletedFalse(productId)
-                .orElseThrow({ ServiceException(ErrorCode.PRODUCT_NOT_FOUND) })
+            val product = productRepository!!
+                .findByProductIdAndIsDeletedFalse(productId)
+                ?: throw ServiceException(ErrorCode.PRODUCT_NOT_FOUND)
 
            log.debug("[Product] [Detail] [DB] 상품 조회 완료")
 
-            if (product.getIsDeleted()) {
+            if (product.isDeleted) {
                 log.warn("[Product] [Detail] [DB] 실패: 삭제된 상품 - productId={}", productId)
                 throw ServiceException(ErrorCode.PRODUCT_NOT_FOUND)
             }
 
             val imageUrls = product.productImages.stream()
-                .map<String?> { obj: ProductImage? -> obj!!.getProductImageUrl() }
+                .map<String?> { obj: ProductImage? -> obj!!.productImageUrl }
                 .collect(Collectors.toList())
 
             // TODO: 시현
@@ -707,7 +706,7 @@ class ProductService (
             }
 
             val reviewCount = reviewRepository!!.countByProductAndIsDeletedFalse(product)
-            product.setReviewCount(reviewCount.toInt())
+            product.reviewCount = reviewCount?.toInt()
             log.debug("[Product] [Detail] [DB] 리뷰 개수 카운트 완료 - count={}", reviewCount)
             val response = ProductDetailResponse.from(product, imageUrls, isLiked)
 

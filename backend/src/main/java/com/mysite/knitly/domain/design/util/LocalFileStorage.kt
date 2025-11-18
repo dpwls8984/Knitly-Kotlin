@@ -171,7 +171,7 @@ class LocalFileStorage {
             )
 
             //String url = "/products/" + relativePath;
-            val url = backendBaseUrl + "/products/" + relativePath
+            val url = BACKEND_BASE_URL + "/products/" + relativePath
 
             log.info("[FileStorage] [Save] Product 이미지 저장 완료 - path={}", filePath)
             return url
@@ -191,12 +191,12 @@ class LocalFileStorage {
             // 1. URL에서 상대 경로(relative path) 추출
             // 예: "http://localhost:8080/products/2025/11/11/img.jpg"
             val relativePath: kotlin.String?
-            if (fileUrl.startsWith(backendBaseUrl + productsUrlPrefix)) {
+            if (fileUrl.startsWith(BACKEND_BASE_URL + PRODUCTS_URL_PREFIX)) {
                 // "http://localhost:8080/products/" 부분을 제거
-                relativePath = fileUrl.substring((backendBaseUrl + productsUrlPrefix).length)
-            } else if (fileUrl.startsWith(productsUrlPrefix)) {
+                relativePath = fileUrl.substring((BACKEND_BASE_URL + PRODUCTS_URL_PREFIX).length)
+            } else if (fileUrl.startsWith(PRODUCTS_URL_PREFIX)) {
                 // (예외 처리) Base URL이 없는 경우 (예: /products/...)
-                relativePath = fileUrl.substring(productsUrlPrefix.length)
+                relativePath = fileUrl.substring(PRODUCTS_URL_PREFIX.length)
             } else {
                 log.warn("예상치 못한 Product 이미지 URL 형식입니다: {}", fileUrl)
                 return

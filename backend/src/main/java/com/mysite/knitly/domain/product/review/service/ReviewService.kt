@@ -38,12 +38,12 @@ class ReviewService(
 
         val product = orderItem.product
 
-        val thumbnailUrl = product.productImages.firstOrNull()?.productImageUrl
+        val thumbnailUrl = product?.productImages?.firstOrNull()?.productImageUrl
 
         log.debug { "[Review] [Form] 썸네일 URL 추출 완료 - thumbnailUrl=$thumbnailUrl" }
-        log.info { "[Review] [Form] 리뷰 작성 폼 조회 완료 - productTitle=${product.title}" }
+        log.info { "[Review] [Form] 리뷰 작성 폼 조회 완료 - productTitle=${product?.title}" }
 
-        return ReviewCreateResponse(product.title, thumbnailUrl)
+        return ReviewCreateResponse(product?.title ?: throw ServiceException(ErrorCode.PRODUCT_NOT_FOUND), thumbnailUrl)
     }
 
     // 1. 리뷰 등록
@@ -80,7 +80,7 @@ class ReviewService(
         reviewRepository.save(review)
 
         log.info {
-            "[Review] [Create] 리뷰 생성 완료 - reviewId=${review.reviewId}, productId=${product.productId}"
+            "[Review] [Create] 리뷰 생성 완료 - reviewId=${review.reviewId}, productId=${product?.productId}"
         }
     }
 

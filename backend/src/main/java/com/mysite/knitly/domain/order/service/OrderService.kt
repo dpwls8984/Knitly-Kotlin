@@ -8,7 +8,6 @@ import com.mysite.knitly.domain.payment.entity.Payment
 import com.mysite.knitly.domain.payment.entity.PaymentMethod
 import com.mysite.knitly.domain.payment.entity.PaymentStatus
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
-import com.mysite.knitly.domain.product.product.entity.Product
 import com.mysite.knitly.domain.product.product.repository.ProductRepository
 import com.mysite.knitly.domain.user.entity.User
 import jakarta.persistence.EntityNotFoundException

@@ -13,7 +13,7 @@ import java.time.LocalDateTime
 class Payment(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    var paymentId: Long ?= null,
+    var paymentId: Long? = null,
 
     // READY 상태에서는 tossPaymentKey가 아직 없으므로 null 허용
     @Column(unique = true)
@@ -31,7 +31,7 @@ class Payment(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    var buyer: User,
+    var buyer: User?,
 
     @Column(nullable = false)
     var totalAmount: Long,
