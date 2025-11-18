@@ -1,9 +1,7 @@
-// 리액트 애플리케이션을 위한 상태 관리 라이브러리
-// 매우 가볍고 빠르며, 복잡하지 않은 API를 사용하여 전역 상태(Global State)를 관리할 수 있게 해줌
-
 import { create } from 'zustand';
 import { AuthStore, User } from '@/types/auth.types';
 import api from '@/lib/api/axios';
+import { logOut as logOutApi } from '@/lib/api/user.api';
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
     // State
@@ -28,9 +26,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         console.log('✅ 로그인 완료:', user);
     },
 
-    logout: async () => {
-
-            // 로컬 상태 초기화
+    logout: async (): Promise<void> => {
+        try {
+            // 1. 백엔드 로그아웃 API 호출 (refresh token 쿠키 삭제)
+            await logOutApi();
+            console.log('✅ 서버 로그아웃 완료');
+        } catch (error) {
+            console.error('❌ 로그아웃 API 호출 실패:', error);
+            // API 실패해도 클라이언트 로그아웃은 진행
+        } finally {
+            // 2. 로컬 상태 초기화 (API 성공/실패 관계없이 실행)
             localStorage.removeItem('accessToken');
             localStorage.removeItem('user');
 
@@ -41,7 +46,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 isLoading: false,
             });
 
-            console.log('✅ 로그아웃 완료');
+            console.log('✅ 클라이언트 로그아웃 완료');
+        }
     },
 
     setUser: (user: User | null) => {
