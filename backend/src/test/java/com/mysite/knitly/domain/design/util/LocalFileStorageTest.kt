@@ -14,12 +14,12 @@ class LocalFileStorageTest {
     @Test
     @DisplayName("로컬 저장 - URL 반환 및 URL → 실경로 복원 성공")
     fun savePdfFile_and_resolve_ok() {
-        val storage = LocalFileStorage()
-        setField(storage, "uploadDir", tempDir.toString())
-        setField(storage, "publicPrefix", "/files")
+        val storage = LocalFileStorage(
+            uploadDir = tempDir.toString(),
+            publicPrefix = "/files"
+        )
 
         val pdfBytes = byteArrayOf(1, 2, 3)
-
         val url = storage.savePdfFile(pdfBytes, "testFile")
 
         assertThat(url).startsWith("/files/")
@@ -28,11 +28,5 @@ class LocalFileStorageTest {
         val abs = storage.toAbsolutePathFromUrl(url)
         assertThat(Files.exists(abs)).isTrue()
         assertThat(Files.size(abs)).isEqualTo(3)
-    }
-
-    private fun setField(target: Any, name: String, value: Any) {
-        val field = target.javaClass.getDeclaredField(name)
-        field.isAccessible = true
-        field.set(target, value)
     }
 }
