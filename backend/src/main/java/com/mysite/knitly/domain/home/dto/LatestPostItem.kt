@@ -1,11 +1,11 @@
-package com.mysite.knitly.domain.home.dto;
+package com.mysite.knitly.domain.home.dto
 
-import java.time.LocalDateTime;
+import java.time.LocalDateTime
 
-public record LatestPostItem(
-        Long postId,
-        String title,
-        String category,
-        String thumbnailUrl,
-        LocalDateTime createdAt
-) {}
+data class LatestPostItem(
+    val postId: Long,
+    val title: String,
+    val category: String,
+    val thumbnailUrl: String?,
+    val createdAt: LocalDateTime
+)
