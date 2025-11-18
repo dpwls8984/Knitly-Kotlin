@@ -20,21 +20,21 @@ class Payment(
     var tossPaymentKey: String? = null,
 
     @Column(nullable = false)
-    var tossOrderId: String,
+    val tossOrderId: String,
 
     @Column(length = 100)
     var mid: String? = null,
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
-    var order: Order,
+    val order: Order,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    var buyer: User?,
+    val buyer: User?,
 
     @Column(nullable = false)
-    var totalAmount: Long,
+    val totalAmount: Long,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
