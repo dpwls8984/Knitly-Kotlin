@@ -52,85 +52,110 @@ class PaymentService(
             orderId, paymentKey, amount
         )
 
-        var savedPayment: Payment? = null
+        return try {
+            processPaymentConfirm(request, startTime)
+        } catch (e: ServiceException) {
+            handlePaymentFailure(orderId, paymentKey, e, startTime)
+            throw e
+        } catch (e: IOException) {
+            handlePaymentFailure(orderId, paymentKey, e, startTime)
+            throw ServiceException(ErrorCode.PAYMENT_API_CALL_FAILED)
+        } catch (e: Exception) {
+            handlePaymentFailure(orderId, paymentKey, e, startTime)
+            throw ServiceException(ErrorCode.PAYMENT_CONFIRM_FAILED)
+        }
+    }
 
-        try {
-            // 1. 주문 정보 조회 및 검증
-            val order = orderRepository.findByTossOrderId(orderId)
-                ?: run {
-                    log.warn("[Payment] [Confirm] 주문을 찾을 수 없음 - orderId={}", orderId)
-                    throw ServiceException(ErrorCode.ORDER_NOT_FOUND)
-                }
+    private fun processPaymentConfirm(request: PaymentConfirmRequest, startTime: Long): PaymentConfirmResponse {
+        val orderId = request.orderId
+        val paymentKey = request.paymentKey
+        val amount = request.amount
 
-            val userId = order.user?.userId
-            log.debug(
-                "[Payment] [Confirm] 주문 정보 조회 완료 - orderId={}, userId={}, orderAmount={}",
-                orderId, userId, order.totalPrice
-            )
-
-            // 2. 주문 금액 검증
-            val orderAmount = order.totalPrice.toLong()
-            if (orderAmount != amount) {
-                log.warn(
-                    "[Payment] [Confirm] 결제 금액 불일치 - orderId={}, orderAmount={}, requestAmount={}",
-                    orderId, orderAmount, amount
-                )
-                throw ServiceException(ErrorCode.PAYMENT_AMOUNT_MISMATCH)
+        // 1. 주문 정보 조회 및 검증
+        val order = orderRepository.findByTossOrderId(orderId)
+            ?: run {
+                log.warn("[Payment] [Confirm] 주문을 찾을 수 없음 - orderId={}", orderId)
+                throw ServiceException(ErrorCode.ORDER_NOT_FOUND)
             }
 
-            // 3. READY 상태의 Payment 조회
-            savedPayment = paymentRepository.findByOrder_OrderId(order.orderId)
-                ?: run {
-                    log.error("[Payment] [Confirm] Payment가 존재하지 않음 - orderId={}", orderId)
-                    throw ServiceException(ErrorCode.PAYMENT_NOT_FOUND)
-                }
+        val userId = order.user?.userId
+        log.debug(
+            "[Payment] [Confirm] 주문 정보 조회 완료 - orderId={}, userId={}, orderAmount={}",
+            orderId, userId, order.totalPrice
+        )
 
-            // READY 상태가 아니면 에러
-            if (savedPayment.paymentStatus != PaymentStatus.READY) {
+        // 2. 주문 금액 검증
+        val orderAmount = order.totalPrice.toLong()
+        if (orderAmount != amount) {
+            log.warn(
+                "[Payment] [Confirm] 결제 금액 불일치 - orderId={}, orderAmount={}, requestAmount={}",
+                orderId, orderAmount, amount
+            )
+            throw ServiceException(ErrorCode.PAYMENT_AMOUNT_MISMATCH)
+        }
+
+        // 3. READY 상태의 Payment 조회
+        val payment = paymentRepository.findByOrder_OrderId(order.orderId)
+            ?: run {
+                log.error("[Payment] [Confirm] Payment가 존재하지 않음 - orderId={}", orderId)
+                throw ServiceException(ErrorCode.PAYMENT_NOT_FOUND)
+            }
+
+        // 4. Payment 상태 검증
+        when (payment.paymentStatus) {
+            PaymentStatus.READY -> {
+                // 정상 진행
+                log.debug("[Payment] [Confirm] Payment 상태 확인 완료 - paymentId={}, status=READY", payment.paymentId)
+            }
+            PaymentStatus.DONE -> {
+                log.warn(
+                    "[Payment] [Confirm] Payment가 이미 완료됨 - paymentId={}, status={}",
+                    payment.paymentId, payment.paymentStatus
+                )
+                throw ServiceException(ErrorCode.PAYMENT_ALREADY_EXISTS)
+            }
+            else -> {
                 log.warn(
                     "[Payment] [Confirm] Payment가 READY 상태가 아님 - paymentId={}, status={}",
-                    savedPayment.paymentId, savedPayment.paymentStatus
+                    payment.paymentId, payment.paymentStatus
                 )
-
-                throw when (savedPayment.paymentStatus) {
-                    PaymentStatus.DONE -> ServiceException(ErrorCode.PAYMENT_ALREADY_EXISTS)
-                    else -> ServiceException(ErrorCode.INVALID_PAYMENT_STATUS)
-                }
+                throw ServiceException(ErrorCode.INVALID_PAYMENT_STATUS)
             }
+        }
 
-            // 4. Payment를 IN_PROGRESS 상태로 변경 + paymentKey 저장
-            savedPayment.tossPaymentKey = paymentKey
-            savedPayment.paymentStatus = PaymentStatus.IN_PROGRESS
-            savedPayment = paymentRepository.save(savedPayment)
+        // 5. Payment를 IN_PROGRESS 상태로 변경 + paymentKey 저장
+        payment.tossPaymentKey = paymentKey
+        payment.paymentStatus = PaymentStatus.IN_PROGRESS
+        val updatedPayment = paymentRepository.save(payment)
 
-            log.info(
-                "[Payment] [Confirm] Payment 상태 변경 - paymentId={}, READY → IN_PROGRESS",
-                savedPayment.paymentId
-            )
+        log.info(
+            "[Payment] [Confirm] Payment 상태 변경 - paymentId={}, READY → IN_PROGRESS",
+            updatedPayment.paymentId
+        )
 
-            // 5. 토스페이먼츠 결제 승인 API 호출 (재시도 자동 적용)
-            val apiStartTime = System.currentTimeMillis()
-            val tossResponse = tossApiClient.confirmPayment(request)
-            val apiDuration = System.currentTimeMillis() - apiStartTime
+        // 6. 토스페이먼츠 결제 승인 API 호출 (재시도 자동 적용)
+        val apiStartTime = System.currentTimeMillis()
+        val tossResponse = tossApiClient.confirmPayment(request)
+        val apiDuration = System.currentTimeMillis() - apiStartTime
 
-            log.info(
-                "[Payment] [Confirm] 토스 API 호출 완료 - orderId={}, paymentKey={}, apiDuration={}ms",
-                orderId, paymentKey, apiDuration
-            )
+        log.info(
+            "[Payment] [Confirm] 토스 API 호출 완료 - orderId={}, paymentKey={}, apiDuration={}ms",
+            orderId, paymentKey, apiDuration
+        )
 
-            // 6. Payment 엔티티 업데이트 (DONE 상태로 변경)
-            updatePaymentFromTossResponse(savedPayment, tossResponse)
-            savedPayment = paymentRepository.save(savedPayment)
+        // 7. Payment 엔티티 업데이트 (DONE 상태로 변경)
+        updatePaymentFromTossResponse(updatedPayment, tossResponse)
+        val finalPayment = paymentRepository.save(updatedPayment)
 
-            log.debug(
-                "[Payment] [Confirm] Payment 엔티티 업데이트 완료 - paymentId={}, status=DONE",
-                savedPayment.paymentId
-            )
+        log.debug(
+            "[Payment] [Confirm] Payment 엔티티 업데이트 완료 - paymentId={}, status=DONE",
+            finalPayment.paymentId
+        )
 
-            // 7. 결제 완료 시 redis 상품 인기도 증가
-            incrementProductPopularity(order)
+        // 8. 결제 완료 시 redis 상품 인기도 증가
+        incrementProductPopularity(order)
 
-            // 8. EmailOutbox 생성
+        // 9. EmailOutbox 생성
 //            MDC.put("orderId", order.orderId.toString())
 //            MDC.put("userId", order.user.userId.toString())
 //
@@ -155,63 +180,48 @@ class PaymentService(
 //                MDC.remove("orderId")
 //                MDC.remove("userId")
 //            }
+        // 10. 응답 데이터 생성
+        val response = buildPaymentConfirmResponse(finalPayment, tossResponse)
 
-            // 9. 응답 데이터 생성
-            val response = buildPaymentConfirmResponse(savedPayment, tossResponse)
+        val totalDuration = System.currentTimeMillis() - startTime
+        log.info(
+            "[Payment] [Confirm] 결제 승인 완료 - orderId={}, paymentKey={}, paymentId={}, amount={}, totalDuration={}ms",
+            orderId, paymentKey, finalPayment.paymentId, amount, totalDuration
+        )
 
-            val totalDuration = System.currentTimeMillis() - startTime
-            log.info(
-                "[Payment] [Confirm] 결제 승인 완료 - orderId={}, paymentKey={}, paymentId={}, amount={}, totalDuration={}ms",
-                orderId, paymentKey, savedPayment.paymentId, amount, totalDuration
-            )
+        return response
+    }
 
-            return response
+    private fun handlePaymentFailure(orderId: String, paymentKey: String, e: Exception, startTime: Long) {
+        val duration = System.currentTimeMillis() - startTime
 
-        } catch (e: ServiceException) {
-            val duration = System.currentTimeMillis() - startTime
-
-            savedPayment?.let {
-                it.fail("ServiceException: ${e.errorCode}")
-                paymentRepository.save(it)
-                log.warn("[Payment] [Confirm] Payment를 FAILED 상태로 업데이트 - paymentId={}", it.paymentId)
+        try {
+            orderRepository.findByTossOrderId(orderId)?.let { order ->
+                paymentRepository.findByOrder_OrderId(order.orderId)?.let { payment ->
+                    val errorMessage = when (e) {
+                        is ServiceException -> "ServiceException: ${e.errorCode}"
+                        is IOException -> "IOException: ${e.message}"
+                        else -> "UnexpectedException: ${e.message}"
+                    }
+                    payment.fail(errorMessage)
+                    paymentRepository.save(payment)
+                    log.warn("[Payment] [Confirm] Payment를 FAILED 상태로 업데이트 - paymentId={}", payment.paymentId)
+                }
             }
-
-            log.error(
-                "[Payment] [Confirm] 결제 승인 실패 (ServiceException) - orderId={}, paymentKey={}, error={}, duration={}ms",
-                orderId, paymentKey, e.errorCode, duration
-            )
-            throw e
-
-        } catch (e: IOException) {
-            val duration = System.currentTimeMillis() - startTime
-
-            savedPayment?.let {
-                it.fail("IOException: ${e.message}")
-                paymentRepository.save(it)
-                log.warn("[Payment] [Confirm] Payment를 FAILED 상태로 업데이트 - paymentId={}", it.paymentId)
-            }
-
-            log.error(
-                "[Payment] [Confirm] 토스 API 호출 실패 (IOException) - orderId={}, paymentKey={}, duration={}ms",
-                orderId, paymentKey, duration, e
-            )
-            throw ServiceException(ErrorCode.PAYMENT_API_CALL_FAILED)
-
-        } catch (e: Exception) {
-            val duration = System.currentTimeMillis() - startTime
-
-            savedPayment?.let {
-                it.fail("UnexpectedException: ${e.message}")
-                paymentRepository.save(it)
-                log.warn("[Payment] [Confirm] Payment를 FAILED 상태로 업데이트 - paymentId={}", it.paymentId)
-            }
-
-            log.error(
-                "[Payment] [Confirm] 결제 승인 실패 (UnexpectedException) - orderId={}, paymentKey={}, duration={}ms",
-                orderId, paymentKey, duration, e
-            )
-            throw ServiceException(ErrorCode.PAYMENT_CONFIRM_FAILED)
+        } catch (ex: Exception) {
+            log.error("[Payment] [Confirm] FAILED 상태 업데이트 실패", ex)
         }
+
+        val errorType = when (e) {
+            is ServiceException -> "ServiceException"
+            is IOException -> "IOException"
+            else -> "UnexpectedException"
+        }
+
+        log.error(
+            "[Payment] [Confirm] 결제 승인 실패 ({}) - orderId={}, paymentKey={}, duration={}ms",
+            errorType, orderId, paymentKey, duration, e
+        )
     }
 
     /**
@@ -244,11 +254,9 @@ class PaymentService(
             payment.paymentStatus = newStatus
 
             if (newStatus == PaymentStatus.DONE) {
-                val approvedAtStr = data["approvedAt"] as? String
-                approvedAtStr?.let {
-                    val approvedAt = LocalDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME)
-                    payment.approve(approvedAt)
-                }
+                data["approvedAt"]?.toString()
+                    ?.let { LocalDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) }
+                    ?.let { payment.approve(it) }
             }
 
             paymentRepository.save(payment)
@@ -364,35 +372,34 @@ class PaymentService(
         val startTime = System.currentTimeMillis()
 
         try {
-            var successCount = 0
-            var failCount = 0
-
-            order.orderItems.forEach { orderItem ->
-                val product = orderItem.product
-                val productId = product?.productId
+            val results = order.orderItems.mapNotNull { orderItem ->
+                val product = orderItem.product ?: return@mapNotNull null
+                val productId = product.productId
                 val quantity = orderItem.quantity
 
                 try {
-                    product?.increasePurchaseCount(quantity)
+                    product.increasePurchaseCount(quantity)
 
                     repeat(quantity) {
                         redisProductService.incrementPurchaseCount(requireNotNull(productId) { "productId is null" })
                     }
 
-                    successCount++
-
                     log.debug(
                         "[Payment] [Popularity] 상품 인기도 증가 완료 - productId={}, quantity={}, newPurchaseCount={}",
-                        productId, quantity, product?.purchaseCount
+                        productId, quantity, product.purchaseCount
                     )
+                    true
                 } catch (e: Exception) {
-                    failCount++
                     log.error(
                         "[Payment] [Popularity] 상품 인기도 증가 실패 - productId={}, quantity={}",
                         productId, quantity, e
                     )
+                    false
                 }
             }
+
+            val successCount = results.count { it }
+            val failCount = results.count { !it }
 
             // 인기순 목록 캐시 삭제
             redisProductService.evictPopularListCache()
@@ -412,6 +419,7 @@ class PaymentService(
         }
     }
 
+
     /**
      * 토스 응답으로 Payment 엔티티 업데이트
      */
@@ -424,10 +432,9 @@ class PaymentService(
 
         tossResponse.get("mId")?.asText()?.let { payment.mid = it }
 
-        tossResponse.get("approvedAt")?.asText()?.let { approvedAtStr ->
-            val approvedAt = LocalDateTime.parse(approvedAtStr, DateTimeFormatter.ISO_DATE_TIME)
-            payment.approve(approvedAt)
-        }
+        tossResponse.get("approvedAt")?.asText()
+            ?.let { LocalDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) }
+            ?.let { payment.approve(it) }
     }
 
     /**
@@ -501,10 +508,9 @@ class PaymentService(
                 paymentStatus = PaymentStatus.fromString(tossResponse.get("status").asText())
             )
 
-            tossResponse.get("approvedAt")?.asText()?.let { approvedAtStr ->
-                val approvedAt = LocalDateTime.parse(approvedAtStr, DateTimeFormatter.ISO_DATE_TIME)
-                payment.approve(approvedAt)
-            }
+            tossResponse.get("approvedAt")?.asText()
+                ?.let { LocalDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) }
+                ?.let { payment.approve(it) }
 
             paymentRepository.save(payment)
         } catch (e: IOException) {
