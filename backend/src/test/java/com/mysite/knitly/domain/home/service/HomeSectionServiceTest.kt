@@ -267,7 +267,6 @@ class HomeSectionServiceTest {
             productCategory = category,
             sizeInfo = "FREE",
             price = price,
-            createdAt = createdAt,
             user = user,
             purchaseCount = purchaseCount,
             isDeleted = isDeleted,

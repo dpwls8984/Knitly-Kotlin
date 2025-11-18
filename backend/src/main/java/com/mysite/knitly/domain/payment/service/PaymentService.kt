@@ -3,6 +3,7 @@ package com.mysite.knitly.domain.payment.service
 import PaymentConfirmResponse
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.mysite.knitly.domain.order.dto.EmailNotificationDto
 import com.mysite.knitly.domain.order.entity.Order
 import com.mysite.knitly.domain.order.repository.OrderRepository
 import com.mysite.knitly.domain.payment.client.TossApiClient
@@ -13,10 +14,12 @@ import com.mysite.knitly.domain.payment.entity.PaymentStatus
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
 import com.mysite.knitly.domain.product.product.service.RedisProductService
 import com.mysite.knitly.domain.user.entity.User
+import com.mysite.knitly.global.email.entity.EmailOutbox
 import com.mysite.knitly.global.email.repository.EmailOutboxRepository
 import com.mysite.knitly.global.exception.ErrorCode
 import com.mysite.knitly.global.exception.ServiceException
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.io.IOException
@@ -156,6 +159,57 @@ class PaymentService(
         incrementProductPopularity(order)
 
         // 9. EmailOutbox 생성
+        val safeOrderId = order.orderId?.toString() ?: "unknown"
+        MDC.put("orderId", safeOrderId)
+
+        val safeUserId = order.user?.userId?.toString() ?: "unknown"
+        MDC.put("userId", safeUserId)
+
+        try {
+            log.info("[Payment] [Outbox] EmailOutbox 작업 생성 시작")
+
+            val user = requireNotNull(order.user) { "Order.user is null" }
+            val userId = requireNotNull(user.userId) { "User.userId is null" }
+
+            val userEmail = user.email
+            if(userEmail == null){
+                log.warn("[Payment] [Outbox] 사용자 이메일이 없어 알림 발송 스킵 - userId={}", userId)
+                return buildPaymentConfirmResponse(finalPayment, tossResponse) // 여기서 종료
+            }
+
+            // Email DTO 생성
+            val emailDto = EmailNotificationDto(
+                orderId = order.orderId ?: 0L,
+                userId = user.userId,
+                userEmail = user.email
+            )
+
+            // JSON 직렬화
+            val payload = runCatching {
+                objectMapper.writeValueAsString(emailDto)
+            }.getOrElse { e ->
+                log.error("[Payment] [Outbox] JSON 직렬화 실패", e)
+                throw ServiceException(ErrorCode.PAYMENT_CONFIRM_FAILED)
+            }
+
+            // Outbox 엔티티 생성
+            val emailJob = EmailOutbox.create(payload = payload)
+            val savedJob = emailOutboxRepository.save(emailJob)
+
+            val outboxId = savedJob.id?.toString() ?: "unknown"
+            MDC.put("outboxId", outboxId)
+            log.info("[Payment] [Outbox] EmailOutbox 작업 생성 완료 - outboxId={}", outboxId)
+
+
+        } catch (e: Exception) {
+            log.error("[Payment] [Outbox] EmailOutbox 작업 저장 실패. 결제 트랜잭션을 롤백합니다.", e)
+            throw ServiceException(ErrorCode.PAYMENT_CONFIRM_FAILED)
+        } finally {
+            MDC.remove("outboxId")
+            MDC.remove("orderId")
+            MDC.remove("userId")
+        }
+
 //            MDC.put("orderId", order.orderId.toString())
 //            MDC.put("userId", order.user.userId.toString())
 //
