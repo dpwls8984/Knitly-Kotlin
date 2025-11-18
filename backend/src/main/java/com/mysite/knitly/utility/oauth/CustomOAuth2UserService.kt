@@ -26,9 +26,9 @@ class CustomOAuth2UserService : DefaultOAuth2UserService() {
         val userInfo = OAuth2UserInfo.of(registrationId, attributes)
 
         // 로그로 확인
-        log.info("OAuth2 Login - Provider: {}", registrationId)
-        log.info("OAuth2 Login - Email: {}", userInfo.email)
-        log.info("OAuth2 Login - Name: {}", userInfo.name)
+        log.info("[OAuth2] [Login] - Provider: {}", registrationId)
+        log.info("[OAuth2] [Login] - Email: {}", userInfo.email)
+        log.info("[OAuth2] [Login] - Name: {}", userInfo.name)
 
         // 4. OAuth2User 반환 (다음 단계 SuccessHandler로 전달됨)
         return oAuth2User

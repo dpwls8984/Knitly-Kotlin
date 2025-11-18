@@ -77,11 +77,11 @@ class UserController(
         @AuthenticationPrincipal user: User?
     ): ResponseEntity<Map<String, Any>> {
         if (user == null) {
-            log.warn("User is null in /api/user/me")
+            log.warn("[Auth] [UserController] User is null in /api/user/me")
             return ResponseEntity.status(401).build()
         }
 
-        log.info("User info requested - userId: {}", user.userId)
+        log.info("[Auth] [UserController] User info requested - userId: {}", user.userId)
 
         val response: Map<String, Any> = mapOf(
             "userId" to user.userId,
@@ -132,27 +132,27 @@ class UserController(
                 try {
                     val token = it.substring(7)
                     jwtProvider.getUserIdFromToken(token).also { id ->
-                        log.info("Extracted userId from access token: {}", id)
+                        log.info("[Auth] [UserController] Extracted userId from access token: {}", id)
                     }
                 } catch (e: Exception) {
-                    log.warn("Failed to extract userId from access token", e)
+                    log.warn("[Auth] [UserController] Failed to extract userId from access token", e)
                     null
                 }
             }
 
-        log.info("Logout requested - userId: {}", userId)
+        log.info("[Auth] [UserController] Logout requested - userId: {}", userId)
 
         // 1. Redis에서 Refresh Token 삭제
         if (userId != null) {
             authService.logout(userId)
         }
-        log.info("Refresh Token deleted from Redis - userId: {}", userId)
+        log.info("[Auth] [UserController] Refresh Token deleted from Redis - userId: {}", userId)
 
         // 2. HTTP-only 쿠키 삭제
         cookieUtil.deleteCookie(response, REFRESH_TOKEN_COOKIE_NAME)
-        log.info("Refresh Token cookie deleted")
+        log.info("[Auth] [UserController] Refresh Token cookie deleted")
 
-        return ResponseEntity.ok("로그아웃되었습니다.")
+        return ResponseEntity.ok("[Auth] [UserController] 로그아웃되었습니다.")
     }
 
     /**
@@ -187,19 +187,19 @@ class UserController(
     ): ResponseEntity<String> {
 
         if (user == null) {
-            log.warn("User is null in DELETE /user/me")
-            return ResponseEntity.status(401).body("인증이 필요합니다.")
+            log.warn("[Auth] [UserController] User is null in DELETE /user/me")
+            return ResponseEntity.status(401).body("[Auth] [UserController] 인증이 필요합니다.")
         }
 
-        log.info("Account deletion requested - userId: {}, email: {}", user.userId, user.email)
+        log.info("[Auth] [UserController] Account deletion requested - userId: {}, email: {}", user.userId, user.email)
 
         // 1. DB에서 사용자 삭제 + Redis에서 Refresh Token 삭제
         authService.deleteAccount(user.userId)
-        log.info("User account deleted from DB and Redis - userId: {}", user.userId)
+        log.info("[Auth] [UserController] User account deleted from DB and Redis - userId: {}", user.userId)
 
         // 2. HTTP-only 쿠키 삭제
         cookieUtil.deleteCookie(response, REFRESH_TOKEN_COOKIE_NAME)
-        log.info("Refresh Token cookie deleted")
+        log.info("[Auth] [UserController] Refresh Token cookie deleted")
 
         return ResponseEntity.ok("회원탈퇴가 완료되었습니다.")
     }
