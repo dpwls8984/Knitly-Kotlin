@@ -112,7 +112,6 @@ class PaymentServiceIntegrationTest {
         testOrder = orderRepository.save(
             Order(
                 user = testUser,
-                totalPrice = 0.0,
                 tossOrderId = "ORDER_${System.currentTimeMillis()}"
             )
         )
