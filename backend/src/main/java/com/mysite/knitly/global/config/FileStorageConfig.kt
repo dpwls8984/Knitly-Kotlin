@@ -1,37 +1,38 @@
-package com.mysite.knitly.global.config;
+package com.mysite.knitly.global.config
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Configuration
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
+import java.nio.file.Paths
 
 @Configuration
-public class FileStorageConfig implements WebMvcConfigurer {
-    @Value("${file.upload-dir:uploads/designs}")
-    private String uploadDir;
+class FileStorageConfig(
+    @Value("\${file.upload-dir:uploads/designs}")
+    private val uploadDir: String,
 
-    @Value("${file.public-prefix:/files}")
-    private String publicPrefix;
+    @Value("\${file.public-prefix:/files}")
+    private val publicPrefix: String
+) : WebMvcConfigurer {
 
-    //로컬에 저장된 파일을 HTTP로 접근 가능하게 설정
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+    // 로컬에 저장된 파일을 HTTP로 접근 가능하게 설정
+    override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
         // designs 핸들러
-        Path base = Paths.get(uploadDir).toAbsolutePath().normalize();
-        String location = "file:" + base.toString() + "/";
-        String pattern = publicPrefix.endsWith("/**") ? publicPrefix : publicPrefix + "/**";
+        val base = Paths.get(uploadDir).toAbsolutePath().normalize()
+        val location = "file:${base}/"
+        val pattern = when {
+            publicPrefix.endsWith("/**") -> publicPrefix
+            else -> "$publicPrefix/**"
+        }
 
         registry.addResourceHandler(pattern)
-                .addResourceLocations(location);
+            .addResourceLocations(location)
 
         // products 핸들러
-        Path productBasePath = Paths.get(uploadDir).getParent().resolve("products").toAbsolutePath().normalize();
-        String productLocation = "file:" + productBasePath.toString() + "/";
+        val productBasePath = Paths.get(uploadDir).parent.resolve("products").toAbsolutePath().normalize()
+        val productLocation = "file:${productBasePath}/"
 
         registry.addResourceHandler("/products/**") // /products/ 로 시작하는 URL
-                .addResourceLocations(productLocation);    // 실제 .../uploads/products/ 폴더에 매핑
+            .addResourceLocations(productLocation)    // 실제 .../uploads/products/ 폴더에 매핑
     }
 }
