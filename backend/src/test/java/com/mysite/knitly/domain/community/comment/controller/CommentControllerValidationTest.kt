@@ -8,6 +8,8 @@ import com.mysite.knitly.domain.user.entity.User
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.BDDMockito.given
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -22,23 +24,20 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import java.time.LocalDateTime
 import java.util.UUID
-import org.mockito.BDDMockito.given
-import org.mockito.ArgumentMatchers.any
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
-class CommentControllerValidationTest(
+class CommentControllerValidationTest {
 
     @Autowired
-    private val mvc: MockMvc,
+    lateinit var mvc: MockMvc
 
     @Autowired
-    private val om: ObjectMapper,
+    lateinit var om: ObjectMapper
 
     @MockBean
-    private val commentService: CommentService
-) {
+    lateinit var commentService: CommentService
 
     private var postId: Long = 0L
     private lateinit var author: User
@@ -206,4 +205,9 @@ class CommentControllerValidationTest(
             )
             .andExpect(jsonPath("$.content").value("대댓글"))
     }
+}
+@Suppress("UNCHECKED_CAST")
+private fun <T> any(): T {
+    Mockito.any<T>()           // Mockito 쪽에 matcher 등록
+    return null as T           // Kotlin 입장에서는 T로 캐스팅된 null을 넘김 (실제로는 안 쓰임)
 }
