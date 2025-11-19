@@ -40,7 +40,6 @@ class CommentControllerIntegrationTest(
 
 ) {
 
-    // Redis 연동 막기
     @MockBean
     lateinit var redissonClient: RedissonClient
 
