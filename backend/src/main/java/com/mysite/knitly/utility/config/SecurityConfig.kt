@@ -19,8 +19,8 @@ import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
-@EnableWebSecurity
-@EnableMethodSecurity
+@EnableWebSecurity // --> 역할 : 스프링부트가 이 애너테이션을 보고 시큐리티 필터체인을 생성하고, DipatchServlet 앞쪽에 시큐리티 필터를 등록한다 => 이에 모든 요청이 시큐리티 필터를 거치게 된다
+@EnableMethodSecurity // --> 역할 : 메서드 수준 권한을 활성화 : 서비스 계층에서 세밀한 접근 제어
 class SecurityConfig(
     private val customOAuth2UserService: CustomOAuth2UserService,
     private val oAuth2SuccessHandler: OAuth2SuccessHandler,
@@ -71,7 +71,7 @@ class SecurityConfig(
         }
     }
 
-    @Bean
+    @Bean // SecurityFilterChain을  Bean이 시큐리티 전체 규칙을 정의
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http
             // CORS 설정 적용

@@ -562,7 +562,7 @@ class ProductService (
      * @param pageable 페이지네이션 정보
      * @return 상품 목록 (대표 이미지 포함)
      */
-    // TODO: 웅철 - 특정 유저의 판매 상품 목록 조회
+    // TODO: 웅철 - 특정 유저의 판매 상품 목록 조회 (On-Sale인것만)
     fun findProductsByUserId(userId: Long, pageable: Pageable): Page<ProductListResponse> {
         val user = userRepository!!.findById(userId).orElseThrow<ServiceException?>(Supplier {
             ServiceException(
@@ -571,7 +571,7 @@ class ProductService (
         })
         val sellerName = user.name
         // Repository에서 DTO로 조회
-        val dtoPage = productRepository.findByUserIdWithThumbnail(userId, pageable)
+        val dtoPage = productRepository.findOnSaleProductsByUserIdWithThumbnail(userId, pageable)
 
         // DTO -> Response 변환
         val responsePage = dtoPage.map<ProductListResponse?>(
@@ -667,7 +667,7 @@ class ProductService (
             } ?: false
 
             val reviewCount = reviewRepository.countByProductAndIsDeletedFalse(product)
-            product.reviewCount = reviewCount?.toInt()
+            product.reviewCount = reviewCount.toInt()
             log.debug("[Product] [Detail] [DB] 리뷰 개수 카운트 완료 - count={}", reviewCount)
             val response = ProductDetailResponse.from(product, imageUrls, isLiked)
 

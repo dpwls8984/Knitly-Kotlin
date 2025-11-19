@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component
 
 /**
  * HTTP Cookie 유틸리티 클래스
- * - HTTP-only 쿠키 생성, 조회, 삭제 기능 제공
+ * - HTTP-only 쿠키 생성, 응답에 추가, 조회, 삭제 기능 제공
  */
 @Component
 class CookieUtil {

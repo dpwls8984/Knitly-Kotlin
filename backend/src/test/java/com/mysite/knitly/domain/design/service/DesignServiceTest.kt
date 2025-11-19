@@ -58,6 +58,9 @@ class DesignServiceTest {
     @Mock
     private lateinit var fileValidator: FileValidator
 
+    @Mock
+    private lateinit var redisProductService: com.mysite.knitly.domain.product.product.service.RedisProductService
+
     @Spy
     private var objectMapper: ObjectMapper = ObjectMapper()
 
@@ -70,7 +73,8 @@ class DesignServiceTest {
             pdfGenerator = pdfGenerator,
             localFileStorage = localFileStorage,
             objectMapper = objectMapper,
-            fileValidator = fileValidator
+            fileValidator = fileValidator,
+            redisProductService = redisProductService
         )
     }
 

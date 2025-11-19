@@ -75,13 +75,13 @@ class AuthController(
         request: HttpServletRequest,
         response: HttpServletResponse
     ): ResponseEntity<TokenRefreshResponse> {
-        log.info("Token refresh API called")
+        log.info("[AuthController] Token refresh API called")
 
         // 1. 쿠키에서 Refresh Token 가져오기
         val refreshToken = cookieUtil.getCookie(request, REFRESH_TOKEN_COOKIE_NAME)
 
         if (refreshToken == null) {
-            log.error("Refresh Token not found in cookie")
+            log.error("[AuthController] Refresh Token not found in cookie")
             return ResponseEntity.badRequest().build()
         }
 
@@ -90,15 +90,15 @@ class AuthController(
         } else {
             refreshToken
         }
-        log.debug("Refresh Token found in cookie: {}...", tokenPreview)
+        log.debug("[AuthController] Refresh Token found in cookie: {}...", tokenPreview)
 
         return try {
             // 2. 새로운 토큰 발급
-            val tokenResponse = authService.refreshAccessToken(refreshToken)
+            val tokenResponse = authService.refreshAccessToken(refreshToken) // --> TokenRefreshResponse 타입으로 반환
 
-            log.info("New tokens created successfully")
-            log.debug("New Access Token: {}", tokenResponse.accessToken)
-            log.debug("New Refresh Token: {}", tokenResponse.refreshToken)
+            log.info("[AuthController] New tokens created successfully")
+            log.debug("[AuthController] New Access Token: {}", tokenResponse.accessToken)
+            log.debug("[AuthController] New Refresh Token: {}", tokenResponse.refreshToken)
 
             // 3. 새로운 Refresh Token을 쿠키에 저장
             cookieUtil.addCookie(
@@ -108,16 +108,16 @@ class AuthController(
                 refreshTokenExpireSeconds
             )
 
-            log.info("New Refresh Token saved to cookie")
+            log.info("[AuthController] New Refresh Token saved to cookie")
 
             ResponseEntity.ok(tokenResponse)
 
         } catch (e: IllegalArgumentException) {
-            log.error("Token refresh failed: {}", e.message)
+            log.error("[AuthController] Token refresh failed: {}", e.message)
 
             // 실패 시 쿠키 삭제
             cookieUtil.deleteCookie(response, REFRESH_TOKEN_COOKIE_NAME)
-            log.info("Invalid Refresh Token removed from cookie")
+            log.info("[AuthController] Invalid Refresh Token removed from cookie")
 
             ResponseEntity.status(401).build()
         }

@@ -28,8 +28,7 @@ class OAuth2SuccessHandler(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    // TODO : yml 파일, env 파일 수정할것
-    // 프론트엔드 URL 설정 (환경변수로 관리 권장)
+    // 프론트엔드 URL 설정 (환경변수로 관리)
     @Value("\${frontend.url}")  // 기본값: localhost:3000
     private lateinit var frontendUrl: String
 
@@ -74,14 +73,14 @@ class OAuth2SuccessHandler(
         // 4. JWT 토큰 발급
         val tokens = jwtProvider.createTokens(user.userId)
 
-        log.info("=== JWT Tokens Created ===")
-        log.info("Access Token: {}", tokens.accessToken)
-        log.info("Refresh Token: {}", tokens.refreshToken)
-        log.info("Expires In: {} seconds", tokens.expiresIn)
+        log.info("[OAuth2] === JWT Tokens Created ===")
+        log.info("[OAuth2] Access Token: {}", tokens.accessToken)
+        log.info("[OAuth2] Refresh Token: {}", tokens.refreshToken)
+        log.info("[OAuth2] Expires In: {} seconds", tokens.expiresIn)
 
         // 5. Refresh Token을 Redis에 저장
         refreshTokenService.saveRefreshToken(user.userId, tokens.refreshToken)
-        log.info("Refresh Token saved to Redis")
+        log.info("[OAuth2] Refresh Token saved to Redis")
 
         // 6. Refresh Token을 HTTP-only 쿠키에 저장
         cookieUtil.addCookie(
@@ -90,7 +89,7 @@ class OAuth2SuccessHandler(
             tokens.refreshToken,
             refreshTokenExpireSeconds
         )
-        log.info("Refresh Token saved to HTTP-only cookie")
+        log.info("[OAuth2] Refresh Token saved to HTTP-only cookie")
 
         // 7. 프론트엔드로 리다이렉트 (Access Token 포함)
         // 변경: localhost:8080 → frontend.url (localhost:3000)
@@ -103,7 +102,7 @@ class OAuth2SuccessHandler(
             tokens.accessToken
         )
 
-        log.info("Redirecting to: {}", targetUrl)
+        log.info("[OAuth2] Redirecting to: {}", targetUrl)
         redirectStrategy.sendRedirect(request, response, targetUrl)
     }
 }
