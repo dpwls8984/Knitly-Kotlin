@@ -20,10 +20,8 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
 import java.time.Duration
-import java.util.function.Consumer
 import java.util.function.Function
 import java.util.function.Supplier
-import java.util.stream.Collectors
 import kotlin.collections.contains
 
 @Service
@@ -278,7 +276,6 @@ class ProductService (
     }
 
 
-    // 상품 목록 조회
     // 상품 목록 조회
     @Transactional(readOnly = true)
     fun getProducts(

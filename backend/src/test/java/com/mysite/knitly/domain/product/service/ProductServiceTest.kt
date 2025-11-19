@@ -25,8 +25,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.ArgumentMatchers.anyLong
-import org.mockito.ArgumentMatchers.anyString
 import org.mockito.kotlin.*
 import org.mockito.BDDMockito.given
 import org.mockito.InjectMocks
@@ -91,6 +89,7 @@ class ProductServiceTest {
     companion object {
         private const val CACHE_KEY_PREFIX = "product:detail:"
     }
+
     @BeforeEach
     fun setUp() {
         objectMapper.registerModule(JavaTimeModule())
@@ -440,160 +439,160 @@ class ProductServiceTest {
         assertThat(exception.errorCode).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND)
     }
 
-    // -------------------- Product List 조회 테스트 --------------------
-//    @Test
-//    @DisplayName("전체 상품 조회 - 최신순")
-//    fun getProducts_All_Latest() {
-//        val productPage = PageImpl(listOf(product1, product2, product3))
-//        given(productRepository.findAllWithImagesAndNotDeleted(any(Pageable::class.java)))
-//            .willReturn(productPage)
-//        given(productLikeRepository.findLikedProductIdsByUserId(anyLong(), anyList()))
-//            .willReturn(emptySet())
-//
-//        val result = productService.getProducts(
-//            buyer, null, ProductFilterType.ALL, ProductSortType.LATEST, pageable
-//        )
-//
-//        assertThat(result.content).hasSize(3)
-//        assertThat(result.totalElements).isEqualTo(3)
-//        verify(productRepository).findAllWithImagesAndNotDeleted(any(Pageable::class.java))
-//    }
-//
-//    @Test
-//    @DisplayName("카테고리별 조회 - 상의만")
-//    fun getProducts_Category_Top() {
-//        val productPage = PageImpl(listOf(product1))
-//        given(
-//            productRepository.findByCategoryWithImagesAndNotDeleted(
-//                eq(ProductCategory.TOP), any(Pageable::class.java)
-//            )
-//        ).willReturn(productPage)
-//        given(productLikeRepository.findLikedProductIdsByUserId(anyLong(), anyList()))
-//            .willReturn(emptySet())
-//
-//        val result = productService.getProducts(
-//            buyer, ProductCategory.TOP, ProductFilterType.ALL, ProductSortType.LATEST, pageable
-//        )
-//
-//        assertThat(result.content).hasSize(1)
-//        assertThat(result.content[0].productCategory).isEqualTo(ProductCategory.TOP)
-//        verify(productRepository).findByCategoryWithImagesAndNotDeleted(
-//            eq(ProductCategory.TOP), any(Pageable::class.java)
-//        )
-//    }
-//
-//    @Test
-//    @DisplayName("무료 상품만 조회")
-//    fun getProducts_Free() {
-//        val productPage = PageImpl(listOf(product2))
-//        given(productRepository.findByPriceWithImagesAndNotDeleted(eq(0.0), any(Pageable::class.java)))
-//            .willReturn(productPage)
-//        given(productLikeRepository.findLikedProductIdsByUserId(anyLong(), anyList()))
-//            .willReturn(emptySet())
-//
-//        val result = productService.getProducts(
-//            buyer, null, ProductFilterType.FREE, ProductSortType.LATEST, pageable
-//        )
-//
-//        assertThat(result.content).hasSize(1)
-//        assertThat(result.content[0].price).isEqualTo(0.0)
-//        assertThat(result.content[0].isFree).isTrue
-//        verify(productRepository).findByPriceWithImagesAndNotDeleted(eq(0.0), any(Pageable::class.java))
-//    }
-//
-//    @Test
-//    @DisplayName("한정판매 상품만 조회")
-//    fun getProducts_Limited() {
-//        val productPage = PageImpl(listOf(product3))
-//        given(productRepository.findLimitedWithImagesAndNotDeleted(any(Pageable::class.java)))
-//            .willReturn(productPage)
-//        given(productLikeRepository.findLikedProductIdsByUserId(anyLong(), anyList()))
-//            .willReturn(emptySet())
-//
-//        val result = productService.getProducts(
-//            buyer, null, ProductFilterType.LIMITED, ProductSortType.LATEST, pageable
-//        )
-//
-//        assertThat(result.content).hasSize(1)
-//        assertThat(result.content[0].stockQuantity).isNotNull
-//        assertThat(result.content[0].isLimited).isTrue
-//        verify(productRepository).findLimitedWithImagesAndNotDeleted(any(Pageable::class.java))
-//    }
-//
-//    @Test
-//    @DisplayName("인기순 조회 - Redis 데이터 있음")
-//    fun getProducts_Popular_WithRedis() {
-//        val popularIds = listOf(2L, 1L, 3L) // 인기순
-//        given(redisProductService.getTopNPopularProducts(100)).willReturn(popularIds)
-//        given(productRepository.findByProductIdInWithImagesAndNotDeleted(popularIds))
-//            .willReturn(listOf(product2, product1, product3))
-//        given(productLikeRepository.findLikedProductIdsByUserId(anyLong(), anyList()))
-//            .willReturn(emptySet())
-//
-//        val result = productService.getProducts(
-//            buyer, null, ProductFilterType.ALL, ProductSortType.POPULAR, pageable
-//        )
-//
-//        assertThat(result.content).hasSize(3)
-//        assertThat(result.content[0].productId).isEqualTo(2L) // 가장 인기있는 상품
-//        verify(redisProductService).getTopNPopularProducts(100)
-//        verify(productRepository).findByProductIdInWithImagesAndNotDeleted(popularIds)
-//    }
-//
-//    @Test
-//    @DisplayName("인기순 조회 - Redis 데이터 없음, DB에서 조회")
-//    fun getProducts_Popular_WithoutRedis() {
-//        given(redisProductService.getTopNPopularProducts(100)).willReturn(emptyList())
-//
-//        val top100 = PageRequest.of(0, 100, Sort.by("purchaseCount").descending())
-//        val productPage = PageImpl(listOf(product2, product3, product1))
-//        given(productRepository.findAllWithImagesAndNotDeleted(top100))
-//            .willReturn(productPage)
-//        given(productLikeRepository.findLikedProductIdsByUserId(anyLong(), anyList()))
-//            .willReturn(emptySet())
-//
-//        val result = productService.getProducts(
-//            buyer, null, ProductFilterType.ALL, ProductSortType.POPULAR, pageable
-//        )
-//
-//        assertThat(result.content).hasSize(3)
-//        verify(redisProductService).getTopNPopularProducts(100)
-//        verify(productRepository).findAllWithImagesAndNotDeleted(top100)
-//    }
-//
-//    @Test
-//    @DisplayName("가격 낮은순 정렬")
-//    fun getProducts_SortByPrice_Asc() {
-//        val productPage = PageImpl(listOf(product2, product1, product3))
-//        given(productRepository.findAllWithImagesAndNotDeleted(any(Pageable::class.java)))
-//            .willReturn(productPage)
-//        given(productLikeRepository.findLikedProductIdsByUserId(anyLong(), anyList()))
-//            .willReturn(emptySet())
-//
-//        val result = productService.getProducts(
-//            buyer, null, ProductFilterType.ALL, ProductSortType.PRICE_ASC, pageable
-//        )
-//
-//        assertThat(result.content).hasSize(3)
-//        verify(productRepository).findAllWithImagesAndNotDeleted(any(Pageable::class.java))
-//    }
-//
-//    @Test
-//    @DisplayName("filter=FREE이면 카테고리 무시하고 무료 전체에서 조회")
-//    fun freeFilter_ignoresCategory() {
-//        val testPageable = PageRequest.of(0, 20)
-//        val productPage = PageImpl(listOf(product2))
-//        given(productRepository.findByPriceWithImagesAndNotDeleted(eq(0.0), any(Pageable::class.java)))
-//            .willReturn(productPage)
-//        given(productLikeRepository.findLikedProductIdsByUserId(anyLong(), anyList()))
-//            .willReturn(emptySet())
-//
-//        val result = productService.getProducts(
-//            buyer, ProductCategory.TOP, ProductFilterType.FREE, ProductSortType.LATEST, testPageable
-//        )
-//
-//        assertThat(result.content).hasSize(1)
-//        assertThat(result.content[0].isFree).isTrue
-//        verify(productRepository).findByPriceWithImagesAndNotDeleted(eq(0.0), any(Pageable::class.java))
-//    }
+    //-------------------- Product List 조회 테스트 --------------------
+    @Test
+    @DisplayName("전체 상품 조회 - 최신순")
+    fun getProducts_All_Latest() {
+        val productPage = PageImpl(listOf(product1, product2, product3))
+        given(productRepository.findAllWithImagesAndNotDeleted(any<Pageable>()))
+            .willReturn(productPage)
+        given(productLikeRepository.findLikedProductIdsByUserId(any<Long>(), any()))
+            .willReturn(emptySet())
+
+        val result = productService.getProducts(
+            buyer, null, ProductFilterType.ALL, ProductSortType.LATEST, pageable
+        )
+
+        assertThat(result.content).hasSize(3)
+        assertThat(result.totalElements).isEqualTo(3)
+        verify(productRepository).findAllWithImagesAndNotDeleted(any<Pageable>())
+    }
+
+    @Test
+    @DisplayName("카테고리별 조회 - 상의만")
+    fun getProducts_Category_Top() {
+        val productPage = PageImpl(listOf(product1))
+        given(
+            productRepository.findByCategoryWithImagesAndNotDeleted(
+                eq(ProductCategory.TOP), any<Pageable>()
+            )
+        ).willReturn(productPage)
+        given(productLikeRepository.findLikedProductIdsByUserId(any<Long>(), any()))
+            .willReturn(emptySet())
+
+        val result = productService.getProducts(
+            buyer, ProductCategory.TOP, ProductFilterType.ALL, ProductSortType.LATEST, pageable
+        )
+
+        assertThat(result.content).hasSize(1)
+        assertThat(result.content[0].productCategory).isEqualTo(ProductCategory.TOP)
+        verify(productRepository).findByCategoryWithImagesAndNotDeleted(
+            eq(ProductCategory.TOP), any<Pageable>()
+        )
+    }
+
+    @Test
+    @DisplayName("무료 상품만 조회")
+    fun getProducts_Free() {
+        val productPage = PageImpl(listOf(product2))
+        given(productRepository.findByPriceWithImagesAndNotDeleted(eq(0.0), any<Pageable>()))
+            .willReturn(productPage)
+        given(productLikeRepository.findLikedProductIdsByUserId(any<Long>(), any()))
+            .willReturn(emptySet())
+
+        val result = productService.getProducts(
+            buyer, null, ProductFilterType.FREE, ProductSortType.LATEST, pageable
+        )
+
+        assertThat(result.content).hasSize(1)
+        assertThat(result.content[0].price).isEqualTo(0.0)
+        assertThat(result.content[0].isFree).isTrue
+        verify(productRepository).findByPriceWithImagesAndNotDeleted(eq(0.0), any<Pageable>())
+    }
+
+    @Test
+    @DisplayName("한정판매 상품만 조회")
+    fun getProducts_Limited() {
+        val productPage = PageImpl(listOf(product3))
+        given(productRepository.findLimitedWithImagesAndNotDeleted(any<Pageable>()))
+            .willReturn(productPage)
+        given(productLikeRepository.findLikedProductIdsByUserId(any<Long>(), any()))
+            .willReturn(emptySet())
+
+        val result = productService.getProducts(
+            buyer, null, ProductFilterType.LIMITED, ProductSortType.LATEST, pageable
+        )
+
+        assertThat(result.content).hasSize(1)
+        assertThat(result.content[0].stockQuantity).isNotNull
+        assertThat(result.content[0].isLimited).isTrue
+        verify(productRepository).findLimitedWithImagesAndNotDeleted(any<Pageable>())
+    }
+
+    @Test
+    @DisplayName("인기순 조회 - Redis 데이터 있음")
+    fun getProducts_Popular_WithRedis() {
+        val popularIds = listOf(2L, 1L, 3L) // 인기순
+        given(redisProductService.getTopNPopularProducts(100)).willReturn(popularIds)
+        given(productRepository.findByProductIdInWithImagesAndNotDeleted(popularIds))
+            .willReturn(listOf(product2, product1, product3))
+        given(productLikeRepository.findLikedProductIdsByUserId(any<Long>(), any()))
+            .willReturn(emptySet())
+
+        val result = productService.getProducts(
+            buyer, null, ProductFilterType.ALL, ProductSortType.POPULAR, pageable
+        )
+
+        assertThat(result.content).hasSize(3)
+        assertThat(result.content[0].productId).isEqualTo(2L) // 가장 인기있는 상품
+        verify(redisProductService).getTopNPopularProducts(100)
+        verify(productRepository).findByProductIdInWithImagesAndNotDeleted(popularIds)
+    }
+
+    @Test
+    @DisplayName("인기순 조회 - Redis 데이터 없음, DB에서 조회")
+    fun getProducts_Popular_WithoutRedis() {
+        given(redisProductService.getTopNPopularProducts(100)).willReturn(emptyList())
+
+        val top100 = PageRequest.of(0, 100, Sort.by("purchaseCount").descending())
+        val productPage = PageImpl(listOf(product2, product3, product1))
+        given(productRepository.findAllWithImagesAndNotDeleted(top100))
+            .willReturn(productPage)
+        given(productLikeRepository.findLikedProductIdsByUserId(any<Long>(), any()))
+            .willReturn(emptySet())
+
+        val result = productService.getProducts(
+            buyer, null, ProductFilterType.ALL, ProductSortType.POPULAR, pageable
+        )
+
+        assertThat(result.content).hasSize(3)
+        verify(redisProductService).getTopNPopularProducts(100)
+        verify(productRepository).findAllWithImagesAndNotDeleted(top100)
+    }
+
+    @Test
+    @DisplayName("가격 낮은순 정렬")
+    fun getProducts_SortByPrice_Asc() {
+        val productPage = PageImpl(listOf(product2, product1, product3))
+        given(productRepository.findAllWithImagesAndNotDeleted(any<Pageable>()))
+            .willReturn(productPage)
+        given(productLikeRepository.findLikedProductIdsByUserId(any<Long>(), any()))
+            .willReturn(emptySet())
+
+        val result = productService.getProducts(
+            buyer, null, ProductFilterType.ALL, ProductSortType.PRICE_ASC, pageable
+        )
+
+        assertThat(result.content).hasSize(3)
+        verify(productRepository).findAllWithImagesAndNotDeleted(any<Pageable>())
+    }
+
+    @Test
+    @DisplayName("filter=FREE이면 카테고리 무시하고 무료 전체에서 조회")
+    fun freeFilter_ignoresCategory() {
+        val testPageable = PageRequest.of(0, 20)
+        val productPage = PageImpl(listOf(product2))
+        given(productRepository.findByPriceWithImagesAndNotDeleted(eq(0.0), any<Pageable>()))
+            .willReturn(productPage)
+        given(productLikeRepository.findLikedProductIdsByUserId(any<Long>(), any()))
+            .willReturn(emptySet())
+
+        val result = productService.getProducts(
+            buyer, ProductCategory.TOP, ProductFilterType.FREE, ProductSortType.LATEST, testPageable
+        )
+
+        assertThat(result.content).hasSize(1)
+        assertThat(result.content[0].isFree).isTrue
+        verify(productRepository).findByPriceWithImagesAndNotDeleted(eq(0.0), any<Pageable>())
+    }
 }

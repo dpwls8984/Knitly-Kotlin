@@ -6,7 +6,6 @@ import com.mysite.knitly.domain.product.product.service.RedisProductService
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -24,68 +23,34 @@ class RedisProductSyncScheduler(
 ) {
     private val log = LoggerFactory.getLogger(RedisProductSyncScheduler::class.java)
 
+    companion object {
+        private const val PAGE_SIZE = 1000
+    }
+
     // 애플리케이션 시작 시 DB → Redis 초기 로딩
     @EventListener(ApplicationReadyEvent::class)
     fun initializedRedisData() {
-        log.info("[Scheduler] [Redis] 애플리케이션 시작 - Redis 초기 데이터 로딩 시작")
-
-        val startTime = System.currentTimeMillis()
-
-        try {
-            // 전체 상품 조회 (페이징으로 모든 데이터 가져오기)
-            val allProducts = mutableListOf<Product>()
-            var pageNumber = 0
-            val pageSize = 1000
-            var page: Page<Product>
-
-            do {
-                val pageable = PageRequest.of(pageNumber, pageSize)
-                page = productRepository.findByIsDeletedFalse(pageable)
-                allProducts.addAll(page.content)
-                pageNumber++
-            } while (page.hasNext())
-
-            if (allProducts.isEmpty()) {
-                log.warn("[Scheduler] [Redis] 초기 로딩할 상품이 없습니다")
-                return
-            }
-
-            redisProductService.syncFromDatabase(allProducts)
-
-            val duration = System.currentTimeMillis() - startTime
-            log.info(
-                "[Scheduler] [Redis] Redis 초기 데이터 로딩 완료 - productCount={}, duration={}ms",
-                allProducts.size, duration
-            )
-        } catch (e: Exception) {
-            val duration = System.currentTimeMillis() - startTime
-            log.error("[Scheduler] [Redis] Redis 초기 데이터 로딩 실패 - duration={}ms", duration, e)
-        }
+        syncAllProducts("애플리케이션 시작 - Redis 초기 데이터 로딩")
     }
 
     // 매일 새벽 3시에 DB → Redis 전체 동기화
     @Scheduled(cron = "0 0 3 * * *")
     fun syncPurchaseCountFromDB() {
-        log.info("[Scheduler] [Redis] 정기 동기화 시작 - DB → Redis")
+        syncAllProducts("정기 동기화 - DB → Redis")
+    }
 
+    /**
+     * 모든 상품을 DB에서 조회하여 Redis에 동기화
+     */
+    private fun syncAllProducts(taskName: String) {
+        log.info("[Scheduler] [Redis] {} 시작", taskName)
         val startTime = System.currentTimeMillis()
 
         try {
-            // 전체 상품 조회 (페이징으로 모든 데이터 가져오기)
-            val allProducts = mutableListOf<Product>()
-            var pageNumber = 0
-            val pageSize = 1000
-            var page: Page<Product>
-
-            do {
-                val pageable = PageRequest.of(pageNumber, pageSize)
-                page = productRepository.findByIsDeletedFalse(pageable)
-                allProducts.addAll(page.content)
-                pageNumber++
-            } while (page.hasNext())
+            val allProducts = fetchAllProducts()
 
             if (allProducts.isEmpty()) {
-                log.warn("[Scheduler] [Redis] 동기화할 상품이 없습니다")
+                log.warn("[Scheduler] [Redis] {}할 상품이 없습니다", taskName)
                 return
             }
 
@@ -93,12 +58,34 @@ class RedisProductSyncScheduler(
 
             val duration = System.currentTimeMillis() - startTime
             log.info(
-                "[Scheduler] [Redis] 정기 동기화 완료 - productCount={}, duration={}ms",
-                allProducts.size, duration
+                "[Scheduler] [Redis] {} 완료 - productCount={}, duration={}ms",
+                taskName, allProducts.size, duration
             )
         } catch (e: Exception) {
             val duration = System.currentTimeMillis() - startTime
-            log.error("[Scheduler] [Redis] 정기 동기화 실패 - duration={}ms", duration, e)
+            log.error("[Scheduler] [Redis] {} 실패 - duration={}ms", taskName, duration, e)
+        }
+    }
+
+    /**
+     * 페이징을 통해 모든 상품 조회 (꼬리 재귀)
+     */
+    private fun fetchAllProducts(): List<Product> =
+        fetchAllProductsRecursive()
+
+    private tailrec fun fetchAllProductsRecursive(
+        pageNumber: Int = 0,
+        accumulated: List<Product> = emptyList()
+    ): List<Product> {
+        val pageable = PageRequest.of(pageNumber, PAGE_SIZE)
+        val page = productRepository.findByIsDeletedFalse(pageable)
+
+        val newAccumulated = accumulated + page.content
+
+        return if (page.hasNext()) {
+            fetchAllProductsRecursive(pageNumber + 1, newAccumulated)
+        } else {
+            newAccumulated
         }
     }
 }
