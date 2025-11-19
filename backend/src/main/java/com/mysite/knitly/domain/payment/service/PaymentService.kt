@@ -210,30 +210,6 @@ class PaymentService(
             MDC.remove("userId")
         }
 
-//            MDC.put("orderId", order.orderId.toString())
-//            MDC.put("userId", order.user.userId.toString())
-//
-//            try {
-//                log.info("[Payment] [Outbox] EmailOutbox 작업 생성 시작")
-//
-//                val user = order.user
-//                val emailDto = EmailNotificationDto(order.orderId, user?.userId ?: , user.email)
-//                val payload = objectMapper.writeValueAsString(emailDto)
-//
-//                val emailJob = EmailOutbox(payload = payload)
-//                emailOutboxRepository.save(emailJob)
-//                MDC.put("outboxId", emailJob.id.toString())
-//
-//                log.info("[Payment] [Outbox] EmailOutbox 작업 생성 완료")
-//            } catch (e: Exception) {
-//                // 페이로드 생성/저장 실패 시, 결제 트랜잭션 전체를 롤백
-//                log.error("[Payment] [Outbox] EmailOutbox 작업 저장 실패. 결제 트랜잭션을 롤백합니다.", e)
-//                throw ServiceException(ErrorCode.PAYMENT_CONFIRM_FAILED)
-//            } finally {
-//                MDC.remove("outboxId")
-//                MDC.remove("orderId")
-//                MDC.remove("userId")
-//            }
         // 10. 응답 데이터 생성
         val response = buildPaymentConfirmResponse(finalPayment, tossResponse)
 
