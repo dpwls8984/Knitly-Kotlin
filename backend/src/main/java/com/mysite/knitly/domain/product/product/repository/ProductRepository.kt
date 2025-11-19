@@ -13,13 +13,18 @@ import java.util.*
 
 @Repository
 interface ProductRepository : JpaRepository<Product, Long> {
-    // 전체 상품 조회 (삭제되지 않은 것만)
+    // 전체 상품 조회 (삭제되지 않은 것만, Design 상태가 ON_SALE인 것만)
+    @Query("SELECT p FROM Product p WHERE p.isDeleted = false AND p.design.designState = 'ON_SALE'")
     fun findByIsDeletedFalse(pageable: Pageable): Page<Product>
 
     // productId로 여러 개 조회 (인기순용 - Redis에서 받은 ID로 조회)
-    fun findByProductIdInAndIsDeletedFalse(productIds: List<Long>): List<Product>
+    // Design 상태가 ON_SALE인 것만 조회
+    @Query("SELECT p FROM Product p WHERE p.productId IN :productIds AND p.isDeleted = false AND p.design.designState = 'ON_SALE'")
+    fun findByProductIdInAndIsDeletedFalse(@Param("productIds") productIds: List<Long>): List<Product>
 
-    fun findByProductIdAndIsDeletedFalse(productId: Long): Product?
+    // 단일 상품 조회 (Design 상태가 ON_SALE인 것만)
+    @Query("SELECT p FROM Product p WHERE p.productId = :productId AND p.isDeleted = false AND p.design.designState = 'ON_SALE'")
+    fun findByProductIdAndIsDeletedFalse(@Param("productId") productId: Long): Product?
 
     /**
      * userId로 판매 상품 조회 (대표 이미지 포함)
@@ -64,15 +69,17 @@ interface ProductRepository : JpaRepository<Product, Long> {
     /**
      * 전체 상품 조회 (batch size로 N+1 방지)
      * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
+     * Design 상태가 ON_SALE인 것만 조회
      */
-    @Query("SELECT p FROM Product p WHERE p.isDeleted = false")
+    @Query("SELECT p FROM Product p WHERE p.isDeleted = false AND p.design.designState = 'ON_SALE'")
     fun findAllWithImagesAndNotDeleted(pageable: Pageable): Page<Product>
 
     /**
      * 카테고리별 조회 (batch size로 N+1 방지)
      * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
+     * Design 상태가 ON_SALE인 것만 조회
      */
-    @Query("SELECT p FROM Product p WHERE p.productCategory = :category AND p.isDeleted = false")
+    @Query("SELECT p FROM Product p WHERE p.productCategory = :category AND p.isDeleted = false AND p.design.designState = 'ON_SALE'")
     fun findByCategoryWithImagesAndNotDeleted(
         @Param("category") category: ProductCategory,
         pageable: Pageable
@@ -81,8 +88,9 @@ interface ProductRepository : JpaRepository<Product, Long> {
     /**
      * 무료 상품 조회 (batch size로 N+1 방지)
      * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
+     * Design 상태가 ON_SALE인 것만 조회
      */
-    @Query("SELECT p FROM Product p WHERE p.price = :price AND p.isDeleted = false")
+    @Query("SELECT p FROM Product p WHERE p.price = :price AND p.isDeleted = false AND p.design.designState = 'ON_SALE'")
     fun findByPriceWithImagesAndNotDeleted(
         @Param("price") price: Double,
         pageable: Pageable
@@ -91,15 +99,17 @@ interface ProductRepository : JpaRepository<Product, Long> {
     /**
      * 한정판매 조회 (batch size로 N+1 방지)
      * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
+     * Design 상태가 ON_SALE인 것만 조회
      */
-    @Query("SELECT p FROM Product p WHERE p.stockQuantity IS NOT NULL AND p.isDeleted = false")
+    @Query("SELECT p FROM Product p WHERE p.stockQuantity IS NOT NULL AND p.isDeleted = false AND p.design.designState = 'ON_SALE'")
     fun findLimitedWithImagesAndNotDeleted(pageable: Pageable): Page<Product>
 
     /**
      * productId 리스트로 여러 개 조회 (batch size로 N+1 방지)
      * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
+     * Design 상태가 ON_SALE인 것만 조회
      */
-    @Query("SELECT p FROM Product p WHERE p.productId IN :productIds AND p.isDeleted = false")
+    @Query("SELECT p FROM Product p WHERE p.productId IN :productIds AND p.isDeleted = false AND p.design.designState = 'ON_SALE'")
     fun findByProductIdInWithImagesAndNotDeleted(
         @Param("productIds") productIds: List<Long>
     ): List<Product>

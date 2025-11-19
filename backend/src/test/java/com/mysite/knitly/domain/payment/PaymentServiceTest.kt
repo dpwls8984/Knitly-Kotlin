@@ -474,8 +474,6 @@ class PaymentServiceTest {
             stockQuantity = null,
             likeCount = 0,
             design = design,
-            avgReviewRating = null,
-            reviewCount = null
         )
 
     private fun testOrder(id: Long, user: User, tossOrderId: String, totalPrice: Double): Order {
