@@ -14,7 +14,7 @@ import java.util.*
 @Service
 class FileStorageService {
 
-    private val uploadDir = "uploads/designs/"
+    private val uploadDir = "backend/uploads/designs/"
     private val urlPrefix = "/files/"
 
     /**
