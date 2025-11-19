@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.implementation
-
 plugins {
     java
     kotlin("jvm") version "1.9.25"
@@ -53,6 +51,7 @@ dependencies {
     implementation("org.apache.pdfbox:pdfbox:2.0.29") // PDF 변환 라이브러리
     implementation("commons-codec:commons-codec:1.16.0")
     implementation("org.springframework.boot:spring-boot-starter-mail")   // Spring Email
+    testImplementation("org.springframework.security:spring-security-test")
 
     // 날짜,시간 모듈 LocalDateTime
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
