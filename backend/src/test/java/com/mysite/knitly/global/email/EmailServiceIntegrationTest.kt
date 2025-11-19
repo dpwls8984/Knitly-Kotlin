@@ -142,7 +142,6 @@ class EmailServiceIntegrationTest {
         // ------------------ Order & OrderItems ------------------
         val testOrder = Order(
             user = testUser,
-            totalPrice = 0.0,
             tossOrderId = UUID.randomUUID().toString()
         )
 
