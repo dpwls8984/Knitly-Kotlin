@@ -254,7 +254,7 @@ class HomeSectionServiceTest {
         val user: User = mock()
         val design: Design = mock()
 
-        val product = Product(
+        return Product(
             productId = id,
             title = title,
             description = "테스트 설명",
@@ -268,10 +268,5 @@ class HomeSectionServiceTest {
             likeCount = likeCount,
             design = design
         )
-        val createdAtField = Product::class.java.getDeclaredField("createdAt")
-        createdAtField.isAccessible = true
-        createdAtField.set(product, createdAt)
-
-        return product
     }
 }
