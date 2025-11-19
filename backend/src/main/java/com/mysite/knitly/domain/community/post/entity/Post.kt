@@ -14,7 +14,7 @@ class Post(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "post_id")
-    val id: Long? = null,
+    val id: Long? = null, // PK는 생성 후 변경되지 않음
 
     @Column(nullable = false, length = 100)
     var title: String,
@@ -30,7 +30,7 @@ class Post(
     )
     @Column(name = "url", nullable = false, length = 512)
     @OrderColumn(name = "sort_order")
-    var imageUrls: MutableList<String> = mutableListOf(),
+    val imageUrls: MutableList<String> = mutableListOf(),
 
     @Enumerated(EnumType.STRING)
     @Column(
@@ -42,7 +42,7 @@ class Post(
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
-    var author: User,
+    val author: User, // 작성자는 변경되지 않음
 
     @Column(name = "is_deleted", nullable = false)
     var deleted: Boolean = false,
@@ -52,7 +52,7 @@ class Post(
         cascade = [CascadeType.ALL],
         orphanRemoval = true
     )
-    var comments: MutableList<Comment> = mutableListOf()
+    val comments: MutableList<Comment> = mutableListOf()
 
 ) : BaseTimeEntity() {
 

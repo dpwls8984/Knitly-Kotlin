@@ -10,13 +10,13 @@ import java.nio.file.Paths
 class CommunityStaticResourceConfig(
 
     @Value("\${file.community.upload-dir:\${user.dir}/uploads}")
-    private var uploadDir: String,
+    private val uploadDir: String,
 
     @Value("\${file.community.upload.sub-dir:communitys}")
-    private var subDir: String,
+    private val subDir: String,
 
     @Value("\${file.community.public-prefix:/uploads/communitys}")
-    private var publicPrefix: String
+    private val publicPrefix: String
 ) : WebMvcConfigurer {
 
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
