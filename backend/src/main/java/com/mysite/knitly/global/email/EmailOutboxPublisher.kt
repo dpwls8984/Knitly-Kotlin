@@ -1,6 +1,5 @@
 package com.mysite.knitly.global.email
 
-import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.mysite.knitly.domain.order.dto.EmailNotificationDto
 import com.mysite.knitly.global.email.entity.EmailOutbox

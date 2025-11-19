@@ -5,10 +5,6 @@ import com.mysite.knitly.domain.user.entity.User
 import com.mysite.knitly.global.exception.ErrorCode
 import com.mysite.knitly.global.exception.ServiceException
 import jakarta.persistence.*
-import lombok.AllArgsConstructor
-import lombok.Builder
-import lombok.Getter
-import lombok.NoArgsConstructor
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
@@ -41,14 +37,20 @@ class Design(
 
     @Column(name = "grid_data", columnDefinition = "JSON", nullable = false)
     val gridData: String,
-
-    @OneToOne(mappedBy = "design", cascade = [CascadeType.REMOVE], fetch = FetchType.LAZY)
-    val product: Product? = null
     ) {
+
+        @OneToOne(mappedBy = "design", cascade = [CascadeType.REMOVE])
+        var product: Product? = null
+          private set
+
         @CreatedDate
         @Column(nullable = false, updatable = false)
         var createdAt: LocalDateTime? = null
             private set
+
+        fun assignProduct(product: Product) {
+            this.product = product
+        }
 
         // 삭제 가능 여부 확인 - BEFORE_SALE 상태인 경우에만 삭제 가능
         fun isDeletable(): Boolean = designState == DesignState.BEFORE_SALE
