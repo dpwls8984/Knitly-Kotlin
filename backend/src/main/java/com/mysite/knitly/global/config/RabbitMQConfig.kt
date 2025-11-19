@@ -1,128 +1,122 @@
-package com.mysite.knitly.global.config;
+package com.mysite.knitly.global.config
 
-import org.springframework.amqp.core.*;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.amqp.core.*
+import org.springframework.amqp.rabbit.connection.ConnectionFactory
+import org.springframework.amqp.rabbit.core.RabbitTemplate
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 
 @Configuration
-public class RabbitMQConfig {
-
-    // --- Like 관련 상수 ---
-    public static final String LIKE_ADD_QUEUE = "like.add.queue";
-    public static final String LIKE_DELETE_QUEUE = "like.delete.queue";
-    public static final String LIKE_ADD_DLQ = "like.add.dlq";
-    public static final String LIKE_DELETE_DLQ = "like.delete.dlq";
-
-    public static final String LIKE_EXCHANGE = "like.exchange";
-    public static final String LIKE_ADD_ROUTING_KEY = "like.add.routingkey";
-    public static final String LIKE_DELETE_ROUTING_KEY = "like.delete.routingkey";
-
-    public static final String DEAD_LETTER_EXCHANGE = "dead-letter.exchange";
-    public static final String DEAD_LETTER_ROUTING_KEY_PREFIX = "dead."; // 라우팅 키 접두사
+class RabbitMQConfig {
+    @Bean
+    fun deadLetterExchange() = DirectExchange(DEAD_LETTER_EXCHANGE)
 
     @Bean
-    public DirectExchange deadLetterExchange() {
-        return new DirectExchange(DEAD_LETTER_EXCHANGE);
-    }
+    fun likeExchange() = TopicExchange(LIKE_EXCHANGE)
 
     @Bean
-    public TopicExchange likeExchange() {
-        return new TopicExchange(LIKE_EXCHANGE);
-    }
+    fun orderExchange() = TopicExchange("order.exchange")
 
     @Bean
-    public Queue likeAddQueue() {
-        return QueueBuilder.durable(LIKE_ADD_QUEUE)
-                .withArgument("x-dead-letter-exchange", DEAD_LETTER_EXCHANGE)
-                .withArgument("x-dead-letter-routing-key", DEAD_LETTER_ROUTING_KEY_PREFIX + LIKE_ADD_QUEUE)
-                .build();
-    }
+    fun likeAddQueue() =
+        durableQueueWithDLQ(LIKE_ADD_QUEUE)
 
     @Bean
-    public Queue likeDeleteQueue() {
-        return QueueBuilder.durable(LIKE_DELETE_QUEUE)
-                .withArgument("x-dead-letter-exchange", DEAD_LETTER_EXCHANGE)
-                .withArgument("x-dead-letter-routing-key", DEAD_LETTER_ROUTING_KEY_PREFIX + LIKE_DELETE_QUEUE)
-                .build();
-    }
+    fun likeDeleteQueue() =
+        durableQueueWithDLQ(LIKE_DELETE_QUEUE)
 
     @Bean
-    public Queue likeAddDeadLetterQueue() {
-        return QueueBuilder.durable(LIKE_ADD_DLQ).build();
-    }
+    fun likeAddDeadLetterQueue() = dlq(LIKE_ADD_DLQ)
 
     @Bean
-    public Queue likeDeleteDeadLetterQueue() {
-        return QueueBuilder.durable(LIKE_DELETE_DLQ).build();
-    }
+    fun likeDeleteDeadLetterQueue() = dlq(LIKE_DELETE_DLQ)
+
+    @Bean
+    fun orderEmailQueue() =
+        durableQueueWithDLQ("order.email.queue")
+
+    @Bean
+    fun orderEmailDeadLetterQueue() = dlq("order.email.queue.dlq")
 
     // Binding
     @Bean
-    public Binding likeAddBinding(Queue likeAddQueue, TopicExchange likeExchange) {
-        return BindingBuilder.bind(likeAddQueue).to(likeExchange).with(LIKE_ADD_ROUTING_KEY);
-    }
+    fun likeAddBinding(
+        @Qualifier("likeAddQueue") queue: Queue,
+        @Qualifier("likeExchange") exchange: TopicExchange
+    ) = BindingBuilder.bind(queue).to(exchange).with(LIKE_ADD_ROUTING_KEY)
 
     @Bean
-    public Binding likeDeleteBinding(Queue likeDeleteQueue, TopicExchange likeExchange) {
-        return BindingBuilder.bind(likeDeleteQueue).to(likeExchange).with(LIKE_DELETE_ROUTING_KEY);
-    }
-
-    // DLQ Binding
-    @Bean
-    public Binding likeAddDlqBinding(Queue likeAddDeadLetterQueue, DirectExchange deadLetterExchange) {
-        return BindingBuilder.bind(likeAddDeadLetterQueue).to(deadLetterExchange).with(DEAD_LETTER_ROUTING_KEY_PREFIX + LIKE_ADD_QUEUE);
-    }
+    fun likeDeleteBinding(
+        @Qualifier("likeDeleteQueue") queue: Queue,
+        @Qualifier("likeExchange") exchange: TopicExchange
+    ) = BindingBuilder.bind(queue).to(exchange).with(LIKE_DELETE_ROUTING_KEY)
 
     @Bean
-    public Binding likeDeleteDlqBinding(Queue likeDeleteDeadLetterQueue, DirectExchange deadLetterExchange) {
-        return BindingBuilder.bind(likeDeleteDeadLetterQueue).to(deadLetterExchange).with(DEAD_LETTER_ROUTING_KEY_PREFIX + LIKE_DELETE_QUEUE);
-    }
-
-
-    @Bean
-    public TopicExchange orderExchange() {
-        return new TopicExchange("order.exchange");
-    }
+    fun likeAddDlqBinding(
+        @Qualifier("likeAddDeadLetterQueue") dlq: Queue,
+        @Qualifier("deadLetterExchange") deadEx: DirectExchange
+    ) = BindingBuilder.bind(dlq).to(deadEx)
+        .with("$DEAD_LETTER_ROUTING_KEY_PREFIX$LIKE_ADD_QUEUE")
 
     @Bean
-    public Queue orderEmailQueue() {
-        return QueueBuilder.durable("order.email.queue")
-                .withArgument("x-dead-letter-exchange", DEAD_LETTER_EXCHANGE)
-                .withArgument("x-dead-letter-routing-key", DEAD_LETTER_ROUTING_KEY_PREFIX + "order.email.queue")
-                .build();
-    }
+    fun likeDeleteDlqBinding(
+        @Qualifier("likeDeleteDeadLetterQueue") dlq: Queue,
+        @Qualifier("deadLetterExchange") deadEx: DirectExchange
+    ) = BindingBuilder.bind(dlq).to(deadEx)
+        .with("$DEAD_LETTER_ROUTING_KEY_PREFIX$LIKE_DELETE_QUEUE")
 
     @Bean
-    public Queue orderEmailDeadLetterQueue() {
-        return QueueBuilder.durable("order.email.queue.dlq").build();
-    }
+    fun orderEmailBinding(
+        @Qualifier("orderEmailQueue") queue: Queue,
+        @Qualifier("orderExchange") exchange: TopicExchange
+    ) = BindingBuilder.bind(queue).to(exchange).with("order.completed")
 
     @Bean
-    public Binding orderEmailBinding(Queue orderEmailQueue, TopicExchange orderExchange) {
-        return BindingBuilder.bind(orderEmailQueue).to(orderExchange).with("order.completed");
-    }
+    fun orderEmailDlqBinding(
+        @Qualifier("orderEmailDeadLetterQueue") dlq: Queue,
+        @Qualifier("deadLetterExchange") deadEx: DirectExchange
+    ) = BindingBuilder.bind(dlq)
+        .to(deadEx)
+        .with("${DEAD_LETTER_ROUTING_KEY_PREFIX}order.email.queue")
 
-    @Bean
-    public Binding orderEmailDlqBinding(Queue orderEmailDeadLetterQueue, DirectExchange deadLetterExchange) {
-        return BindingBuilder.bind(orderEmailDeadLetterQueue).to(deadLetterExchange).with(DEAD_LETTER_ROUTING_KEY_PREFIX + "order.email.queue");
-    }
 
     // JSON 메시지 컨버터
     @Bean
-    public Jackson2JsonMessageConverter jackson2JsonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
-    }
+    fun jackson2JsonMessageConverter() = Jackson2JsonMessageConverter()
+
 
     // RabbitTemplate에 JSON 컨버터 적용
     @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
-                                         Jackson2JsonMessageConverter converter) {
-        RabbitTemplate template = new RabbitTemplate(connectionFactory);
-        template.setMessageConverter(converter);
-        return template;
+    fun rabbitTemplate(
+        factory: ConnectionFactory,
+        converter: Jackson2JsonMessageConverter
+    ) = RabbitTemplate(factory).apply {
+        messageConverter = converter
     }
 
+    // 공통 함수들
+    private fun durableQueueWithDLQ(queueName: String) =
+        QueueBuilder.durable(queueName)
+            .withArgument("x-dead-letter-exchange", DEAD_LETTER_EXCHANGE)
+            .withArgument("x-dead-letter-routing-key", "$DEAD_LETTER_ROUTING_KEY_PREFIX$queueName")
+            .build()
+
+    private fun dlq(name: String) = QueueBuilder.durable(name).build()
+
+    companion object {
+        // --- Like 관련 상수 ---
+        const val LIKE_ADD_QUEUE: String = "like.add.queue"
+        const val LIKE_DELETE_QUEUE: String = "like.delete.queue"
+        const val LIKE_ADD_DLQ: String = "like.add.dlq"
+        const val LIKE_DELETE_DLQ: String = "like.delete.dlq"
+
+        const val LIKE_EXCHANGE: String = "like.exchange"
+        const val LIKE_ADD_ROUTING_KEY: String = "like.add.routingkey"
+        const val LIKE_DELETE_ROUTING_KEY: String = "like.delete.routingkey"
+
+        const val DEAD_LETTER_EXCHANGE: String = "dead-letter.exchange"
+        const val DEAD_LETTER_ROUTING_KEY_PREFIX: String = "dead." // 라우팅 키 접두사
+    }
 }
