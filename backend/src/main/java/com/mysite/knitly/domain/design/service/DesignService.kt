@@ -29,7 +29,8 @@ class DesignService(
     private val pdfGenerator: PdfGenerator,
     private val localFileStorage: LocalFileStorage,
     private val objectMapper: ObjectMapper,
-    private val fileValidator: FileValidator
+    private val fileValidator: FileValidator,
+    private val redisProductService: com.mysite.knitly.domain.product.product.service.RedisProductService
 ) {
     private val log = LoggerFactory.getLogger(DesignService::class.java)
 
@@ -236,6 +237,13 @@ class DesignService(
             }
 
             design.stopSale()
+
+            // Redis에서 상품 제거
+            design.product?.productId?.let { productId ->
+                redisProductService.removeProduct(productId)
+                log.info("[Design] [Stop] Redis에서 상품 제거 완료 - productId={}", productId)
+            }
+
             log.info("[Design] [Stop] 판매 중지 완료")
         } finally {
             MDC.clear()
@@ -272,6 +280,16 @@ class DesignService(
 
 
             design.relist()
+
+            // Redis에 상품 추가
+            design.product?.let { product ->
+                product.productId?.let { productId ->
+                    redisProductService.addProduct(productId, product.purchaseCount.toLong())
+                    log.info("[Design] [Relist] Redis에 상품 추가 완료 - productId={}, purchaseCount={}",
+                        productId, product.purchaseCount)
+                }
+            }
+
             log.info("[Design] [Relist] 판매 재개 완료")
         } finally {
             MDC.clear()

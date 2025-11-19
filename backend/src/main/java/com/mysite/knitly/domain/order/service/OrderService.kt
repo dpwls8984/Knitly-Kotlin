@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 
 @Service
 class OrderService(
@@ -65,14 +66,18 @@ class OrderService(
             log.debug("[Order] [Service] DB 주문 저장 완료")
 
             //5. Payment를 READY 상태로 생성 - Order 생성 이후에 실행되어야 함
-            //TODO: 결제 수단은 추후 업데이트 필요
+            val totalPrice = orderItems.sumOf { it.orderPrice }
+            val paymentStatus = if (totalPrice == 0.0) PaymentStatus.DONE else PaymentStatus.READY  // 0원이면 바로 DONE
+            val approvedAt = if (totalPrice == 0.0) LocalDateTime.now() else null  // 0원이면 승인시간도 설정
+
             val readyPayment = Payment(
                 tossOrderId = savedOrder.tossOrderId,
                 order = savedOrder,
                 buyer = user,
                 totalAmount = savedOrder.totalPrice.toLong(),
-                paymentMethod = PaymentMethod.CARD,  // 초기값 (나중에 실제 결제 수단으로 업데이트됨)
-                paymentStatus = PaymentStatus.READY  // READY 상태
+                paymentMethod = if (totalPrice == 0.0) PaymentMethod.FREE else PaymentMethod.CARD, // 0원이면 무료 결제
+                paymentStatus = paymentStatus,  // 0원이면 DONE, 아니면 READY
+                approvedAt = approvedAt  // 0원이면 현재 시간, 아니면 null
             )
 
             paymentRepository.save(readyPayment)
