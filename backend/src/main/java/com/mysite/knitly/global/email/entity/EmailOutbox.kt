@@ -1,8 +1,6 @@
 package com.mysite.knitly.global.email.entity
 
 import jakarta.persistence.*
-import lombok.AccessLevel
-import lombok.NoArgsConstructor
 import java.time.LocalDateTime
 
 @Entity

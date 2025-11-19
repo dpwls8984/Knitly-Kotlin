@@ -23,7 +23,6 @@ class Order(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val orderId: Long? = null
 
-    // 2. 변경이 필요한 상태값은 var로 선언하되, 외부 변경을 막기 위해 private set 사용
     @Column(nullable = false)
     var totalPrice: Double = 0.0
         private set
@@ -33,8 +32,6 @@ class Order(
     var createdAt: LocalDateTime? = null
         private set
 
-    // MutableList를 내부에서만 쓰고, 밖으로는 Immutable List로 노출하는 것이 더 안전하지만,
-    // JPA 편의상 MutableList를 유지하되 초기화 로직 개선
     @OneToMany(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     val orderItems: MutableList<OrderItem> = mutableListOf()
 
@@ -47,7 +44,6 @@ class Order(
 
     companion object {
         fun create(user: User, items: List<OrderItem>): Order {
-            // 생성자를 통해 필수값을 주입
             val order = Order(
                 user = user,
                 tossOrderId = generateTossOrderId()

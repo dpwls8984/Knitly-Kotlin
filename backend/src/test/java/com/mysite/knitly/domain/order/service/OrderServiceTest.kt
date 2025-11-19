@@ -4,6 +4,7 @@ import com.mysite.knitly.domain.design.entity.Design
 import com.mysite.knitly.domain.design.entity.DesignState
 import com.mysite.knitly.domain.design.repository.DesignRepository
 import com.mysite.knitly.domain.order.dto.OrderCreateRequest
+import com.mysite.knitly.domain.order.repository.OrderItemRepository
 import com.mysite.knitly.domain.order.repository.OrderRepository
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
 import com.mysite.knitly.domain.product.product.entity.Product
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.annotation.DirtiesContext
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -27,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger
 private val log = KotlinLogging.logger {}
 
 @SpringBootTest(properties = ["spring.profiles.active=test"])
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class OrderServiceTest {
 
     // [개선 1] Nullable(? = null) 제거 및 lateinit var 사용
@@ -38,6 +41,7 @@ class OrderServiceTest {
     @Autowired lateinit var designRepository: DesignRepository
     @Autowired lateinit var paymeRepository: PaymentRepository
     @Autowired lateinit var orderFacade: OrderFacade
+    @Autowired lateinit var orderItemRepository: OrderItemRepository
 
     // 테스트 데이터는 lateinit으로 선언하여 setup에서 확실히 초기화
     private lateinit var testUser: User
@@ -46,14 +50,15 @@ class OrderServiceTest {
 
     @BeforeEach
     fun setUp() {
-        // 외래키 제약조건 등을 고려하여 자식 테이블부터 삭제하거나,
-        // 전체 삭제 순서를 보장해야 함. (여기서는 기존 로직 유지)
 
-        paymeRepository.deleteAll()
-        orderRepository.deleteAll()
-        productRepository.deleteAll()
-        designRepository.deleteAll()
-        userRepository.deleteAll()
+        orderItemRepository.deleteAllInBatch()
+        paymeRepository.deleteAllInBatch()
+
+        orderRepository.deleteAllInBatch()
+
+        productRepository.deleteAllInBatch()
+        designRepository.deleteAllInBatch()
+        userRepository.deleteAllInBatch()
 
         testUser = userRepository.save(
             User(
@@ -169,7 +174,6 @@ class OrderServiceTest {
         val failCount = AtomicInteger(0)
 
         // when
-        // [개선 4] 0..n 루프 대신 repeat 사용
         repeat(threadCount) {
             executorService.submit {
                 try {
@@ -185,12 +189,10 @@ class OrderServiceTest {
         }
 
         latch.await(10, TimeUnit.SECONDS)
-        executorService.shutdown()
+        executorService.shutdownNow()
+        executorService.awaitTermination(3, TimeUnit.SECONDS)
 
         // then
-        // lateinit으로 선언했기 때문에 !! 없이 바로 접근 가능
-        // findById가 Optional을 반환하므로, Kotlin에서는 getOrNull() 등을 쓸 수도 있지만
-        // 테스트에서는 확실한 값 존재를 위해 orElseThrow()가 적합
         val updatedProduct = productRepository.findById(productToCheck.productId!!).orElseThrow()
         val dbOrderCount = orderRepository.count()
 
@@ -214,8 +216,6 @@ class OrderServiceTest {
 
         // 검증
         assertThat(updatedProduct.stockQuantity).isEqualTo(0)
-        // DB에 쌓인 주문 수는 재고 수량과 정확히 일치해야 함 (동시성 제어 성공 시)
-        // 주의: 이 테스트는 전체 DB count를 세고 있으므로, setUp()에서 deleteAll()이 필수임
         assertThat(dbOrderCount).isEqualTo(stockQuantity.toLong())
         assertThat(successCount.get()).isEqualTo(stockQuantity)
     }
