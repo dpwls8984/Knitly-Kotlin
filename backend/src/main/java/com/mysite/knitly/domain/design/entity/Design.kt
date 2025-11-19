@@ -42,13 +42,14 @@ class Design(
     @Column(name = "grid_data", columnDefinition = "JSON", nullable = false)
     val gridData: String,
 
-    @CreatedDate
-    @Column(nullable = false)
-    val createdAt: LocalDateTime? = null,
-
     @OneToOne(mappedBy = "design", cascade = [CascadeType.REMOVE], fetch = FetchType.LAZY)
     val product: Product? = null
     ) {
+        @CreatedDate
+        @Column(nullable = false, updatable = false)
+        var createdAt: LocalDateTime? = null
+            private set
+
         // 삭제 가능 여부 확인 - BEFORE_SALE 상태인 경우에만 삭제 가능
         fun isDeletable(): Boolean = designState == DesignState.BEFORE_SALE
 

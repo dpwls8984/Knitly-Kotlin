@@ -54,9 +54,9 @@ open class Product (
     var sizeInfo: String = sizeInfo
         private set
 
-    @Column(nullable = false)
     @CreatedDate
-    lateinit var createdAt: LocalDateTime
+    @Column(nullable = false, updatable = false)
+    var createdAt: LocalDateTime? = null
         private set
 
     @Column(nullable = false)
