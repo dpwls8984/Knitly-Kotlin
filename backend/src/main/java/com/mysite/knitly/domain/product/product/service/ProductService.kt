@@ -663,7 +663,7 @@ class ProductService (
             val imageUrls = product.productImages.map { it.productImageUrl }
 
             val isLiked = user?.let {
-                productLikeRepository.existsByUser_UserIdAndProduct_ProductId(it.userId, productId)
+                productLikeRepository.existsByUserIdAndProductId(it.userId, productId)
             } ?: false
 
             val reviewCount = reviewRepository.countByProductAndIsDeletedFalse(product)

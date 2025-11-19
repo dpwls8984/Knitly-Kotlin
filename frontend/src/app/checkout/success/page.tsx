@@ -19,12 +19,61 @@ export default function PaymentSuccessPage() {
       const paymentKey = searchParams.get('paymentKey');
       const orderId = searchParams.get('orderId');
       const amount = searchParams.get('amount');
+      const isFree = searchParams.get('isFree') === 'true';
 
-      if (!paymentKey || !orderId || !amount) {
+      if (!orderId) {
         setError('결제 정보가 올바르지 않습니다.');
         setIsProcessing(false);
         return;
       }
+
+      // 무료 주문(isFree=true)인 경우 토스 승인 API를 호출하지 않음
+      if (isFree) {
+        try {
+          // 주문 정보만 조회하여 표시
+          const response = await fetch(`${API_URL}/orders/${orderId}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+          });
+
+          if (response.ok) {
+            const orderData = await response.json();
+            setPaymentInfo({
+              orderId: orderId,
+              totalAmount: 0,
+              method: 'FREE',
+            });
+          } else {
+            // 주문 조회 실패해도 무료 주문이므로 성공 처리
+            setPaymentInfo({
+              orderId: orderId,
+              totalAmount: 0,
+              method: 'FREE',
+            });
+          }
+        } catch (error: any) {
+          console.error('주문 정보 조회 실패:', error);
+          // 무료 주문이므로 에러가 나도 성공 처리
+          setPaymentInfo({
+            orderId: orderId,
+            totalAmount: 0,
+            method: 'FREE',
+          });
+        }
+        setIsProcessing(false);
+        return;
+      }
+
+      // 유료 주문인 경우 토스 승인 API 호출
+      if (!paymentKey || !amount) {
+        setError('결제 정보가 올바르지 않습니다.');
+        setIsProcessing(false);
+        return;
+      }
+
+      const amountNum = parseInt(amount);
 
       try {
         // 백엔드 결제 승인 API 호출
@@ -162,6 +211,7 @@ export default function PaymentSuccessPage() {
                 {paymentInfo.method === 'CARD' ? '카드' : 
                  paymentInfo.method === 'TRANSFER' ? '계좌이체' :
                  paymentInfo.method === 'VIRTUAL_ACCOUNT' ? '가상계좌' :
+                 paymentInfo.method === 'FREE' ? '무료' :
                  paymentInfo.method}
               </span>
             </div>

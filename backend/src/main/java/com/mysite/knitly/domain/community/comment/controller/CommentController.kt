@@ -60,7 +60,7 @@ class CommentController(
 
         log.info("[CommentController] 댓글 작성 요청 - postId={}, parentId={}", postId, request.parentId)
 
-        // 🔥 1) PathVariable postId와 body postId 일치 여부 체크
+        // PathVariable postId와 body postId 일치 여부 체크
         if (postId != request.postId) {
             log.warn(
                 "[CommentController] 댓글 작성 실패 - 경로 postId와 본문 postId 불일치 path={}, body={}",
@@ -69,14 +69,14 @@ class CommentController(
             return ResponseEntity.badRequest().build()
         }
 
-        // 🔥 2) content 유효성 검증 (테스트 400 대응)
+        // content 유효성 검증 (테스트 400 대응)
         val content = request.content?.trim() ?: ""
         if (content.isBlank() || content.length > 300) {
             log.warn("[CommentController] 댓글 작성 실패 - 유효성 오류 content='{}'", content)
             return ResponseEntity.badRequest().build()
         }
 
-        // 🔥 3) 유효성 통과 → 서비스 호출
+        // 유효성 통과 → 서비스 호출
         val resp: CommentResponse = commentService.create(request, user)
 
         log.info("[CommentController] 댓글 작성 완료 - postId={}, commentId={}", postId, resp.id)

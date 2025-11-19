@@ -84,7 +84,7 @@ class MyPageService(
             pageable.pageSize
         )
         val page: Page<FavoriteProductItem> = productLikeRepository
-            .findByUser_UserId(userId, pageable)
+            .findByUserUserId(userId, pageable)
             .map { convertToDto(it) }
         log.info(
             "[MyPageService] 찜 목록 조회 완료 - userId={}, totalElements={}",

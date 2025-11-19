@@ -22,15 +22,15 @@ class Comment(
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
-    var author: User,
+    val author: User,  // 작성자
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "post_id", nullable = false)
-    var post: Post,
+    val post: Post, // 어떤 게시글의 댓글인지 생성 시 결정
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
-    var parent: Comment? = null,
+    val parent: Comment? = null, // parent도 생성 시점에만 설정
 
     @OneToMany(
         mappedBy = "parent",
@@ -38,7 +38,7 @@ class Comment(
         orphanRemoval = true
     )
     @OrderBy("createdAt ASC")
-    var children: MutableList<Comment> = mutableListOf(),
+    val children: MutableList<Comment> = mutableListOf(),
 
     @Column(name = "is_deleted", nullable = false)
     var deleted: Boolean = false

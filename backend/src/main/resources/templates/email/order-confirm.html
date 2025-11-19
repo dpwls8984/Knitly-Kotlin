@@ -1,0 +1,32 @@
+<div style="font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; padding: 20px; color: #333;">
+    <h2 style="color: #4CAF50;">안녕하세요, {{username}}님 😊</h2>
+
+    <p>주문이 정상적으로 완료되었습니다.</p>
+
+    <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+
+    <h3>📦 주문 상세 정보</h3>
+    <p><strong>주문번호:</strong> {{orderId}}</p>
+    <p><strong>주문일시:</strong> {{orderDate}}</p>
+    <p><strong>결제수단:</strong> {{paymentMethod}}</p>
+
+    <h3>🧶 주문 상품</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <thead>
+        <tr>
+            <th style="text-align: left; padding: 8px; border-bottom: 1px solid #eee;">상품명</th>
+            <th style="text-align: center; padding: 8px; border-bottom: 1px solid #eee;">가격</th>
+            <th style="text-align: center; padding: 8px; border-bottom: 1px solid #eee;">수량</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{orderItems}}
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 20px;">💰 총 결제 금액: <span style="color: #4CAF50;">{{totalPrice}}</span>원</h3>
+
+    <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+
+    <p>항상 저희 서비스를 이용해 주셔서 감사합니다! 🙏</p>
+</div>

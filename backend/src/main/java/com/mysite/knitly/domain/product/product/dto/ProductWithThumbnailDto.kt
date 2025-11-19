@@ -11,9 +11,9 @@ data class ProductWithThumbnailDto(
     val purchaseCount: Int,
     val likeCount: Int,
     val stockQuantity: Int?,
-    val avgReviewRating: Double,
+    val avgReviewRating: Double?,
     val createdAt: LocalDateTime,
-    val thumbnailUrl: String,
+    val thumbnailUrl: String?,
     val userId: Long
 ) {
     fun toResponse(isLikedByUser: Boolean, sellerName: String?): ProductListResponse {
@@ -26,9 +26,9 @@ data class ProductWithThumbnailDto(
             this.likeCount,
             isLikedByUser,
             this.stockQuantity,
-            this.avgReviewRating,
+            this.avgReviewRating ?: 0.0,
             this.createdAt,
-            this.thumbnailUrl,
+            this.thumbnailUrl ?: "",
             sellerName ?: "판매자 정보 없음",
             this.price == 0.0,
             this.stockQuantity != null,

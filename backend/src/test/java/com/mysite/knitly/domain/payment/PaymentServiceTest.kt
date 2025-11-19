@@ -21,6 +21,7 @@ import com.mysite.knitly.domain.product.product.entity.ProductCategory
 import com.mysite.knitly.domain.product.product.service.RedisProductService
 import com.mysite.knitly.domain.user.entity.Provider
 import com.mysite.knitly.domain.user.entity.User
+import com.mysite.knitly.global.email.entity.EmailOutbox
 import com.mysite.knitly.global.email.repository.EmailOutboxRepository
 import com.mysite.knitly.global.exception.ErrorCode
 import com.mysite.knitly.global.exception.ServiceException
@@ -109,6 +110,21 @@ class PaymentServiceTest {
         doNothing().whenever(redisProductService).incrementPurchaseCount(any())
         doNothing().whenever(redisProductService).evictPopularListCache()
 
+        // EmailOutboxRepository 모킹 수정
+        whenever(emailOutboxRepository.save(any<EmailOutbox>())).thenAnswer { invocation ->
+            val outbox = invocation.arguments[0] as EmailOutbox
+            // 리플렉션으로 ID 설정 (테스트 환경에서 ID 생성 시뮬레이션)
+            try {
+                val idField = EmailOutbox::class.java.getDeclaredField("id")
+                idField.isAccessible = true
+                idField.set(outbox, 100L)
+            } catch (e: Exception) {
+                throw RuntimeException("EmailOutbox ID 설정 실패", e)
+            }
+            outbox // 반드시 입력받은 객체를 반환해야 함 (null 반환 시 NPE 발생)
+        }
+        whenever(objectMapper.writeValueAsString(any())).thenReturn("""{"dummy":"json"}""")
+
         // when
         val response = paymentService.confirmPayment(request)
 
@@ -123,6 +139,7 @@ class PaymentServiceTest {
         verify(paymentRepository, times(2)).save(any<Payment>())
         verify(redisProductService).incrementPurchaseCount(1L)
         verify(redisProductService).evictPopularListCache()
+        verify(emailOutboxRepository).save(any<EmailOutbox>())
     }
 
     @Test
@@ -416,11 +433,22 @@ class PaymentServiceTest {
 
         val tossResponse = createTossResponse("DONE", "CARD")
 
+        whenever(emailOutboxRepository.save(any<EmailOutbox>())).thenAnswer { invocation ->
+            val outbox = invocation.arguments[0] as EmailOutbox
+            try {
+                val idField = EmailOutbox::class.java.getDeclaredField("id")
+                idField.isAccessible = true
+                idField.set(outbox, 100L)
+            } catch (ignored: Exception) { }
+            outbox
+        }
+        whenever(objectMapper.writeValueAsString(any<Any>())).thenReturn("""{"ok":true}""")
+
         whenever(orderRepository.findByTossOrderId("ORDER123")).thenReturn(order)
         whenever(paymentRepository.findByOrder_OrderId(1L)).thenReturn(payment)
         whenever(paymentRepository.save(any<Payment>())).thenAnswer { it.arguments[0] as Payment }
         whenever(tossApiClient.confirmPayment(request)).thenReturn(tossResponse)
-        doNothing().whenever(redisProductService).incrementPurchaseCount(any())
+        doNothing().whenever(redisProductService).incrementPurchaseCount(any<Long>())
         doNothing().whenever(redisProductService).evictPopularListCache()
 
         val initialPurchaseCount1 = product1.purchaseCount
@@ -473,7 +501,7 @@ class PaymentServiceTest {
             isDeleted = false,
             stockQuantity = null,
             likeCount = 0,
-            design = design,
+            design = design
         )
 
     private fun testOrder(id: Long, user: User, tossOrderId: String, totalPrice: Double): Order {
@@ -484,9 +512,22 @@ class PaymentServiceTest {
         )
 
         // 리플렉션으로 orderId 설정
-        Order::class.java.getDeclaredField("orderId").apply {
-            isAccessible = true
-            set(order, id)
+        try {
+            // Order 클래스의 필드 확인 (보통 "orderId" 또는 "id")
+            val idField = Order::class.java.getDeclaredField("orderId")
+            idField.isAccessible = true
+            idField.set(order, id)
+        } catch (e: NoSuchFieldException) {
+            // 필드명이 다를 경우를 대비
+            try {
+                val idField = Order::class.java.getDeclaredField("id")
+                idField.isAccessible = true
+                idField.set(order, id)
+            } catch (e2: Exception) {
+                throw RuntimeException("Order ID 설정 실패: 필드명을 찾을 수 없습니다.", e2)
+            }
+        } catch (e: Exception) {
+            throw RuntimeException("Order ID 설정 중 예외 발생", e)
         }
 
         return order
