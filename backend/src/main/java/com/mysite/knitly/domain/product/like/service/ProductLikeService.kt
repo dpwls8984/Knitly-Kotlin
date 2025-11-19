@@ -28,13 +28,10 @@ class ProductLikeService(
         redisTemplate.expire(redisKey, Duration.ofDays(7))
         log.debug { "[Like] [Add] Redis 찜 Set에 추가 완료" }
 
-        val eventDto = LikeEventRequest(userId, productId)
-        rabbitTemplate.convertAndSend(EXCHANGE_NAME, LIKE_ROUTING_KEY, eventDto)
+        rabbitTemplate.convertAndSend(EXCHANGE_NAME, LIKE_ROUTING_KEY, LikeEventRequest(userId, productId))
         log.debug { "[Like] [Add] RabbitMQ 이벤트 전송 완료" }
 
-        val productCacheKey = PRODUCT_DETAIL_CACHE_PREFIX + productId
-        redisTemplate.delete(productCacheKey)
-        log.info { "[Like] [Invalidate] 상품 상세 캐시 삭제 완료 - key=$productCacheKey" }
+        invalidateProductCache(productId)
 
         log.info { "[Like] [Add] 좋아요 추가 완료" }
     }
@@ -49,13 +46,10 @@ class ProductLikeService(
         redisTemplate.opsForSet().remove(redisKey, userKey)
         log.debug { "[Like] [Delete] Redis 찜 Set에서 제거 완료" }
 
-        val eventDto = LikeEventRequest(userId, productId)
-        rabbitTemplate.convertAndSend(EXCHANGE_NAME, DISLIKE_ROUTING_KEY, eventDto)
+        rabbitTemplate.convertAndSend(EXCHANGE_NAME, DISLIKE_ROUTING_KEY, LikeEventRequest(userId, productId))
         log.debug { "[Like] [Delete] RabbitMQ 이벤트 전송 완료" }
 
-        val productCacheKey = PRODUCT_DETAIL_CACHE_PREFIX + productId
-        redisTemplate.delete(productCacheKey)
-        log.info { "[Like] [Invalidate] 상품 상세 캐시 삭제 완료 - key=$productCacheKey" }
+        invalidateProductCache(productId)
 
         log.info { "[Like] [Delete] 좋아요 삭제 완료" }
     }
@@ -66,19 +60,25 @@ class ProductLikeService(
 
         val existsInRedis = redisTemplate.opsForSet().isMember(redisKey, userKey)
 
-        val existsInDb = productLikeRepository.existsByUser_UserIdAndProduct_ProductId(userId, productId)
+        val existsInDb = productLikeRepository.existsByUserIdAndProductId(userId, productId)
 
         if (existsInRedis != existsInDb) {
             log.warn { "[Like] Redis/DB 불일치 - userId=$userId, productId=$productId" }
 
-            if (existsInDb && existsInRedis == false) {
+            if (existsInDb) {
                 redisTemplate.opsForSet().add(redisKey, userKey)
-            } else if (!existsInDb && existsInRedis == true) {
+            } else {
                 redisTemplate.opsForSet().remove(redisKey, userKey)
             }
         }
 
         return existsInDb
+    }
+
+    private fun invalidateProductCache(productId: Long) {
+        val productCacheKey = "${PRODUCT_DETAIL_CACHE_PREFIX}$productId"
+        redisTemplate.delete(productCacheKey)
+        log.info { "[Like] [Invalidate] 상품 상세 캐시 삭제 완료 - key=$productCacheKey" }
     }
 
     companion object {

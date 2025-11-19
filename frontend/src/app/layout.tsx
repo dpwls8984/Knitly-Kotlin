@@ -55,9 +55,6 @@ export default function RootLayout({
                 <Link href="/community" className="hover:text-[#925C4C] transition-colors">
                     커뮤니티
                 </Link>
-                <Link href="/event" className="hover:text-[#925C4C] transition-colors">
-                    이벤트
-                </Link>
             </nav>
 
             {/* 오른쪽 로그인/로그아웃 버튼 */}
