@@ -83,8 +83,8 @@ open class Product (
     @Column
     var avgReviewRating: Double? = null
 
-    @Column
-    var reviewCount: Int? = null
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    var reviewCount: Int = 0
 
     //상품 수정하는 로직 추가
     fun update(

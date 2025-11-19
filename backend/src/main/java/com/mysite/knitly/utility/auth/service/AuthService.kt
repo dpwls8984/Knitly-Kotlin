@@ -30,17 +30,17 @@ class AuthService(
     fun refreshAccessToken(refreshToken: String): TokenRefreshResponse {
         // 1. Refresh Token 유효성 검증
         if (!jwtProvider.validateToken(refreshToken)) {
-            log.info("유효하지 않은 Refresh Token입니다.")
-            throw IllegalArgumentException("유효하지 않은 Refresh Token입니다.")
+            log.info("[AuthService] 유효하지 않은 Refresh Token입니다.")
+            throw IllegalArgumentException("[AuthService] 유효하지 않은 Refresh Token입니다.")
         }
 
         // 2. Refresh Token에서 userId 추출
         val userId = jwtProvider.getUserIdFromToken(refreshToken)
-        log.info("Token refresh requested - userId: {}", userId)
+        log.info("[AuthService] Token refresh requested - userId: {}", userId)
 
         // 3. Redis에 저장된 Refresh Token과 비교
         if (!refreshTokenService.validateRefreshToken(userId, refreshToken)) {
-            throw IllegalArgumentException("Refresh Token이 일치하지 않습니다.")
+            throw IllegalArgumentException("[AuthService] Refresh Token이 일치하지 않습니다.")
         }
 
         // 4. 새로운 Access Token 생성
@@ -52,7 +52,7 @@ class AuthService(
         // 6. 새로운 Refresh Token을 Redis에 저장 (기존 토큰 덮어쓰기)
         refreshTokenService.saveRefreshToken(userId, newRefreshToken)
 
-        log.info("Token refreshed successfully - userId: {}", userId)
+        log.info("[AuthService] Token refreshed successfully - userId: {}", userId)
 
         return TokenRefreshResponse.of(
             accessToken = newAccessToken,
@@ -66,7 +66,7 @@ class AuthService(
      */
     fun logout(userId: Long) {
         refreshTokenService.deleteRefreshToken(userId)
-        log.info("User logged out - userId: {}", userId)
+        log.info("[AuthService] User logged out - userId: {}", userId)
     }
 
     /**
@@ -77,16 +77,16 @@ class AuthService(
     @Transactional
     fun deleteAccount(userId: Long) {
         val user = userRepository.findById(userId)
-            .orElseThrow { RuntimeException("사용자를 찾을 수 없습니다.") }
+            .orElseThrow { RuntimeException("[AuthService] 사용자를 찾을 수 없습니다.") }
 
-        log.info("회원 탈퇴 시작 - userId: {}", userId)
+        log.info("[AuthService] 회원 탈퇴 시작 - userId: {}", userId)
 
         // 1. Redis에서 Refresh Token 삭제
         refreshTokenService.deleteRefreshToken(userId)
-        log.info("Redis에서 Refresh Token 삭제 완료 - userId: {}", userId)
+        log.info("[AuthService] Redis에서 Refresh Token 삭제 완료 - userId: {}", userId)
 
         // 2. 사용자 삭제 (Cascade로 자동으로 연관 데이터 모두 삭제됨!)
         userRepository.delete(user)
-        log.info("사용자 및 모든 연관 데이터 삭제 완료 - userId: {}", userId)
+        log.info("[AuthService] 사용자 및 모든 연관 데이터 삭제 완료 - userId: {}", userId)
     }
 }

@@ -1,5 +1,6 @@
 package com.mysite.knitly.domain.product.product.repository
 
+import com.mysite.knitly.domain.design.entity.Design
 import com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto
 import com.mysite.knitly.domain.product.product.entity.Product
 import com.mysite.knitly.domain.product.product.entity.ProductCategory
@@ -26,45 +27,6 @@ interface ProductRepository : JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p WHERE p.productId = :productId AND p.isDeleted = false AND p.design.designState = 'ON_SALE'")
     fun findByProductIdAndIsDeletedFalse(@Param("productId") productId: Long): Product?
 
-    /**
-     * userId로 판매 상품 조회 (대표 이미지 포함)
-     *
-     * sortOrder = 1인 대표 이미지만 LEFT JOIN
-     * DTO 프로젝션으로 한 번의 쿼리로 조회
-     */
-    @Query(
-        value = """
-            SELECT new com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto(
-                p.productId,
-                p.title,
-                p.productCategory,
-                p.price,
-                p.purchaseCount,
-                p.likeCount,
-                p.stockQuantity,
-                CAST(COALESCE(p.avgReviewRating, 0.0) AS double),
-                p.createdAt,
-                COALESCE(pi.productImageUrl, ''),
-                p.user.userId
-            )
-            FROM Product p
-            LEFT JOIN ProductImage pi ON pi.product.productId = p.productId 
-                AND pi.sortOrder = 1
-            WHERE p.user.userId = :userId
-            AND p.isDeleted = false
-            ORDER BY p.createdAt DESC
-        """,
-        countQuery = """
-            SELECT COUNT(DISTINCT p.productId)
-            FROM Product p
-            WHERE p.user.userId = :userId
-            AND p.isDeleted = false
-        """
-    )
-    fun findByUserIdWithThumbnail(
-        @Param("userId") userId: Long,
-        pageable: Pageable
-    ): Page<ProductWithThumbnailDto>
 
     /**
      * 전체 상품 조회 (batch size로 N+1 방지)
@@ -73,6 +35,50 @@ interface ProductRepository : JpaRepository<Product, Long> {
      */
     @Query("SELECT p FROM Product p WHERE p.isDeleted = false AND p.design.designState = 'ON_SALE'")
     fun findAllWithImagesAndNotDeleted(pageable: Pageable): Page<Product>
+
+    /**
+     * 판매자 스토어 _ 특정 유저의 전체 상품 조회 (batch size로 N+1 방지)
+     * fetch join 제거 - @BatchSize 어노테이션이 동작하도록 변경
+     * Design 상태가 ON_SALE인 것만 조회
+     */
+    @Query(
+        countQuery = """
+        SELECT COUNT(DISTINCT p.productId)
+        FROM Product p
+        LEFT JOIN p.design d
+        WHERE p.user.userId = :userId
+        AND p.isDeleted = false
+        AND d.designState = 'ON_SALE'
+    """,
+        value = """
+        SELECT new com.mysite.knitly.domain.product.product.dto.ProductWithThumbnailDto(
+            p.productId,
+            p.title,
+            p.productCategory,
+            p.price,
+            p.purchaseCount,
+            p.likeCount,
+            p.stockQuantity,
+            p.avgReviewRating,
+            p.createdAt,
+            (SELECT pi2.productImageUrl 
+             FROM ProductImage pi2 
+             WHERE pi2.product = p 
+             AND pi2.sortOrder = 1),
+            p.user.userId
+        )
+        FROM Product p
+        LEFT JOIN p.design d
+        WHERE p.user.userId = :userId
+        AND p.isDeleted = false
+        AND d.designState = 'ON_SALE'
+        ORDER BY p.createdAt DESC
+    """
+    )
+    fun findOnSaleProductsByUserIdWithThumbnail(
+        @Param("userId") userId: Long,
+        pageable: Pageable
+    ): Page<ProductWithThumbnailDto>
 
     /**
      * 카테고리별 조회 (batch size로 N+1 방지)
