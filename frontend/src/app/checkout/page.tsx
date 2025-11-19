@@ -59,6 +59,14 @@ export default function CheckoutPage() {
 
     const initializePayment = async () => {
       try {
+        const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
+        
+        // 금액이 0원이면 토스 위젯 초기화하지 않음
+        if (totalAmount === 0) {
+          setReady(true);
+          return;
+        }
+
         // 3-1. 주문 생성 (백엔드에서 tossOrderId 자동 생성)
         const accessToken = localStorage.getItem('accessToken');
         const productIds = items.map(item => item.productId);
@@ -88,9 +96,11 @@ export default function CheckoutPage() {
         console.log('생성된 tossOrderId:', generatedTossOrderId);
 
         // 3-2. 토스페이먼츠 SDK 로드 및 위젯 초기화
+        if (!clientKey) {
+          throw new Error('토스페이먼츠 클라이언트 키가 설정되지 않았습니다.');
+        }
         const tossPayments = await loadTossPayments(clientKey);
         
-        const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
         const orderName = items.length > 1 
           ? `${items[0].title} 외 ${items.length - 1}건`
           : items[0].title;
@@ -133,13 +143,46 @@ export default function CheckoutPage() {
 
   // 4. 결제 요청
   const handlePayment = async () => {
+    const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
+    
+    // 금액이 0원이면 토스 API를 거치지 않고 바로 주문 생성 후 success 페이지로 이동
+    if (totalAmount === 0) {
+      try {
+        const accessToken = localStorage.getItem('accessToken');
+        const productIds = items.map(item => item.productId);
+        
+        const orderResponse = await fetch(`${API_URL}/orders`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ productIds }),
+        });
+
+        if (!orderResponse.ok) {
+          throw new Error('주문 생성에 실패했습니다.');
+        }
+
+        const orderData = await orderResponse.json();
+        const orderId = orderData.tossOrderId || orderData.orderId;
+        
+        // 무료 주문이므로 success 페이지로 바로 이동 (isFree=true 파라미터 사용)
+        router.push(`/checkout/success?orderId=${orderId}&isFree=true`);
+      } catch (error) {
+        console.error('주문 생성 실패:', error);
+        alert('주문 생성 중 오류가 발생했습니다.');
+      }
+      return;
+    }
+
+    // 유료 주문인 경우 기존 토스 결제 플로우 진행
     if (!paymentWidgetRef.current || !tossOrderId) {
       alert('결제 준비가 완료되지 않았습니다.');
       return;
     }
 
     try {
-      const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
       const orderName = items.length > 1 
         ? `${items[0].title} 외 ${items.length - 1}건`
         : items[0].title;
@@ -153,7 +196,7 @@ export default function CheckoutPage() {
         successUrl: `${window.location.origin}/checkout/success`,
         failUrl: `${window.location.origin}/checkout/fail`,
         customerEmail: user?.email,
-        customerName: user?.username || user?.name,
+        customerName: user?.name,
       });
     } catch (error) {
       console.error('결제 요청 실패:', error);
