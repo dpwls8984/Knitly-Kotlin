@@ -32,7 +32,6 @@ class ProductListController (
         return ResponseEntity.ok(response)
     }
 
-    // TODO : 예진 - 상품 상세 조회
     @GetMapping("/{productId}")
     fun getProductDetail(
         @AuthenticationPrincipal user: User?,

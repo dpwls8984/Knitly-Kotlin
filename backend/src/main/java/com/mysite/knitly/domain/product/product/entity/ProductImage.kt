@@ -1,9 +1,6 @@
 package com.mysite.knitly.domain.product.product.entity
 
 import jakarta.persistence.*
-import lombok.AccessLevel
-import lombok.NoArgsConstructor
-import org.springframework.data.jpa.domain.support.AuditingEntityListener
 
 @Entity
 @Table(name = "product_images")

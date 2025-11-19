@@ -12,25 +12,25 @@ import java.util.*
 class Order(
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    var user: User? = null,
-
-    @Column(nullable = false)
-    var totalPrice: Double = 0.0,
+    @JoinColumn(name = "user_id", nullable = false)
+    val user: User,
 
     @Column(nullable = false, unique = true, length = 64)
-    var tossOrderId: String
+    val tossOrderId: String
 
 ) {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val orderId: Long? = null
 
+    @Column(nullable = false)
+    var totalPrice: Double = 0.0
+        private set
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
-    lateinit var createdAt: LocalDateTime
-        protected set
+    var createdAt: LocalDateTime? = null
+        private set
 
     @OneToMany(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     val orderItems: MutableList<OrderItem> = mutableListOf()
@@ -38,31 +38,22 @@ class Order(
     // 연관관계 편의 메서드
     fun addOrderItem(orderItem: OrderItem) {
         orderItems.add(orderItem)
-        orderItem.order = this
-        totalPrice += orderItem.orderPrice * orderItem.quantity
+        orderItem.assignOrder(this)
+        this.totalPrice += orderItem.orderPrice * orderItem.quantity
     }
 
     companion object {
-
         fun create(user: User, items: List<OrderItem>): Order {
             val order = Order(
                 user = user,
-                totalPrice = 0.0,
                 tossOrderId = generateTossOrderId()
             )
 
+            // 로직 수행
             items.forEach { order.addOrderItem(it) }
-
             return order
         }
 
-        private fun generateTossOrderId(): String =
-            UUID.randomUUID().toString()
+        private fun generateTossOrderId(): String = UUID.randomUUID().toString()
     }
-
-    protected constructor() : this(
-        user = null,
-        totalPrice = 0.0,
-        tossOrderId = ""
-    )
 }
