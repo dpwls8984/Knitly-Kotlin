@@ -48,7 +48,8 @@ class EmailService(
             val paymentMethod = when (payment?.paymentMethod) {
                 PaymentMethod.CARD -> "카드 결제"
                 PaymentMethod.VIRTUAL_ACCOUNT -> "가상계좌"
-                PaymentMethod.EASY_PAY -> " 간편결제"
+                PaymentMethod.EASY_PAY -> " 간편 결제"
+                PaymentMethod.FREE -> "무료 결제"
                 null -> "결제수단 정보 없음"
             }
 
