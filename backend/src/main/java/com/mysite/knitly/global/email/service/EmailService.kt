@@ -13,6 +13,7 @@ import org.springframework.core.io.ResourceLoader
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.util.FileCopyUtils
 import java.io.IOException
 import java.io.InputStreamReader
@@ -37,6 +38,7 @@ class EmailService(
     /**
      * 주문 확인 이메일을 발송하고 도안 파일을 첨부합니다.
      */
+    @Transactional(readOnly = true)
     fun sendOrderConfirmationEmail(emailDto: EmailNotificationDto) {
         log.info("[EmailService] [Send] 이메일 발송 처리 시작 - to={}", emailDto.userEmail)
 
@@ -54,7 +56,7 @@ class EmailService(
             mimeMessageHelper.setTo(emailDto.userEmail)
             mimeMessageHelper.setSubject("[Knitly] 주문하신 도안이 도착했습니다.")
 
-            // 1. 데이터 준비
+            // 1. 데이터 준비ㄹ
             val payment = paymentRepository.findByOrder_OrderId(order.orderId!!)
             val paymentMethod = when (payment?.paymentMethod) {
                 PaymentMethod.CARD -> "카드 결제"
@@ -153,14 +155,20 @@ class EmailService(
         order.orderItems.forEach { item ->
             val pdfUrl = item.product!!.design.pdfUrl
             log.debug("[EmailService] [Send] PDF 첨부파일 로드 시도 - url={}", pdfUrl)
+
+            if (pdfUrl.isNullOrEmpty()) {
+                log.warn("[EmailService] [Send] PDF URL이 비어있어 첨부 생략 - productId={}", item.product.productId)
+                return@forEach
+            }
+
             try {
                 val pdfBytes = fileStorageService.loadFileAsBytes(pdfUrl)
                 val filename = item.product!!.title + ".pdf"
                 mimeMessageHelper.addAttachment(filename, ByteArrayResource(pdfBytes))
                 log.debug("[EmailService] [Send] 파일 첨부 완료: {}", filename)
-            } catch (e: IOException) {
-                log.error("[EmailService] [Send] PDF 파일 첨부 실패. 작업 롤백/재시도. url={}", pdfUrl, e)
-                throw RuntimeException("PDF 파일 로드 실패: $pdfUrl", e)
+            } catch (e: Exception) {
+                // [중요 수정] 파일이 없더라도 이메일은 보내야 하므로 예외를 던지지 않고 로그만 남김
+                log.error("[EmailService] [Send] PDF 파일 로드 실패 (첨부 없이 발송 진행). url={}", pdfUrl, e)
             }
         }
 

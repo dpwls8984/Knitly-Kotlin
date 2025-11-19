@@ -14,8 +14,8 @@ import java.util.*
 @Service
 class FileStorageService {
 
-    private val uploadDir = "resources/static/"
-    private val urlPrefix = "/resources/static/"
+    private val uploadDir = "uploads/designs/"
+    private val urlPrefix = "/files/"
 
     /**
      * 파일을 저장하고 접근 URL을 반환합니다.

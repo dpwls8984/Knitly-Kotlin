@@ -75,7 +75,7 @@ class EmailOutboxPublisher(
             rabbitTemplate.convertAndSend(
                 "order.exchange",
                 "order.completed",
-                objectMapper.writeValueAsString(emailDto)
+                emailDto
             )
             log.debug("[OutboxPublisher] [Process] RabbitMQ 발행 요청 완료")
 
