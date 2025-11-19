@@ -30,7 +30,7 @@ private val log = KotlinLogging.logger {}
 
 @SpringBootTest(properties = ["spring.profiles.active=test"])
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-class OrderServiceTest {
+class OrderServiceIntegrationTest {
 
     // [개선 1] Nullable(? = null) 제거 및 lateinit var 사용
     // 테스트 클래스에서는 생성자 주입보다 필드 주입이 설정상 편할 때가 많음.
