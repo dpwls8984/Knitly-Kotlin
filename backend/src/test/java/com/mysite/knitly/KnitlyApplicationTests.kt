@@ -1,13 +1,11 @@
-package com.mysite.knitly;
+package com.mysite.knitly
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.Test
+import org.springframework.boot.test.context.SpringBootTest
 
 @SpringBootTest
-class KnitlyApplicationTests {
-
+internal class KnitlyApplicationTests {
     @Test
-    void contextLoads() {
+    fun contextLoads() {
     }
-
 }

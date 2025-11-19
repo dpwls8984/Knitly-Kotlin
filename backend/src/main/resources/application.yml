@@ -97,7 +97,7 @@ spring:
 
 # --- pdf 파일 업로드 ---
 file:
-  upload-dir: ./uploads/designs
+  upload-dir: ./backend/uploads/designs
   public-prefix: /files
 
 # --- Springdoc ---

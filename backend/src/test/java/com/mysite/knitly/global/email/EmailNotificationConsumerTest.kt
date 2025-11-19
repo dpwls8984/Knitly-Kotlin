@@ -54,7 +54,7 @@ class EmailNotificationConsumerTest {
         val mockUser = User(userId = 100L, name = "김니트", email = "customer@knitly.com", socialId = "test", provider = com.mysite.knitly.domain.user.entity.Provider.GOOGLE)
         val mockDesign = Design(pdfUrl = "/fake/path/to/design.pdf", user = mockUser, designState = com.mysite.knitly.domain.design.entity.DesignState.ON_SALE, designName = "테스트 도안", gridData = "{}")
         val mockProduct = Product(productId = 1L, title = "테스트 도안", design = mockDesign, user = mockUser, description = "", productCategory = com.mysite.knitly.domain.product.product.entity.ProductCategory.ETC, sizeInfo = "", price = 0.0)
-        val initialOrder = Order(user = mockUser, totalPrice = 0.0, tossOrderId = "test-order-toss")
+        val initialOrder = Order(user = mockUser, tossOrderId = "test-order-toss")
         val mockItem = OrderItem(
             product = mockProduct,
             orderPrice = 0.0,

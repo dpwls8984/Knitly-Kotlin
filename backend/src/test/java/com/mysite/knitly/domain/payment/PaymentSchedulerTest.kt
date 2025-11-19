@@ -323,7 +323,6 @@ class PaymentSchedulerTest {
     private fun testOrder(id: Long, user: User, tossOrderId: String, totalPrice: Double): Order =
         Order(
             user = user,
-            totalPrice = totalPrice,
             tossOrderId = tossOrderId
         ).apply {
             // orderId를 설정하기 위해 리플렉션 사용
