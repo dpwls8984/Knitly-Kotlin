@@ -7,6 +7,7 @@ import com.mysite.knitly.domain.product.review.entity.Review
 import com.mysite.knitly.domain.userstore.entity.UserStore
 import com.mysite.knitly.global.jpa.BaseTimeEntity
 import jakarta.persistence.*
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "users")
@@ -87,22 +88,27 @@ open class User(
         private var email: String = ""
         private var name: String = ""
         private var provider: Provider? = null
+        private var createdAt: LocalDateTime = LocalDateTime.now()
 
         fun userId(userId: Long) = apply { this.userId = userId }
         fun socialId(socialId: String) = apply { this.socialId = socialId }
         fun email(email: String) = apply { this.email = email }
         fun name(name: String) = apply { this.name = name }
         fun provider(provider: Provider) = apply { this.provider = provider }
+        fun createdAt(date: LocalDateTime) = apply { this.createdAt = date }
 
         fun build(): User {
             require(provider != null) { "Provider must not be null" }
-            return User(
+            val user = User(
                 userId = userId,
                 socialId = socialId,
                 email = email,
                 name = name,
                 provider = provider!!
             )
+
+            createdAt?.let { user.createdAt = it }
+            return user
         }
     }
 }

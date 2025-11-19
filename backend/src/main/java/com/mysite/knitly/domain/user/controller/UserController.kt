@@ -145,8 +145,10 @@ class UserController(
         // 1. Redis에서 Refresh Token 삭제
         if (userId != null) {
             authService.logout(userId)
+            log.info("[Auth] [UserController] Refresh Token deleted from Redis - userId: {}", userId)
+        } else {
+            log.info("[Auth] [UserController] Skipping Redis deletion - userId is null")
         }
-        log.info("[Auth] [UserController] Refresh Token deleted from Redis - userId: {}", userId)
 
         // 2. HTTP-only 쿠키 삭제
         cookieUtil.deleteCookie(response, REFRESH_TOKEN_COOKIE_NAME)
