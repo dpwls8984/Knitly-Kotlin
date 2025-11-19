@@ -36,7 +36,7 @@ class ReviewService(
         val orderItem = orderItemRepository.findByIdOrNull(orderItemId)
             ?: throw ServiceException(ErrorCode.ORDER_ITEM_NOT_FOUND)
 
-        val product = orderItem.product
+        val product = orderItem.product ?: throw ServiceException(ErrorCode.PRODUCT_NOT_FOUND)
 
         val thumbnailUrl = product?.productImages?.firstOrNull()?.productImageUrl
 
@@ -60,12 +60,12 @@ class ReviewService(
             user = user,
             product = product,
             orderItem = orderItem,
-            rating = request.rating!!,
-            content = request.content!!
+            rating = request.rating,
+            content = request.content
         )
 
         val reviewImages = request.reviewImageUrls
-            .filter { !it.isEmpty } // 빈 파일 필터링
+            .filterNot { it.isEmpty }
             .mapIndexed { index, file ->
                 val url = localFileStorage.saveReviewImage(file)
                 log.debug { "[Review] [Create] 이미지 저장 완료 - index=$index, url=$url" }

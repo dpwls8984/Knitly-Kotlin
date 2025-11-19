@@ -54,7 +54,13 @@ internal class ProductLikeServiceTest {
 
         Mockito.verify(setOperations).add(redisKey, userKey)
         Mockito.verify(redisTemplate).expire(redisKey, Duration.ofDays(7))
-        Mockito.verify(rabbitTemplate).convertAndSend("like.exchange", "like.add.routingkey", eventDto)
+
+        // ✨ 수정된 부분: Mockito.eq()를 사용하여 값 동등성을 검증합니다.
+        Mockito.verify(rabbitTemplate).convertAndSend(
+            Mockito.eq("like.exchange"),
+            Mockito.eq("like.add.routingkey"),
+            Mockito.eq(eventDto)
+        )
     }
 
     @Test
@@ -71,7 +77,7 @@ internal class ProductLikeServiceTest {
     fun isLiked_WhenRedisTrueAndDbTrue_ShouldReturnTrue() {
         Mockito.lenient().`when`(redisTemplate.opsForSet()).thenReturn(setOperations)
         Mockito.lenient().`when`(setOperations.isMember(Mockito.anyString(), Mockito.anyString())).thenReturn(true)
-        Mockito.lenient().`when`(productLikeRepository.existsByUser_UserIdAndProduct_ProductId(userId, productId)).thenReturn(true)
+        Mockito.lenient().`when`(productLikeRepository.existsByUserIdAndProductId(userId, productId)).thenReturn(true)
 
         val isLiked = productLikeService.isLiked(userId, productId)
 
@@ -98,7 +104,7 @@ internal class ProductLikeServiceTest {
     fun isLiked_WhenRedisFalseAndDbTrue_ShouldReturnTrueAndHealRedis() {
         Mockito.lenient().`when`(redisTemplate.opsForSet()).thenReturn(setOperations)
         Mockito.lenient().`when`(setOperations.isMember(Mockito.anyString(), Mockito.anyString())).thenReturn(false)
-        Mockito.lenient().`when`(productLikeRepository.existsByUser_UserIdAndProduct_ProductId(userId, productId)).thenReturn(true)
+        Mockito.lenient().`when`(productLikeRepository.existsByUserIdAndProductId(userId, productId)).thenReturn(true)
 
         val isLiked = productLikeService.isLiked(userId, productId)
 

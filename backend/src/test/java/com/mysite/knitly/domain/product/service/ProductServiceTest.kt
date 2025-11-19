@@ -278,13 +278,13 @@ class ProductServiceTest {
         given(redisTemplate.opsForValue()).willReturn(valueOperations)
         given(valueOperations.get(cacheKey)).willReturn(null)
         given(productRepository.findByProductIdAndIsDeletedFalse(4L)).willReturn(product4)
-        given(productLikeRepository.existsByUser_UserIdAndProduct_ProductId(1L, 4L)).willReturn(true)
+        given(productLikeRepository.existsByUserIdAndProductId(1L, 4L)).willReturn(true)
         given(reviewRepository.countByProductAndIsDeletedFalse(product4)).willReturn(5L)
 
         val response = productService.getProductDetail(seller, 4L)
 
         verify(productRepository).findByProductIdAndIsDeletedFalse(4L)
-        verify(productLikeRepository).existsByUser_UserIdAndProduct_ProductId(1L, 4L)
+        verify(productLikeRepository).existsByUserIdAndProductId(1L, 4L)
         verify(reviewRepository).countByProductAndIsDeletedFalse(product4)
 
         assertThat(response).isNotNull
@@ -317,7 +317,7 @@ class ProductServiceTest {
         // [수정] anyLong() -> any<Long>()
         verify(productRepository, never()).findByProductIdAndIsDeletedFalse(any<Long>())
         // [수정] anyLong() -> any<Long>()
-        verify(productLikeRepository, never()).existsByUser_UserIdAndProduct_ProductId(any<Long>(), any<Long>())
+        verify(productLikeRepository, never()).existsByUserIdAndProductId(any<Long>(), any<Long>())
         // [수정] any(Product::class.java) -> any<Product>()
         verify(reviewRepository, never()).countByProductAndIsDeletedFalse(any<Product>())
         // [수정] anyString() -> any<String>(), any(Duration::class.java) -> any<Duration>()
