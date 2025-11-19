@@ -12,9 +12,9 @@ class RedisProductService(
     private val log = LoggerFactory.getLogger(RedisProductService::class.java)
 
     companion object {
-        private const val POPULAR_KEY = "product:popular"
-        private const val POPULAR_LIST_CACHE_PREFIX = "product:list:popular:"
-        private const val HOME_POPULAR_TOP5_CACHE_KEY = "home:popular:top5"
+        const val POPULAR_KEY = "product:popular"
+        const val POPULAR_LIST_CACHE_PREFIX = "product:list:popular:"
+        const val HOME_POPULAR_TOP5_CACHE_KEY = "home:popular:top5"
     }
 
     // 상품 구매시 인기도 증가
@@ -75,6 +75,10 @@ class RedisProductService(
         log.info("[Redis] [Product] [Sync] DB → Redis 동기화 시작 - productCount={}", products.size)
 
         try {
+            // 기존 데이터 전체 삭제 후 재구축
+            redisTemplate.delete(POPULAR_KEY)
+            log.info("[Redis] [Product] [Sync] 기존 인기순 데이터 삭제 완료")
+
             val results = products.map { product ->
                 try {
                     redisTemplate.opsForZSet().add(
@@ -106,6 +110,58 @@ class RedisProductService(
             log.error(
                 "[Redis] [Product] [Sync] DB → Redis 동기화 실패 - productCount={}, duration={}ms",
                 products.size, duration, e
+            )
+        }
+    }
+
+    // 상품을 Redis에서 제거 (판매 중지 시)
+    fun removeProduct(productId: Long) {
+        val startTime = System.currentTimeMillis()
+
+        try {
+            val removed = redisTemplate.opsForZSet().remove(POPULAR_KEY, productId.toString())
+            val duration = System.currentTimeMillis() - startTime
+
+            log.info(
+                "[Redis] [Product] [Remove] 상품 제거 완료 - productId={}, removed={}, duration={}ms",
+                productId, removed, duration
+            )
+
+            // 캐시 무효화
+            evictPopularListCache()
+        } catch (e: Exception) {
+            val duration = System.currentTimeMillis() - startTime
+            log.error(
+                "[Redis] [Product] [Remove] 상품 제거 실패 - productId={}, duration={}ms",
+                productId, duration, e
+            )
+        }
+    }
+
+    // 상품을 Redis에 추가 (판매 재개 시)
+    fun addProduct(productId: Long, purchaseCount: Long) {
+        val startTime = System.currentTimeMillis()
+
+        try {
+            val added = redisTemplate.opsForZSet().add(
+                POPULAR_KEY,
+                productId.toString(),
+                purchaseCount.toDouble()
+            )
+            val duration = System.currentTimeMillis() - startTime
+
+            log.info(
+                "[Redis] [Product] [Add] 상품 추가 완료 - productId={}, purchaseCount={}, added={}, duration={}ms",
+                productId, purchaseCount, added, duration
+            )
+
+            // 캐시 무효화
+            evictPopularListCache()
+        } catch (e: Exception) {
+            val duration = System.currentTimeMillis() - startTime
+            log.error(
+                "[Redis] [Product] [Add] 상품 추가 실패 - productId={}, purchaseCount={}, duration={}ms",
+                productId, purchaseCount, duration, e
             )
         }
     }
