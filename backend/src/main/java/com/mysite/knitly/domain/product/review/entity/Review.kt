@@ -13,10 +13,10 @@ import java.time.LocalDateTime
 @EntityListeners(AuditingEntityListener::class)
 open class Review (
     @Column(nullable = false)
-    var rating: Int,
+    val rating: Int,
 
     @Column(nullable = false, length = 300)
-    var content: String,
+    val content: String,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_item_id", nullable = false)

@@ -20,7 +20,6 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.spy
 import org.mockito.kotlin.*
 import org.springframework.data.domain.*
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.mock.web.MockMultipartFile
 import java.time.LocalDateTime
 import java.util.Optional

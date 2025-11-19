@@ -42,9 +42,9 @@ interface ProductRepository : JpaRepository<Product, Long> {
                 p.purchaseCount,
                 p.likeCount,
                 p.stockQuantity,
-                p.avgReviewRating,
+                CAST(COALESCE(p.avgReviewRating, 0.0) AS double),
                 p.createdAt,
-                pi.productImageUrl,
+                COALESCE(pi.productImageUrl, ''),
                 p.user.userId
             )
             FROM Product p

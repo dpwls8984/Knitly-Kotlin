@@ -14,17 +14,17 @@ import org.springframework.transaction.annotation.Transactional
 @Repository
 interface ProductLikeRepository : JpaRepository<ProductLike, ProductLikeId> {
 
-    fun findByUser_UserId(userId: Long, pageable: Pageable): Page<ProductLike>
+    fun findByUserUserId(userId: Long, pageable: Pageable): Page<ProductLike>
 
     @Transactional
     @Modifying
-    fun deleteByUser_UserIdAndProduct_ProductId(userId: Long, productId: Long)
+    fun deleteByUserIdAndProductId(userId: Long, productId: Long)
 
-    @Query("SELECT pl.product.productId FROM ProductLike pl WHERE pl.user.userId = :userId AND pl.product.productId IN :productIds")
+    @Query("SELECT pl.productId FROM ProductLike pl WHERE pl.userId = :userId AND pl.productId IN :productIds")
     fun findLikedProductIdsByUserId(
         @Param("userId") userId: Long,
         @Param("productIds") productIds: List<Long>
     ): Set<Long>
 
-    fun existsByUser_UserIdAndProduct_ProductId(userId: Long?, productId: Long): Boolean
+    fun existsByUserIdAndProductId(userId: Long?, productId: Long): Boolean
 }

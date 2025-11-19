@@ -3,22 +3,26 @@ package com.mysite.knitly.domain.product.like.entity
 import com.mysite.knitly.domain.product.product.entity.Product
 import com.mysite.knitly.domain.user.entity.User
 import jakarta.persistence.*
-import lombok.AllArgsConstructor
-import lombok.Builder
-import lombok.Getter
-import lombok.NoArgsConstructor
 
 @Entity
 @Table(name = "product_likes")
 @IdClass(ProductLikeId::class) // 복합 키 클래스
 open class ProductLike(
     @Id
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    val user: User,
+    @Column(name = "user_id")
+    val userId: Long,
 
     @Id
+    @Column(name = "product_id")
+    val productId: Long,
+
+    @MapsId("userId")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    val user: User,
+
+    @MapsId("productId")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", insertable = false, updatable = false)
     val product: Product
 )

@@ -115,7 +115,7 @@ class MyPageServiceTest {
 
         val page = PageImpl(listOf(like), PageRequest.of(0, 10), 1)
 
-        whenever(productLikeRepository.findByUser_UserId(eq(10L), any()))
+        whenever(productLikeRepository.findByUserUserId(eq(10L), any()))
             .thenReturn(page)
 
         val result = service.getMyFavorites(10L, PageRequest.of(0, 10))
