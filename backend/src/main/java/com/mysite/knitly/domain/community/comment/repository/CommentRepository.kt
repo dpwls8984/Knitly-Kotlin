@@ -1,34 +1,20 @@
 package com.mysite.knitly.domain.community.comment.repository
 
 import com.mysite.knitly.domain.community.comment.entity.Comment
-import com.mysite.knitly.domain.community.post.entity.Post
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface CommentRepository : JpaRepository<Comment, Long> {
 
-    fun findByPost(post: Post): List<Comment>
-
-    fun findByPostAndDeletedFalseOrderByCreatedAtAsc(post: Post, pageable: Pageable): Page<Comment>
-    fun findByPostAndDeletedFalseOrderByCreatedAtDesc(post: Post, pageable: Pageable): Page<Comment>
-
+    // 게시글별 댓글 개수 조회
     fun countByPostIdAndDeletedFalse(postId: Long): Long
 
-    fun findByPostAndParentIsNullAndDeletedFalseOrderByCreatedAtAsc(post: Post, pageable: Pageable): Page<Comment>
-    fun findByPostAndParentIsNullAndDeletedFalseOrderByCreatedAtDesc(post: Post, pageable: Pageable): Page<Comment>
-
+    // 특정 부모 댓글의 자식 댓글 조회 (대댓글)
     fun findByParentIdAndDeletedFalseOrderByCreatedAtAsc(parentId: Long): List<Comment>
 
+    // 여러 부모 댓글의 자식 댓글 한 번에 조회
     fun findByParentIdInAndDeletedFalseOrderByCreatedAtAsc(parentIds: Collection<Long>): List<Comment>
-
-    fun findByAuthor_UserIdAndDeletedFalseAndContentContainingIgnoreCaseOrderByCreatedAtDesc(
-        userId: Long,
-        content: String,
-        pageable: Pageable
-    ): Page<Comment>
 
     @Query(
         "SELECT c.author.userId " +
@@ -39,5 +25,6 @@ interface CommentRepository : JpaRepository<Comment, Long> {
     )
     fun findAuthorOrderForPost(@Param("postId") postId: Long): List<Long>
 
+    // 게시글의 전체 댓글 목록
     fun findByPostIdAndDeletedFalseOrderByCreatedAtAsc(postId: Long): List<Comment>
 }
