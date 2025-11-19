@@ -15,9 +15,6 @@ import org.springframework.scheduling.annotation.EnableScheduling
 @ConfigurationPropertiesScan
 class KnitlyApplication
 
-// 자바와 달리 main 함수를 클래스 밖으로 뺍니다 (Top-level function)
 fun main(args: Array<String>) {
-    // SpringApplication.run(...) 대신 코틀린 전용 확장 함수인 runApplication을 사용합니다.
-    // 제네릭<T>을 통해 클래스 타입을 명시하고, 가변 인자(*args)를 전달합니다.
     runApplication<KnitlyApplication>(*args)
 }
