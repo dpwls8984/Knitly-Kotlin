@@ -21,6 +21,8 @@ import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.JavaMailSenderImpl
 import org.springframework.test.context.ActiveProfiles
+import java.lang.reflect.Field
+import java.time.LocalDateTime
 import java.util.*
 
 @SpringBootTest
@@ -52,12 +54,21 @@ class EmailNotificationConsumerTest {
         val mockUser = User(userId = 100L, name = "김니트", email = "customer@knitly.com", socialId = "test", provider = com.mysite.knitly.domain.user.entity.Provider.GOOGLE)
         val mockDesign = Design(pdfUrl = "/fake/path/to/design.pdf", user = mockUser, designState = com.mysite.knitly.domain.design.entity.DesignState.ON_SALE, designName = "테스트 도안", gridData = "{}")
         val mockProduct = Product(productId = 1L, title = "테스트 도안", design = mockDesign, user = mockUser, description = "", productCategory = com.mysite.knitly.domain.product.product.entity.ProductCategory.ETC, sizeInfo = "", price = 0.0)
-        val mockItem = OrderItem(product = mockProduct, order = Order(user = mockUser, tossOrderId = "test"), orderPrice = 0.0, quantity = 1)
-        mockOrder = Order(user = mockUser, tossOrderId = "test")
-        mockOrder.addOrderItem(mockItem) // OrderItem 추가 로직 필요 시 수정
+        val initialOrder = Order(user = mockUser, totalPrice = 0.0, tossOrderId = "test-order-toss")
+        val mockItem = OrderItem(
+            product = mockProduct,
+            orderPrice = 0.0,
+            quantity = 1
+        )
+        initialOrder.addOrderItem(mockItem) // OrderItems에 추가 및 totalPrice 업데이트
+        val createdAtField: Field = Order::class.java.getDeclaredField("createdAt")
+        createdAtField.isAccessible = true
+        createdAtField.set(initialOrder, LocalDateTime.now())
 
-        // OrderItem에 product 설정 등 연관관계 설정이 필요할 수 있음
-        // 테스트 데이터 생성 로직은 실제 엔티티 구조에 맞춰 조정 필요
+        mockOrder = initialOrder
+        val idField = Order::class.java.getDeclaredField("orderId")
+        idField.isAccessible = true
+        idField.set(mockOrder, 1L)
     }
 
     @Test
