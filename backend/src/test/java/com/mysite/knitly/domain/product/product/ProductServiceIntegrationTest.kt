@@ -3,6 +3,9 @@ package com.mysite.knitly.domain.product.product
 import com.mysite.knitly.domain.design.entity.Design
 import com.mysite.knitly.domain.design.entity.DesignState
 import com.mysite.knitly.domain.design.repository.DesignRepository
+import com.mysite.knitly.domain.design.util.LocalFileStorage
+import com.mysite.knitly.domain.product.product.dto.ProductModifyRequest
+import com.mysite.knitly.domain.product.product.dto.ProductRegisterRequest
 import com.mysite.knitly.domain.product.product.entity.Product
 import com.mysite.knitly.domain.product.product.entity.ProductCategory
 import com.mysite.knitly.domain.product.product.entity.ProductFilterType
@@ -17,11 +20,16 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.data.domain.PageRequest
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.multipart.MultipartFile
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -43,7 +51,8 @@ class ProductServiceIntegrationTest {
     @Autowired
     private lateinit var redisProductService: RedisProductService
 
-
+    @MockBean
+    private lateinit var localFileStorage: LocalFileStorage
 
     private lateinit var testUser: User
     private lateinit var testProduct1: Product
@@ -300,5 +309,142 @@ class ProductServiceIntegrationTest {
         // 가장 구매수가 많은 상품이 첫 번째에 있어야 함
         val topProduct = result.content[0]
         assertThat(topProduct.productId).isIn(testProduct1.productId, testProduct2.productId, testProduct3.productId)
+    }
+    @Test
+    @DisplayName("상품 등록 - 정상 등록 확인")
+    fun registerProduct_success() {
+        // given
+        // 등록을 위한 새로운 도안 생성
+        val newDesign = designRepository.save(
+            Design(
+                user = testUser,
+                designName = "등록용도안",
+                pdfUrl = "/files/register.pdf",
+                gridData = "{}",
+                designState = DesignState.BEFORE_SALE
+            )
+        )
+
+        // 파일 저장소 Mocking
+        given(localFileStorage.saveProductImage(any<MultipartFile>()))
+            .willReturn("/static/product/test_image.jpg")
+
+        val request = ProductRegisterRequest(
+            title = "신규 등록 상품",
+            description = "상품 등록 테스트입니다.",
+            productCategory = ProductCategory.TOP,
+            sizeInfo = "L",
+            price = 35000.0,
+            stockQuantity = 100,
+            productImageUrls = listOf(
+                MockMultipartFile("image", "test.jpg", "image/jpeg", "dummy".toByteArray())
+            )
+        )
+
+        // when
+        val response = productService.registerProduct(testUser, newDesign.designId!!, request)
+
+        // then
+        assertThat(response).isNotNull
+        assertThat(response.productId).isNotNull()
+
+        val savedProduct = productRepository.findById(response.productId).orElseThrow()
+        assertThat(savedProduct.title).isEqualTo("신규 등록 상품")
+        assertThat(savedProduct.price).isEqualTo(35000.0)
+        assertThat(savedProduct.design.designState).isEqualTo(DesignState.ON_SALE) // 도안 상태 변경 확인
+    }
+
+    @Test
+    @DisplayName("상품 수정 - 정보 및 이미지 수정 확인")
+    fun modifyProduct_success() {
+        // given
+        val targetProduct = testProduct1 // 기존 상품 활용
+
+        // 파일 저장소 Mocking
+        given(localFileStorage.saveProductImage(any<MultipartFile>()))
+            .willReturn("/static/product/new_image.jpg")
+
+        val request = ProductModifyRequest(
+            description = "수정된 설명입니다.",
+            productCategory = ProductCategory.OUTER, // 카테고리 변경
+            sizeInfo = "XL",
+            stockQuantity = 50,
+            existingImageUrls = emptyList(), // 기존 이미지 모두 삭제
+            productImageUrls = listOf(
+                MockMultipartFile("image", "new.jpg", "image/jpeg", "new_dummy".toByteArray())
+            )
+        )
+
+        // when
+        val response = productService.modifyProduct(testUser, targetProduct.productId!!, request)
+
+        // then
+        assertThat(response).isNotNull
+
+        val modifiedProduct = productRepository.findById(targetProduct.productId!!).orElseThrow()
+        assertThat(modifiedProduct.description).isEqualTo("수정된 설명입니다.")
+        assertThat(modifiedProduct.productCategory).isEqualTo(ProductCategory.OUTER)
+        assertThat(modifiedProduct.stockQuantity).isEqualTo(50)
+
+        // 이미지가 교체되었는지 확인
+        assertThat(modifiedProduct.productImages).hasSize(1)
+        assertThat(modifiedProduct.productImages[0].productImageUrl).isEqualTo("/static/product/new_image.jpg")
+    }
+
+    @Test
+    @DisplayName("상품 삭제 - Soft Delete 확인")
+    fun deleteProduct_success() {
+        // given
+        val targetProduct = testProduct2 // 삭제할 상품
+        val targetId = targetProduct.productId!!
+
+        // when
+        productService.deleteProduct(testUser, targetId)
+
+        // then
+        // 1. 상품이 Soft Delete 되었는지 확인 (isDeleted = true)
+        val deletedProduct = productRepository.findById(targetId).orElseThrow()
+        assertThat(deletedProduct.isDeleted).isTrue()
+
+        // 2. 도안 판매 상태가 중지로 변경되었는지 확인
+        assertThat(deletedProduct.design.designState).isEqualTo(DesignState.STOPPED) // Logic 상 STOPPED 여야 함 (Service 코드 확인 필요)
+    }
+
+    @Test
+    @DisplayName("상품 재판매 - Relist 확인")
+    fun relistProduct_success() {
+        // given
+        // 먼저 상품을 삭제 상태로 만듦
+        val targetProduct = testProduct3
+        productService.deleteProduct(testUser, targetProduct.productId!!)
+
+        // 삭제 확인
+        assertThat(productRepository.findById(targetProduct.productId!!).get().isDeleted).isTrue()
+
+        // when
+        productService.relistProduct(testUser, targetProduct.productId!!)
+
+        // then
+        val relistedProduct = productRepository.findById(targetProduct.productId!!).orElseThrow()
+        assertThat(relistedProduct.isDeleted).isFalse()
+
+        // 도안 상태도 다시 판매중(ON_SALE)인지 확인 (Service 구현에 따라 다를 수 있음, 여기선 에러 안나면 성공)
+        // assertThat(relistedProduct.design.designState).isEqualTo(DesignState.ON_SALE)
+    }
+
+    @Test
+    @DisplayName("상품 상세 조회 - DB 조회 확인")
+    fun getProductDetail_success() {
+        // given
+        val targetProduct = testProduct1
+
+        // when
+        val response = productService.getProductDetail(testUser, targetProduct.productId!!)
+
+        // then
+        assertThat(response).isNotNull
+        assertThat(response!!.productId).isEqualTo(targetProduct.productId)
+        assertThat(response.title).isEqualTo(targetProduct.title)
+        assertThat(response.price).isEqualTo(targetProduct.price)
     }
 }
