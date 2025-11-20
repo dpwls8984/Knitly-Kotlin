@@ -14,3 +14,11 @@ export const getUserInfo = async () => {
     const response = await api.get('/users/me');
     return response.data;
 };
+
+/**
+ * 로그아웃
+ */
+export const logOut = async () => {
+    const response = await api.post('/users/logout');
+    return response.data;
+};

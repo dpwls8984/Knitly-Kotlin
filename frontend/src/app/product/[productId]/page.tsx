@@ -258,6 +258,7 @@ export default function ProductDetailPage() {
 
   const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
   const [isReviewLoading, setIsReviewLoading] = useState(false);
+  const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const [hasFetchedReviews, setHasFetchedReviews] = useState(false);
 
   // --- 4. 데이터 페칭 (실제 API 호출) ---
@@ -412,7 +413,7 @@ const handleAddToCart = () => {
     imageUrl: product.productImageUrls?.[0] || undefined,
   });
 
-  alert(`${product.title} 상품이 장바구니에 담겼습니다.`);
+  setIsCartModalOpen(true);
 };
 // ▲▲▲ [수정] 장바구니 버튼 핸들러 ▲▲▲
   
@@ -479,8 +480,11 @@ const handleBuyNow = () => {
     );
   }
 
-  // 한정 판매 여부 판단 (isLimited 대신 사용)
-  const isProductLimited = product.stockQuantity !== null;
+  // 0도 상시 판매(null)처럼 취급하고 싶다면 && 조건 추가
+  const isProductLimited = product.stockQuantity !== null && product.stockQuantity !== 0;
+
+  // 품절 여부 계산 (한정판이면서 재고가 0 이하인 경우)
+  const isSoldOut = isProductLimited && (product.stockQuantity || 0) <= 0;
 
   // --- 메인 UI 렌더링 ---
   return (
@@ -699,6 +703,43 @@ const handleBuyNow = () => {
           {/* ▲▲▲ [수정] 리뷰 탭 ▲▲▲ */}
         </div>
       </div>
+      {isCartModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.5)]">
+          {/* 팝업 박스 */}
+          <div className="bg-white rounded-lg shadow-xl p-6 w-80 md:w-96 transform transition-all">
+            
+            {/* 문구 */}
+            <div className="text-center mb-6">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900">장바구니에 담겼어요!</h3>
+              <p className="text-sm text-gray-500 mt-2">장바구니로 이동하시겠습니까?</p>
+            </div>
+
+            {/* 버튼 영역 */}
+            <div className="flex space-x-3">
+              {/* 계속 쇼핑하기: 팝업만 닫음 */}
+              <button
+                onClick={() => setIsCartModalOpen(false)}
+                className="flex-1 py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
+              >
+                계속 쇼핑하기
+              </button>
+              
+              {/* 장바구니로 이동: 페이지 이동 */}
+              <button
+                onClick={() => router.push('/cart')}
+                className="flex-1 py-2 px-4 bg-[#925C4C] border border-transparent rounded-md text-sm font-medium text-white hover:bg-[#7a4c3e] focus:outline-none"
+              >
+                장바구니로 이동
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

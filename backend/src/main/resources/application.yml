@@ -97,7 +97,7 @@ spring:
 
 # --- pdf 파일 업로드 ---
 file:
-  upload-dir: ./uploads/designs
+  upload-dir: ./backend/uploads/designs
   public-prefix: /files
 
 # --- Springdoc ---
@@ -132,4 +132,4 @@ frontend:
 # --- toss 연동 ---
 payment:
   toss:
-    secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6
+    secret-key: ${TOSS_SECRET_KEY}

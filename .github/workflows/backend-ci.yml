@@ -1,0 +1,43 @@
+# 워크플로 이름
+name: backend-ci
+
+on:
+  # dev 브랜치로 향하는 PR이 생성되거나 업데이트될 때 실행
+  pull_request:
+    branches: [ "dev" ]
+
+    # backend 관련 파일 또는 CI workflow 파일이 변경될 때만 실행
+    paths:
+      - "backend/**"
+      - ".github/workflows/**"
+
+jobs:
+  test:
+    # GitHub Actions 실행 환경
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        # 모든 run 명령은 backend 폴더 기준으로 실행됨
+        working-directory: backend
+
+    steps:
+      # 1) 레포지토리 코드를 GitHub Actions 서버로 체크아웃
+      - uses: actions/checkout@v4
+        name: Checkout repository
+
+      # 2) JDK 21 설치 (temurin: 가장 많이 사용하는 오픈소스 JDK)
+      - uses: actions/setup-java@v4
+        name: Set up JDK 21
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      # 3) 리눅스 환경에서 gradlew 실행 권한 부여 (필수)
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # 4) 전체 단위 테스트 실행 (backend의 모든 테스트가 실행됨)
+      - name: Run tests
+        run: ./gradlew clean test

@@ -68,12 +68,6 @@ function DesignCard({ design, onStopSale, onDelete, onRegisterSale, onResumeSale
             >
               다시 판매하기
             </button>
-            <button
-              onClick={() => onDelete(design.designId)}
-              className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-            >
-              삭제
-            </button>
           </div>
         );
       case 'BEFORE_SALE':

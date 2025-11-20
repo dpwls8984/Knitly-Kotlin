@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.implementation
-
 plugins {
     java
     kotlin("jvm") version "1.9.25"
@@ -50,9 +48,11 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1") // 버전에 맞게 확인
     implementation("org.apache.pdfbox:pdfbox:2.0.29") // PDF 변환 라이브러리
     implementation("commons-codec:commons-codec:1.16.0")
     implementation("org.springframework.boot:spring-boot-starter-mail")   // Spring Email
+    testImplementation("org.springframework.security:spring-security-test")
 
     // 날짜,시간 모듈 LocalDateTime
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
@@ -75,6 +75,13 @@ dependencies {
     implementation ("org.springframework:spring-aspects")
 
     implementation("me.paulschwarz:spring-dotenv:3.0.0")
+    implementation("io.github.cdimascio:dotenv-java:3.0.0")
+    implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
+
+    implementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
 }
 

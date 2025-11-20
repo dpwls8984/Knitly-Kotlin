@@ -31,10 +31,18 @@ spring:
 frontend:
   url: http://dummy-test-frontend.com
 
+  # Redis 설정 (테스트용 Embedded Redis 또는 로컬 Redis)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
 custom:
   jwt:
     # application.yml을 참고하여 가짜 시크릿 키 제공
     secretKey: "dGVzdC1zZWNyZXQta2V5LXRlc3Qtc2VjcmV0LWtleQo="
+    accessTokenExpireSeconds: 1800  # 30분
+    refreshTokenExpireSeconds: 604800  # 7일
 
 # --- 3. Actuator 상태 점검 설정 ---
 management:
