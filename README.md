@@ -25,7 +25,7 @@
 
 | 분류                 | 기술 스택                                                   |
 | ------------------ | ------------------------------------------------------- |
-| **Backend**        | Spring Boot 3.5.x, Java 17, JPA(Hibernate), MySQL       |
+| **Backend**        | Spring Boot 3.5.x, Kotlin, JPA(Hibernate), MySQL       |
 | **Infra**          | AWS EC2, Docker, Redis, Nginx                           |
 | **API**            | OAuth 2.0 (Google Login), Toss Payments API, Swagger UI |
 | **DevOps**         | GitHub Actions (CI/CD), Docker Compose                  |
