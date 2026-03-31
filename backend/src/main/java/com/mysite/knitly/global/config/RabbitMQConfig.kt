@@ -17,9 +17,6 @@ class RabbitMQConfig {
     fun likeExchange() = TopicExchange(LIKE_EXCHANGE)
 
     @Bean
-    fun orderExchange() = TopicExchange("order.exchange")
-
-    @Bean
     fun likeAddQueue() =
         durableQueueWithDLQ(LIKE_ADD_QUEUE)
 
@@ -32,13 +29,6 @@ class RabbitMQConfig {
 
     @Bean
     fun likeDeleteDeadLetterQueue() = dlq(LIKE_DELETE_DLQ)
-
-    @Bean
-    fun orderEmailQueue() =
-        durableQueueWithDLQ("order.email.queue")
-
-    @Bean
-    fun orderEmailDeadLetterQueue() = dlq("order.email.queue.dlq")
 
     // Binding
     @Bean
@@ -66,21 +56,6 @@ class RabbitMQConfig {
         @Qualifier("deadLetterExchange") deadEx: DirectExchange
     ) = BindingBuilder.bind(dlq).to(deadEx)
         .with("$DEAD_LETTER_ROUTING_KEY_PREFIX$LIKE_DELETE_QUEUE")
-
-    @Bean
-    fun orderEmailBinding(
-        @Qualifier("orderEmailQueue") queue: Queue,
-        @Qualifier("orderExchange") exchange: TopicExchange
-    ) = BindingBuilder.bind(queue).to(exchange).with("order.completed")
-
-    @Bean
-    fun orderEmailDlqBinding(
-        @Qualifier("orderEmailDeadLetterQueue") dlq: Queue,
-        @Qualifier("deadLetterExchange") deadEx: DirectExchange
-    ) = BindingBuilder.bind(dlq)
-        .to(deadEx)
-        .with("${DEAD_LETTER_ROUTING_KEY_PREFIX}order.email.queue")
-
 
     // JSON 메시지 컨버터
     @Bean

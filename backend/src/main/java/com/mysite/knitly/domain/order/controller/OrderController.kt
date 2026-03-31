@@ -22,7 +22,7 @@ class OrderController(
         @AuthenticationPrincipal user: User,
         @RequestBody @Valid request: OrderCreateRequest
     ): ResponseEntity<OrderCreateResponse> {
-        val response = orderFacade.createOrderWithLock(user, request)
+        val response = orderFacade.createOrder(user, request)
         return ResponseEntity.ok(response)
     }
 }

@@ -1,6 +1,6 @@
 package com.mysite.knitly.domain.order.service
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.mysite.knitly.domain.order.dto.EmailNotificationDto
 import com.mysite.knitly.domain.order.entity.Order
 import com.mysite.knitly.domain.order.entity.OrderItem
 import com.mysite.knitly.domain.order.event.OrderCreatedEvent
@@ -11,7 +11,9 @@ import com.mysite.knitly.domain.payment.entity.PaymentStatus
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
 import com.mysite.knitly.domain.product.product.repository.ProductRepository
 import com.mysite.knitly.domain.user.entity.User
-import com.mysite.knitly.global.email.repository.EmailOutboxRepository
+import com.mysite.knitly.global.email.service.EmailService
+import com.mysite.knitly.global.exception.ErrorCode
+import com.mysite.knitly.global.exception.ServiceException
 import jakarta.persistence.EntityNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
@@ -25,9 +27,7 @@ class OrderService(
     private val orderRepository: OrderRepository,
     private val paymentRepository: PaymentRepository,
     private val eventPublisher: ApplicationEventPublisher,
-
-    private val emailOutboxRepository: EmailOutboxRepository,
-    private val objectMapper: ObjectMapper
+    private val emailService: EmailService
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(OrderService::class.java)
@@ -50,10 +50,17 @@ class OrderService(
                 throw EntityNotFoundException("일부 상품을 찾을 수 없습니다.")
             }
 
-            // 2. 각 Product에 대해 OrderItem을 생성하고, 재고를 직접 감소시킴
+            // 2. 각 Product에 대해 재고를 원자적으로 차감하고 OrderItem을 생성
             val orderItems = products.map { product ->
-                log.trace("[Order] [Service] 재고 감소 - productId={}", product.productId)
-                product.decreaseStock(1)
+                // 상시 판매 상품(stockQuantity == null)은 재고 차감 불필요
+                if (product.stockQuantity != null) {
+                    val updatedRows = productRepository.decreaseStock(product.productId!!, 1)
+                    if (updatedRows == 0) {
+                        log.warn("[Order] [Service] 재고 부족 - productId={}", product.productId)
+                        throw ServiceException(ErrorCode.PRODUCT_STOCK_INSUFFICIENT)
+                    }
+                    log.trace("[Order] [Service] 원자적 재고 감소 완료 - productId={}", product.productId)
+                }
                 OrderItem(
                     product = product,
                     orderPrice = product.price,
@@ -87,29 +94,14 @@ class OrderService(
 
             paymentRepository.save(readyPayment)
 
-            if (paymentStatus == PaymentStatus.DONE) {
-                try {
-                    log.info("[Order] [Service] 무료 주문 완료 - 이메일 발송 요청(Outbox) 생성 시작")
-
-                    val emailDto = com.mysite.knitly.domain.order.dto.EmailNotificationDto(
-                        orderId = savedOrder.orderId ?: 0L,
-                        userId = user.userId!!,
-                        userEmail = user.email!!
-                    )
-
-                    // 객체를 JSON 문자열로 변환
-                    val payload = objectMapper.writeValueAsString(emailDto)
-
-                    // Outbox 저장
-                    val emailJob = com.mysite.knitly.global.email.entity.EmailOutbox.create(payload)
-                    emailOutboxRepository.save(emailJob)
-
-                    log.info("[Order] [Service] 무료 주문 이메일 Outbox 저장 완료")
-                } catch (e: Exception) {
-                    // 이메일 실패가 주문 전체 실패로 이어지지 않도록 로그만 남김 (선택 사항)
-                    log.error("[Order] [Service] 무료 주문 이메일 Outbox 저장 실패", e)
-                    // 만약 이메일이 필수라면 여기서 throw e를 해서 주문을 롤백시켜야 함
-                }
+            if (paymentStatus == PaymentStatus.DONE && user.email != null) {
+                val emailDto = EmailNotificationDto(
+                    orderId = savedOrder.orderId ?: 0L,
+                    userId = user.userId!!,
+                    userEmail = user.email!!
+                )
+                emailService.sendOrderConfirmationEmail(emailDto)
+                log.info("[Order] [Service] 무료 주문 비동기 이메일 발송 요청 완료")
             }
 
             eventPublisher.publishEvent(OrderCreatedEvent(products))
