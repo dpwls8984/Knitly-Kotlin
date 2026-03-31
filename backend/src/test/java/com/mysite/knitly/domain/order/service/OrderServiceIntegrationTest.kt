@@ -177,7 +177,7 @@ class OrderServiceIntegrationTest {
         repeat(threadCount) {
             executorService.submit {
                 try {
-                    orderFacade.createOrderWithLock(user, request)
+                    orderFacade.createOrder(user, request)
                     successCount.incrementAndGet()
                 } catch (e: Exception) {
                     // 락 획득 실패, 재고 부족 등은 의도된 실패

@@ -1,6 +1,5 @@
 package com.mysite.knitly.domain.payment
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.mysite.knitly.domain.design.entity.Design
 import com.mysite.knitly.domain.design.entity.DesignState
@@ -20,8 +19,7 @@ import com.mysite.knitly.domain.product.product.entity.ProductCategory
 import com.mysite.knitly.domain.product.product.service.RedisProductService
 import com.mysite.knitly.domain.user.entity.Provider
 import com.mysite.knitly.domain.user.entity.User
-import com.mysite.knitly.global.email.entity.EmailOutbox
-import com.mysite.knitly.global.email.repository.EmailOutboxRepository
+import com.mysite.knitly.global.email.service.EmailService
 import com.mysite.knitly.global.exception.ErrorCode
 import com.mysite.knitly.global.exception.ServiceException
 import org.assertj.core.api.Assertions.assertThat
@@ -44,8 +42,7 @@ class PaymentServiceTest {
     @Mock private lateinit var paymentRepository: PaymentRepository
     @Mock private lateinit var redisProductService: RedisProductService
     @Mock private lateinit var tossApiClient: TossApiClient
-    @Mock private lateinit var objectMapper: ObjectMapper
-    @Mock private lateinit var emailOutboxRepository: EmailOutboxRepository
+    @Mock private lateinit var emailService: EmailService
 
     private lateinit var paymentService: PaymentService
 
@@ -56,8 +53,7 @@ class PaymentServiceTest {
             paymentRepository = paymentRepository,
             redisProductService = redisProductService,
             tossApiClient = tossApiClient,
-            objectMapper = objectMapper,
-            emailOutboxRepository = emailOutboxRepository
+            emailService = emailService
         )
     }
 
@@ -100,8 +96,6 @@ class PaymentServiceTest {
 
         doNothing().whenever(redisProductService).incrementPurchaseCount(any())
         doNothing().whenever(redisProductService).evictPopularListCache()
-        whenever(emailOutboxRepository.save(any<EmailOutbox>())).thenAnswer { it.arguments[0] }
-        whenever(objectMapper.writeValueAsString(any())).thenReturn("""{"dummy":"json"}""")
 
         // when
         val response = paymentService.confirmPayment(request)
@@ -276,8 +270,6 @@ class PaymentServiceTest {
         whenever(paymentRepository.findByOrder_OrderId(1L)).thenReturn(payment)
         whenever(paymentRepository.save(any<Payment>())).thenAnswer { it.arguments[0] as Payment }
         whenever(tossApiClient.confirmPayment(request)).thenReturn(tossResponse)
-        whenever(emailOutboxRepository.save(any<EmailOutbox>())).thenAnswer { it.arguments[0] }
-        whenever(objectMapper.writeValueAsString(any())).thenReturn("{}")
 
         // when
         paymentService.confirmPayment(request)

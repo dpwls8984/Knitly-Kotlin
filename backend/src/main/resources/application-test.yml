@@ -31,6 +31,9 @@ spring:
 frontend:
   url: http://dummy-test-frontend.com
 
+discord:
+  webhook-url: ${DISCORD_WEBHOOK_URL:https://discord.com/api/webhooks/test/dummy}
+
   # Redis 설정 (테스트용 Embedded Redis 또는 로컬 Redis)
   data:
     redis:

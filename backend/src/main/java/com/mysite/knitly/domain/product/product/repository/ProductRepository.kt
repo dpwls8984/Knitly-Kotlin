@@ -7,6 +7,7 @@ import com.mysite.knitly.domain.product.product.entity.ProductCategory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
@@ -119,4 +120,20 @@ interface ProductRepository : JpaRepository<Product, Long> {
     fun findByProductIdInWithImagesAndNotDeleted(
         @Param("productIds") productIds: List<Long>
     ): List<Product>
+
+    /**
+     * 원자적 재고 차감 쿼리
+     * stock_quantity = stock_quantity - :quantity 로 상대값 UPDATE
+     * WHERE stock_quantity >= :quantity 로 재고 부족 시 UPDATE 자체가 0건
+     * @return 영향받은 행 수 (1이면 성공, 0이면 재고 부족)
+     */
+    @Modifying
+    @Query("UPDATE Product p SET p.stockQuantity = p.stockQuantity - :quantity WHERE p.productId = :productId AND p.stockQuantity >= :quantity")
+    fun decreaseStock(@Param("productId") productId: Long, @Param("quantity") quantity: Int): Int
+
+    /**
+     * 주어진 상품 ID 목록 중 한정 재고 상품(stockQuantity IS NOT NULL)이 존재하는지 확인
+     */
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Product p WHERE p.productId IN :productIds AND p.stockQuantity IS NOT NULL")
+    fun existsLimitedStockIn(@Param("productIds") productIds: List<Long>): Boolean
 }

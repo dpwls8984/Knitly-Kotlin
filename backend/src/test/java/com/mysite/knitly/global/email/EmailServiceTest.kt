@@ -11,6 +11,7 @@ import com.mysite.knitly.domain.payment.entity.PaymentStatus
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
 import com.mysite.knitly.domain.product.product.entity.Product
 import com.mysite.knitly.domain.user.entity.User
+import com.mysite.knitly.global.notification.DiscordNotifier
 import com.mysite.knitly.global.util.FileStorageService
 import jakarta.mail.internet.MimeMessage
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -38,6 +39,7 @@ class EmailServiceTest {
     @Mock private lateinit var fileStorageService: FileStorageService
     @Mock private lateinit var paymentRepository: PaymentRepository
     @Mock private lateinit var resourceLoader: ResourceLoader
+    @Mock private lateinit var discordNotifier: DiscordNotifier
 
     @Mock private lateinit var mockResource: Resource
     @Mock private lateinit var mockMimeMessage: MimeMessage

@@ -95,6 +95,10 @@ spring:
           starttls:
             enable: true
 
+# --- Discord 알림 ---
+discord:
+  webhook-url: ${DISCORD_WEBHOOK_URL}
+
 # --- pdf 파일 업로드 ---
 file:
   upload-dir: ./backend/uploads/designs

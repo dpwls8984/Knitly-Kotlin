@@ -143,6 +143,13 @@ class SecurityConfig(
                         "/products/**"           // 상품 목록 (읽기는 public)
                     ).permitAll()
 
+                    .requestMatchers(
+                        "/resources/**",          // 정적 리소스
+                        "/static/**",
+                        "/post/**", // 게시글 이미지
+                        "/files/**"               // 파일 접근
+                    ).permitAll()
+
                     // 나머지 모두 인증 필요
                     .anyRequest().authenticated()
             }
