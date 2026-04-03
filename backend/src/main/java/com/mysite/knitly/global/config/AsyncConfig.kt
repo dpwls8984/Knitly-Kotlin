@@ -15,7 +15,7 @@ class AsyncConfig {
     fun restTemplate(): RestTemplate = RestTemplate()
 
     @Bean("emailExecutor")
-    fun emailExecutor(): Executor {
+    fun emailExecutor(): ThreadPoolTaskExecutor {
         val executor = ThreadPoolTaskExecutor()
         executor.corePoolSize = 2
         executor.maxPoolSize = 5

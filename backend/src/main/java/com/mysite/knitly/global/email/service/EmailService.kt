@@ -52,6 +52,11 @@ class EmailService(
     fun sendOrderConfirmationEmail(emailDto: EmailNotificationDto) {
         log.info("[EmailService] [Send] 이메일 발송 처리 시작 - to={}", emailDto.userEmail)
 
+        // ⚠️ 테스트용: 10초 지연 (서버 종료 타이밍 확보용, 테스트 후 반드시 제거)
+        log.info("[EmailService] [TEST] 10초 지연 시작 - 이 사이에 서버를 종료하세요")
+        Thread.sleep(10000)
+        log.info("[EmailService] [TEST] 10초 지연 완료")
+
         val order = orderRepository.findById(emailDto.orderId?.toLong() ?: 0L)
             .orElseThrow {
                 log.error("[EmailService] [Send] DB에서 Order 엔티티 조회 실패. orderId={}", emailDto.orderId)
