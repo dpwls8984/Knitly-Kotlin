@@ -119,6 +119,9 @@ class SecurityConfig(
                     // 인증 불필요
                     .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/refresh", "/auth/test").permitAll()
 
+                    // 이메일 유실 테스트용 (테스트 후 반드시 제거)
+                    .requestMatchers("/test/email/**").permitAll()
+
                     // JWT 인증 필요
                     .requestMatchers("/users/**").authenticated()
 
