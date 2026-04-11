@@ -1,10 +1,8 @@
 package com.mysite.knitly.global.email.service
 
 import com.mysite.knitly.domain.design.entity.Design
-import com.mysite.knitly.domain.order.dto.EmailNotificationDto
 import com.mysite.knitly.domain.order.entity.Order
 import com.mysite.knitly.domain.order.entity.OrderItem
-import com.mysite.knitly.domain.order.repository.OrderRepository
 import com.mysite.knitly.domain.payment.entity.Payment
 import com.mysite.knitly.domain.payment.entity.PaymentMethod
 import com.mysite.knitly.domain.payment.entity.PaymentStatus
@@ -35,7 +33,6 @@ import java.util.*
 class EmailServiceTest {
 
     @Mock private lateinit var javaMailSender: JavaMailSender
-    @Mock private lateinit var orderRepository: OrderRepository
     @Mock private lateinit var fileStorageService: FileStorageService
     @Mock private lateinit var paymentRepository: PaymentRepository
     @Mock private lateinit var resourceLoader: ResourceLoader
@@ -49,7 +46,7 @@ class EmailServiceTest {
 
     private lateinit var order: Order
     private lateinit var user: User
-    private lateinit var emailDto: EmailNotificationDto
+    private val userEmail: String = "test@knitly.com"
 
     @BeforeEach
     fun setUp() {
@@ -65,16 +62,11 @@ class EmailServiceTest {
 
         val orderItem = OrderItem(product = product, orderPrice = 10000.0, quantity = 1)
         order.addOrderItem(orderItem)
-
-        emailDto = EmailNotificationDto(orderId = 100L, userId = 1L, userEmail = "test@knitly.com")
     }
 
     @Test
     @DisplayName("이메일 발송 성공: HTML 템플릿 렌더링 및 PDF 첨부 파일 로드 검증")
     fun sendOrderConfirmationEmail_Success() {
-
-        given(orderRepository.findById(100L)).willReturn(Optional.of(order))
-
         val payment = Payment(order = order, buyer = user, totalAmount = 10000, paymentMethod = PaymentMethod.CARD, paymentStatus = PaymentStatus.DONE, tossOrderId = "toss_123")
         given(paymentRepository.findByOrder_OrderId(100L)).willReturn(payment)
         given(javaMailSender.createMimeMessage()).willReturn(mockMimeMessage)
@@ -85,9 +77,8 @@ class EmailServiceTest {
 
         val pdfUrl = "/resources/static/design/pattern.pdf"
         given(fileStorageService.loadFileAsBytes(pdfUrl)).willReturn(byteArrayOf(1, 2, 3, 4, 5))
-        emailService.sendOrderConfirmationEmail(emailDto)
+        emailService.sendOrderConfirmationEmail(order, userEmail)
 
-        verify(orderRepository).findById(100L)
         verify(resourceLoader).getResource(any())
         verify(fileStorageService).loadFileAsBytes(pdfUrl)
         verify(javaMailSender).send(mockMimeMessage)
@@ -96,8 +87,6 @@ class EmailServiceTest {
     @Test
     @DisplayName("PDF 파일 로드 중 IOException 발생 시 RuntimeException으로 래핑하여 던짐")
     fun sendOrderConfirmationEmail_PdfLoadFail() {
-
-        given(orderRepository.findById(100L)).willReturn(Optional.of(order))
         given(paymentRepository.findByOrder_OrderId(100L)).willReturn(Payment(order = order, buyer = user, totalAmount = 0, paymentMethod = PaymentMethod.FREE, paymentStatus = PaymentStatus.DONE, tossOrderId = ""))
         given(javaMailSender.createMimeMessage()).willReturn(mockMimeMessage)
 
@@ -108,7 +97,7 @@ class EmailServiceTest {
         given(fileStorageService.loadFileAsBytes(any())).willAnswer { throw IOException("Disk Read Error") }
 
         assertThatThrownBy {
-            emailService.sendOrderConfirmationEmail(emailDto)
+            emailService.sendOrderConfirmationEmail(order, userEmail)
         }
             .isInstanceOf(RuntimeException::class.java)
             .hasMessageContaining("PDF 파일 로드 실패")

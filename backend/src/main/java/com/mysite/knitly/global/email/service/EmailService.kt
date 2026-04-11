@@ -1,8 +1,6 @@
 package com.mysite.knitly.global.email.service
 
-import com.mysite.knitly.domain.order.dto.EmailNotificationDto
 import com.mysite.knitly.domain.order.entity.Order
-import com.mysite.knitly.domain.order.repository.OrderRepository
 import com.mysite.knitly.domain.payment.entity.PaymentMethod
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
 import com.mysite.knitly.global.notification.DiscordNotifier
@@ -16,7 +14,6 @@ import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.retry.annotation.Backoff
 import org.springframework.retry.annotation.Recover
 import org.springframework.retry.annotation.Retryable
-import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 import org.springframework.util.FileCopyUtils
 import java.io.IOException
@@ -29,7 +26,6 @@ import java.util.*
 @Service
 class EmailService(
     private val javaMailSender: JavaMailSender,
-    private val orderRepository: OrderRepository,
     private val fileStorageService: FileStorageService,
     private val paymentRepository: PaymentRepository,
     private val resourceLoader: ResourceLoader,
@@ -41,34 +37,29 @@ class EmailService(
     }
 
     /**
-     * 주문 확인 이메일을 비동기로 발송하고 도안 파일을 첨부합니다.
-     * 최대 3회 재시도하며, 모두 실패 시 Discord로 알림을 보냅니다.
+     * 주문 확인 이메일을 발송하고 도안 파일을 첨부합니다.
+     *
+     * 이 메서드는 더 이상 @Async가 아닙니다. 호출자(OrderEmailNotificationListener)가
+     * @TransactionalEventListener(AFTER_COMMIT) + @Async("emailExecutor") 조합으로
+     * 비동기 경계와 트랜잭션 경계를 모두 책임집니다.
+     *
+     * 전달되는 Order는 fetch join으로 orderItems / user / product / design 까지
+     * 미리 초기화된 상태여야 합니다 (OrderRepository.findByIdWithItems 참조).
+     *
+     * 최대 3회 재시도하며, 모두 실패 시 @Recover 에서 Discord 알림을 보냅니다.
      */
-    @Async("emailExecutor")
     @Retryable(
         maxAttempts = 3,
         backoff = Backoff(delay = 2000, multiplier = 2.0)
     )
-    fun sendOrderConfirmationEmail(emailDto: EmailNotificationDto) {
-        log.info("[EmailService] [Send] 이메일 발송 처리 시작 - to={}", emailDto.userEmail)
-
-        // ⚠️ 테스트용: 10초 지연 (서버 종료 타이밍 확보용, 테스트 후 반드시 제거)
-        log.info("[EmailService] [TEST] 10초 지연 시작 - 이 사이에 서버를 종료하세요")
-        Thread.sleep(10000)
-        log.info("[EmailService] [TEST] 10초 지연 완료")
-
-        val order = orderRepository.findById(emailDto.orderId?.toLong() ?: 0L)
-            .orElseThrow {
-                log.error("[EmailService] [Send] DB에서 Order 엔티티 조회 실패. orderId={}", emailDto.orderId)
-                IllegalArgumentException("Order not found: " + emailDto.orderId)
-            }
-        log.debug("[EmailService] [Send] DB에서 Order 엔티티 조회 완료")
+    fun sendOrderConfirmationEmail(order: Order, userEmail: String) {
+        log.info("[EmailService] [Send] 이메일 발송 처리 시작 - to={}", userEmail)
 
         val mimeMessage = javaMailSender.createMimeMessage()
 
         try {
             val mimeMessageHelper = MimeMessageHelper(mimeMessage, true, "UTF-8")
-            mimeMessageHelper.setTo(emailDto.userEmail)
+            mimeMessageHelper.setTo(userEmail)
             mimeMessageHelper.setSubject("[Knitly] 주문하신 도안이 도착했습니다.")
 
             // 1. 데이터 준비ㄹ
@@ -101,7 +92,7 @@ class EmailService(
             // 4. PDF 첨부 및 발송
             attachPdfsAndSend(order, mimeMessageHelper)
 
-            log.info("[EmailService] [Send] 이메일 발송 API 호출 성공 - to={}", emailDto.userEmail)
+            log.info("[EmailService] [Send] 이메일 발송 API 호출 성공 - to={}", userEmail)
         } catch (e: MessagingException) {
             log.error("[EmailService] [Send] MimeMessage 생성 또는 Gmail 발송 실패. 재시도 예정.", e)
             throw RuntimeException("MimeMessage 생성 또는 발송에 실패했습니다.", e)
@@ -109,9 +100,14 @@ class EmailService(
     }
 
     @Recover
-    fun recoverEmailSending(e: Exception, emailDto: EmailNotificationDto) {
-        log.error("[EmailService] [FINAL_FAILURE] 3회 재시도 모두 실패 - orderId={}, email={}", emailDto.orderId, emailDto.userEmail, e)
-        discordNotifier.send("[Knitly] 이메일 발송 최종 실패 - orderId=${emailDto.orderId}, email=${emailDto.userEmail}, error=${e.message}")
+    fun recoverEmailSending(e: Exception, order: Order, userEmail: String) {
+        log.error(
+            "[EmailService] [FINAL_FAILURE] 3회 재시도 모두 실패 - orderId={}, email={}",
+            order.orderId, userEmail, e
+        )
+        discordNotifier.send(
+            "[Knitly] 이메일 발송 최종 실패 - orderId=${order.orderId}, email=${userEmail}, error=${e.message}"
+        )
     }
 
     /**

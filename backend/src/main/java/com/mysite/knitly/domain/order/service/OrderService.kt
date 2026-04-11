@@ -1,9 +1,9 @@
 package com.mysite.knitly.domain.order.service
 
-import com.mysite.knitly.domain.order.dto.EmailNotificationDto
 import com.mysite.knitly.domain.order.entity.Order
 import com.mysite.knitly.domain.order.entity.OrderItem
 import com.mysite.knitly.domain.order.event.OrderCreatedEvent
+import com.mysite.knitly.domain.order.event.OrderPaidEvent
 import com.mysite.knitly.domain.order.repository.OrderRepository
 import com.mysite.knitly.domain.payment.entity.Payment
 import com.mysite.knitly.domain.payment.entity.PaymentMethod
@@ -11,7 +11,6 @@ import com.mysite.knitly.domain.payment.entity.PaymentStatus
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
 import com.mysite.knitly.domain.product.product.repository.ProductRepository
 import com.mysite.knitly.domain.user.entity.User
-import com.mysite.knitly.global.email.service.EmailService
 import com.mysite.knitly.global.exception.ErrorCode
 import com.mysite.knitly.global.exception.ServiceException
 import jakarta.persistence.EntityNotFoundException
@@ -26,8 +25,7 @@ class OrderService(
     private val productRepository: ProductRepository,
     private val orderRepository: OrderRepository,
     private val paymentRepository: PaymentRepository,
-    private val eventPublisher: ApplicationEventPublisher,
-    private val emailService: EmailService
+    private val eventPublisher: ApplicationEventPublisher
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(OrderService::class.java)
@@ -95,13 +93,15 @@ class OrderService(
             paymentRepository.save(readyPayment)
 
             if (paymentStatus == PaymentStatus.DONE && user.email != null) {
-                val emailDto = EmailNotificationDto(
-                    orderId = savedOrder.orderId ?: 0L,
-                    userId = user.userId!!,
-                    userEmail = user.email!!
+                // 이메일 발송은 OrderEmailNotificationListener가 AFTER_COMMIT 시점에 비동기로 처리.
+                // 여기서는 이벤트만 발행한다.
+                eventPublisher.publishEvent(
+                    OrderPaidEvent(
+                        orderId = savedOrder.orderId!!,
+                        userEmail = user.email!!
+                    )
                 )
-                emailService.sendOrderConfirmationEmail(emailDto)
-                log.info("[Order] [Service] 무료 주문 비동기 이메일 발송 요청 완료")
+                log.info("[Order] [Service] 무료 주문 OrderPaidEvent 발행 완료 - orderId={}", savedOrder.orderId)
             }
 
             eventPublisher.publishEvent(OrderCreatedEvent(products))

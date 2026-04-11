@@ -2,8 +2,8 @@ package com.mysite.knitly.domain.payment.service
 
 import PaymentConfirmResponse
 import com.fasterxml.jackson.databind.JsonNode
-import com.mysite.knitly.domain.order.dto.EmailNotificationDto
 import com.mysite.knitly.domain.order.entity.Order
+import com.mysite.knitly.domain.order.event.OrderPaidEvent
 import com.mysite.knitly.domain.order.repository.OrderRepository
 import com.mysite.knitly.domain.payment.client.TossApiClient
 import com.mysite.knitly.domain.payment.dto.*
@@ -13,11 +13,11 @@ import com.mysite.knitly.domain.payment.entity.PaymentStatus
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
 import com.mysite.knitly.domain.product.product.service.RedisProductService
 import com.mysite.knitly.domain.user.entity.User
-import com.mysite.knitly.global.email.service.EmailService
 import com.mysite.knitly.global.exception.ErrorCode
 import com.mysite.knitly.global.exception.ServiceException
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.io.IOException
@@ -30,7 +30,7 @@ class PaymentService(
     private val paymentRepository: PaymentRepository,
     private val redisProductService: RedisProductService,
     private val tossApiClient: TossApiClient,
-    private val emailService: EmailService
+    private val eventPublisher: ApplicationEventPublisher
 ) {
 
     /**
@@ -155,19 +155,21 @@ class PaymentService(
         // 8. 결제 완료 시 redis 상품 인기도 증가
         incrementProductPopularity(order)
 
-        // 9. 이메일 발송 (비동기)
+        // 9. 이메일 발송 트리거 (OrderPaidEvent 발행)
+        //    실제 발송은 OrderEmailNotificationListener 가 AFTER_COMMIT 시점에 비동기로 수행.
+        //    여기서는 트랜잭션/LAZY 걱정 없이 이벤트만 발행한다.
         order.user?.let { user ->
             val userEmail = user.email
             if (userEmail == null) {
                 log.warn("[Payment] [Email] 사용자 이메일이 없어 발송 스킵 - userId={}", user.userId)
             } else {
-                val emailDto = EmailNotificationDto(
-                    orderId = order.orderId ?: 0L,
-                    userId = user.userId!!,
-                    userEmail = userEmail
+                eventPublisher.publishEvent(
+                    OrderPaidEvent(
+                        orderId = order.orderId!!,
+                        userEmail = userEmail
+                    )
                 )
-                emailService.sendOrderConfirmationEmail(emailDto)
-                log.info("[Payment] [Email] 비동기 이메일 발송 요청 완료 - orderId={}", order.orderId)
+                log.info("[Payment] [Email] OrderPaidEvent 발행 완료 - orderId={}", order.orderId)
             }
         }
 

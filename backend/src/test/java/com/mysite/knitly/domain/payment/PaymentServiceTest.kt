@@ -19,7 +19,7 @@ import com.mysite.knitly.domain.product.product.entity.ProductCategory
 import com.mysite.knitly.domain.product.product.service.RedisProductService
 import com.mysite.knitly.domain.user.entity.Provider
 import com.mysite.knitly.domain.user.entity.User
-import com.mysite.knitly.global.email.service.EmailService
+import org.springframework.context.ApplicationEventPublisher
 import com.mysite.knitly.global.exception.ErrorCode
 import com.mysite.knitly.global.exception.ServiceException
 import org.assertj.core.api.Assertions.assertThat
@@ -42,7 +42,7 @@ class PaymentServiceTest {
     @Mock private lateinit var paymentRepository: PaymentRepository
     @Mock private lateinit var redisProductService: RedisProductService
     @Mock private lateinit var tossApiClient: TossApiClient
-    @Mock private lateinit var emailService: EmailService
+    @Mock private lateinit var eventPublisher: ApplicationEventPublisher
 
     private lateinit var paymentService: PaymentService
 
@@ -53,7 +53,7 @@ class PaymentServiceTest {
             paymentRepository = paymentRepository,
             redisProductService = redisProductService,
             tossApiClient = tossApiClient,
-            emailService = emailService
+            eventPublisher = eventPublisher
         )
     }
 

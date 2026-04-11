@@ -3,7 +3,6 @@ package com.mysite.knitly.global.email
 import com.mysite.knitly.domain.design.entity.Design
 import com.mysite.knitly.domain.design.entity.DesignState
 import com.mysite.knitly.domain.design.repository.DesignRepository
-import com.mysite.knitly.domain.order.dto.EmailNotificationDto
 import com.mysite.knitly.domain.order.entity.Order
 import com.mysite.knitly.domain.order.entity.OrderItem
 import com.mysite.knitly.domain.order.repository.OrderRepository
@@ -143,14 +142,15 @@ class EmailRetryAndDiscordNotificationTest {
     @Test
     @DisplayName("이메일 3회 재시도 실패 후 Discord 알림이 전송된다")
     fun emailRetryFailure_sendsDiscordNotification() {
-        val emailDto = EmailNotificationDto(
-            orderId = testOrderId!!,
-            userId = 1L,
-            userEmail = "test@knitly.com"
-        )
+        // fetch join으로 LAZY 컬렉션을 미리 초기화한 Order를 준비
+        val order = orderRepository.findByIdWithItems(testOrderId!!)
+            ?: error("테스트용 Order가 존재하지 않습니다")
 
-        // @Async로 비동기 실행되므로 호출 자체는 즉시 반환됨
-        emailService.sendOrderConfirmationEmail(emailDto)
+        // 리팩토링 후 EmailService는 Order 엔티티와 userEmail을 직접 받는다.
+        // 이 테스트는 @Async 제거 후 동기 실행되므로 예외가 곧바로 전파될 수 있다.
+        runCatching {
+            emailService.sendOrderConfirmationEmail(order, "test@knitly.com")
+        }
 
         // 3회 재시도 (2초 + 4초 + 8초) + 여유 시간 대기
         // @Retryable backoff: delay=2000, multiplier=2.0 → 2s, 4s, 8s = 총 ~14초

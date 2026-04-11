@@ -3,7 +3,6 @@ package com.mysite.knitly.global.email
 import com.mysite.knitly.domain.design.entity.Design
 import com.mysite.knitly.domain.design.entity.DesignState
 import com.mysite.knitly.domain.design.repository.DesignRepository
-import com.mysite.knitly.domain.order.dto.EmailNotificationDto
 import com.mysite.knitly.domain.order.entity.Order
 import com.mysite.knitly.domain.order.entity.OrderItem
 import com.mysite.knitly.domain.order.repository.OrderRepository
@@ -194,18 +193,13 @@ class EmailServiceIntegrationTest {
         val orderId = testOrderId
             ?: throw RuntimeException("Order ID가 DB에 의해 생성되지 않았습니다.")
 
-        val testOrder = orderRepository.findById(orderId)
-            .orElseThrow { RuntimeException("테스트용 주문(ID: $orderId)을 찾을 수 없습니다.") }
+        // fetch join으로 LAZY 컬렉션까지 미리 초기화된 Order를 가져온다.
+        val testOrder = orderRepository.findByIdWithItems(orderId)
+            ?: throw RuntimeException("테스트용 주문(ID: $orderId)을 찾을 수 없습니다.")
 
-        val testDto = EmailNotificationDto(
-            orderId = testOrder.orderId!!,
-            userId = testOrder.user!!.userId,
-            userEmail = "test@knitly.com"
-        )
-
-        // EmailService.kt의 포맷 인수 갯수(7개)가 수정되었다면, 이 테스트는 통과해야 합니다.
+        // 리팩토링 후 EmailService는 Order 엔티티와 userEmail을 직접 받는다.
         assertDoesNotThrow {
-            emailService.sendOrderConfirmationEmail(testDto)
+            emailService.sendOrderConfirmationEmail(testOrder, "test@knitly.com")
         }
     }
 }
