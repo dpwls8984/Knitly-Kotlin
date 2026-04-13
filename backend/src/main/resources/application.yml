@@ -4,13 +4,13 @@ server:
 spring:
   config:
     import: optional:file:.env.properties
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
   profiles:
     active: dev
   output:
     ansi:
       enabled: always
-  lifecycle:
-    timeout-per-shutdown-phase: 65s
 
   # --- Datasource / JPA ---
   datasource:

@@ -21,9 +21,8 @@ class AsyncConfig {
         executor.maxPoolSize = 5
         executor.queueCapacity = 50
         executor.setThreadNamePrefix("email-")
-        // Graceful Shutdown: 종료 시 큐에 쌓인 작업까지 모두 완료될 때까지 대기
         executor.setWaitForTasksToCompleteOnShutdown(true)
-        executor.setAwaitTerminationSeconds(30)
+        executor.setAwaitTerminationSeconds(15)
         executor.initialize()
         return executor
     }
