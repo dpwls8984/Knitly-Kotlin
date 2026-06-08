@@ -239,9 +239,12 @@ class DesignService(
             design.stopSale()
 
             // Redis에서 상품 제거
-            design.product?.productId?.let { productId ->
-                redisProductService.removeProduct(productId)
-                log.info("[Design] [Stop] Redis에서 상품 제거 완료 - productId={}", productId)
+            design.product?.let { product ->
+                product.productId?.let { productId ->
+                    redisProductService.removeProduct(productId)
+                    redisProductService.cacheLimitedStatus(productId, product.stockQuantity != null)
+                    log.info("[Design] [Stop] Redis에서 상품 제거 완료 - productId={}", productId)
+                }
             }
 
             log.info("[Design] [Stop] 판매 중지 완료")
@@ -285,6 +288,7 @@ class DesignService(
             design.product?.let { product ->
                 product.productId?.let { productId ->
                     redisProductService.addProduct(productId, product.purchaseCount.toLong())
+                    redisProductService.cacheLimitedStatus(productId, product.stockQuantity != null)
                     log.info("[Design] [Relist] Redis에 상품 추가 완료 - productId={}, purchaseCount={}",
                         productId, product.purchaseCount)
                 }

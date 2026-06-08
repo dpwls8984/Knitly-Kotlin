@@ -3,6 +3,7 @@ package com.mysite.knitly.domain.order.service
 import com.mysite.knitly.domain.order.dto.OrderCreateRequest
 import com.mysite.knitly.domain.order.dto.OrderCreateResponse
 import com.mysite.knitly.domain.product.product.repository.ProductRepository
+import com.mysite.knitly.domain.product.product.service.RedisProductService
 import com.mysite.knitly.domain.user.entity.User
 import com.mysite.knitly.global.lock.RedisLockService
 import org.slf4j.LoggerFactory
@@ -13,12 +14,13 @@ import kotlin.random.Random
 class OrderFacade(
     private val redisLockService: RedisLockService,
     private val orderService: OrderService,
-    private val productRepository: ProductRepository
+    private val productRepository: ProductRepository,
+    private val redisProductService: RedisProductService
 ) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
     fun createOrder(user: User, request: OrderCreateRequest): OrderCreateResponse {
-        val hasLimitedStock = productRepository.existsLimitedStockIn(request.productIds)
+        val hasLimitedStock = containsLimitedStock(request.productIds)
 
         return if (hasLimitedStock) {
             log.info("[Order] [Facade] 한정 재고 상품 포함 - 분산락 적용")
@@ -71,6 +73,27 @@ class OrderFacade(
             }
             throw e
         }
+    }
+
+    private fun containsLimitedStock(productIds: List<Long>): Boolean {
+        if (productIds.isEmpty()) {
+            return false
+        }
+
+        redisProductService.containsLimitedStock(productIds)?.let { cached ->
+            log.info("[Order] [Facade] 한정 상품 여부 Redis 캐시 히트 - hasLimitedStock={}", cached)
+            return cached
+        }
+
+        val limitedProductIds = productRepository.findLimitedStockProductIds(productIds)
+        redisProductService.cacheLimitedStatuses(productIds, limitedProductIds)
+
+        val hasLimitedStock = limitedProductIds.isNotEmpty()
+        log.info(
+            "[Order] [Facade] 한정 상품 여부 Redis 캐시 미스 - DB 조회 후 캐시 저장, hasLimitedStock={}",
+            hasLimitedStock
+        )
+        return hasLimitedStock
     }
 
     private fun generateCompositeLockKey(productIds: List<Long>): String {

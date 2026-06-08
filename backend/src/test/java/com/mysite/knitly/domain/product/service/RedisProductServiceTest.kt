@@ -17,6 +17,7 @@ import org.mockito.kotlin.*
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.ValueOperations
 import org.springframework.data.redis.core.ZSetOperations
+import java.time.Duration
 
 @ExtendWith(MockitoExtension::class)
 class RedisProductServiceTest {
@@ -304,6 +305,52 @@ class RedisProductServiceTest {
         redisProductService.evictPopularListCache()
 
         verify(redisTemplate).keys("$POPULAR_LIST_CACHE_PREFIX*")
+    }
+
+    @Test
+    @DisplayName("한정 상품 여부 캐시 조회 - 모든 상품 캐시 히트")
+    fun containsLimitedStock_AllCached() {
+        // given
+        whenever(redisTemplate.opsForValue()).thenReturn(valueOperations)
+        whenever(valueOperations.multiGet(listOf("product:limited:1", "product:limited:2")))
+            .thenReturn(listOf("false", "true"))
+
+        // when
+        val result = redisProductService.containsLimitedStock(listOf(1L, 2L))
+
+        // then
+        assertThat(result).isTrue()
+        verify(valueOperations).multiGet(listOf("product:limited:1", "product:limited:2"))
+    }
+
+    @Test
+    @DisplayName("한정 상품 여부 캐시 조회 - 일부 상품 캐시 미스")
+    fun containsLimitedStock_PartialCacheMiss() {
+        // given
+        whenever(redisTemplate.opsForValue()).thenReturn(valueOperations)
+        whenever(valueOperations.multiGet(listOf("product:limited:1", "product:limited:2")))
+            .thenReturn(listOf("false", null))
+
+        // when
+        val result = redisProductService.containsLimitedStock(listOf(1L, 2L))
+
+        // then
+        assertThat(result).isNull()
+        verify(valueOperations).multiGet(listOf("product:limited:1", "product:limited:2"))
+    }
+
+    @Test
+    @DisplayName("한정 상품 여부 캐시 저장 - 상품별 true/false 저장")
+    fun cacheLimitedStatuses_Success() {
+        // given
+        whenever(redisTemplate.opsForValue()).thenReturn(valueOperations)
+
+        // when
+        redisProductService.cacheLimitedStatuses(listOf(1L, 2L), listOf(2L))
+
+        // then
+        verify(valueOperations).set(eq("product:limited:1"), eq("false"), any<Duration>())
+        verify(valueOperations).set(eq("product:limited:2"), eq("true"), any<Duration>())
     }
 
     private fun createProduct(productId: Long, purchaseCount: Int): Product {

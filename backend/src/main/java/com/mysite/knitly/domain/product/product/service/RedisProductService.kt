@@ -4,6 +4,7 @@ import com.mysite.knitly.domain.product.product.entity.Product
 import org.slf4j.LoggerFactory
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Service
+import java.time.Duration
 
 @Service
 class RedisProductService(
@@ -15,7 +16,80 @@ class RedisProductService(
         const val POPULAR_KEY = "product:popular"
         const val POPULAR_LIST_CACHE_PREFIX = "product:list:popular:"
         const val HOME_POPULAR_TOP5_CACHE_KEY = "home:popular:top5"
+        private const val LIMITED_KEY_PREFIX = "product:limited:"
+        private val LIMITED_CACHE_TTL = Duration.ofHours(24)
     }
+
+    fun containsLimitedStock(productIds: List<Long>): Boolean? {
+        val distinctIds = productIds.distinct()
+        if (distinctIds.isEmpty()) {
+            return false
+        }
+
+        return try {
+            val keys = distinctIds.map { limitedKey(it) }
+            val cachedValues = redisTemplate.opsForValue().multiGet(keys)
+
+            if (cachedValues == null || cachedValues.size != distinctIds.size || cachedValues.any { it == null }) {
+                log.debug("[Redis] [Product] [Limited] 캐시 미스 - productIds={}", distinctIds)
+                null
+            } else {
+                val statuses = cachedValues.mapNotNull { it?.toBooleanStrictOrNull() }
+                if (statuses.size != distinctIds.size) {
+                    log.warn("[Redis] [Product] [Limited] 캐시 값 파싱 실패 - productIds={}", distinctIds)
+                    return null
+                }
+
+                val hasLimitedStock = statuses.any { it }
+                log.debug(
+                    "[Redis] [Product] [Limited] 캐시 히트 - productIds={}, hasLimitedStock={}",
+                    distinctIds, hasLimitedStock
+                )
+                hasLimitedStock
+            }
+        } catch (e: Exception) {
+            log.error("[Redis] [Product] [Limited] 캐시 조회 실패 - productIds={}", distinctIds, e)
+            null
+        }
+    }
+
+    fun cacheLimitedStatuses(productIds: List<Long>, limitedProductIds: Collection<Long>) {
+        val distinctIds = productIds.distinct()
+        if (distinctIds.isEmpty()) {
+            return
+        }
+
+        val limitedIdSet = limitedProductIds.toSet()
+        distinctIds.forEach { productId ->
+            cacheLimitedStatus(productId, productId in limitedIdSet)
+        }
+    }
+
+    fun cacheLimitedStatus(productId: Long, isLimited: Boolean) {
+        try {
+            redisTemplate.opsForValue().set(limitedKey(productId), isLimited.toString(), LIMITED_CACHE_TTL)
+            log.info(
+                "[Redis] [Product] [Limited] 캐시 저장 완료 - productId={}, isLimited={}",
+                productId, isLimited
+            )
+        } catch (e: Exception) {
+            log.error(
+                "[Redis] [Product] [Limited] 캐시 저장 실패 - productId={}, isLimited={}",
+                productId, isLimited, e
+            )
+        }
+    }
+
+    fun evictLimitedStatus(productId: Long) {
+        try {
+            redisTemplate.delete(limitedKey(productId))
+            log.info("[Redis] [Product] [Limited] 캐시 삭제 완료 - productId={}", productId)
+        } catch (e: Exception) {
+            log.error("[Redis] [Product] [Limited] 캐시 삭제 실패 - productId={}", productId, e)
+        }
+    }
+
+    private fun limitedKey(productId: Long): String = "$LIMITED_KEY_PREFIX$productId"
 
     // 상품 구매시 인기도 증가
     fun incrementPurchaseCount(productId: Long) {

@@ -80,6 +80,10 @@ class ProductService (
             val savedProduct = productRepository.save(product)
             log.debug("[Product] [Register] DB 상품 저장 완료")
 
+            savedProduct.productId?.let { savedProductId ->
+                redisProductService.cacheLimitedStatus(savedProductId, savedProduct.stockQuantity != null)
+            }
+
             val imageUrls = savedProduct.productImages.map { it.productImageUrl }
 
             log.info("[Product] [Register] 상품 등록 성공 - new productId={}", savedProduct.productId)
@@ -164,6 +168,9 @@ class ProductService (
             }
 
             val currentImageUrls = product.productImages.map { it.productImageUrl }
+            product.productId?.let { updatedProductId ->
+                redisProductService.cacheLimitedStatus(updatedProductId, product.stockQuantity != null)
+            }
 
             log.info("[Product] [Modify] 상품 수정 성공 - productId={}", product.productId)
 
@@ -201,6 +208,10 @@ class ProductService (
             product.design.stopSale()
             log.debug("[Product] [Delete] design.stopSale() 호출")
 
+            product.productId?.let { deletedProductId ->
+                redisProductService.cacheLimitedStatus(deletedProductId, product.stockQuantity != null)
+            }
+
             log.info("[Product] [Delete] 상품 삭제(Soft) 성공 - productId={}", productId)
         } catch (e: Exception) {
             log.error(
@@ -233,6 +244,10 @@ class ProductService (
             log.debug("[Product] [Relist] product.relist() 호출")
             product.design.relist()
             log.debug("[Product] [Relist] design.relist() 호출")
+
+            product.productId?.let { relistedProductId ->
+                redisProductService.cacheLimitedStatus(relistedProductId, product.stockQuantity != null)
+            }
 
             log.info("[Product] [Relist] 상품 재판매 성공 - productId={}", productId)
         } catch (e: Exception) {

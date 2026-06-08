@@ -136,4 +136,11 @@ interface ProductRepository : JpaRepository<Product, Long> {
      */
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Product p WHERE p.productId IN :productIds AND p.stockQuantity IS NOT NULL")
     fun existsLimitedStockIn(@Param("productIds") productIds: List<Long>): Boolean
+
+    /**
+     * 주어진 상품 ID 목록 중 한정 재고 상품 ID만 조회
+     * Redis limited 캐시 미스 시 캐시 재적재에 사용
+     */
+    @Query("SELECT p.productId FROM Product p WHERE p.productId IN :productIds AND p.stockQuantity IS NOT NULL")
+    fun findLimitedStockProductIds(@Param("productIds") productIds: List<Long>): List<Long>
 }
