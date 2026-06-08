@@ -2,13 +2,19 @@ package com.mysite.knitly.domain.payment
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.mysite.knitly.domain.design.entity.Design
+import com.mysite.knitly.domain.design.entity.DesignState
 import com.mysite.knitly.domain.order.entity.Order
+import com.mysite.knitly.domain.order.entity.OrderItem
 import com.mysite.knitly.domain.payment.client.TossApiClient
 import com.mysite.knitly.domain.payment.entity.Payment
 import com.mysite.knitly.domain.payment.entity.PaymentMethod
 import com.mysite.knitly.domain.payment.entity.PaymentStatus
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
 import com.mysite.knitly.domain.payment.scheduler.PaymentScheduler
+import com.mysite.knitly.domain.product.product.entity.Product
+import com.mysite.knitly.domain.product.product.entity.ProductCategory
+import com.mysite.knitly.domain.product.product.repository.ProductRepository
 import com.mysite.knitly.domain.user.entity.Provider
 import com.mysite.knitly.domain.user.entity.User
 import org.assertj.core.api.Assertions.assertThat
@@ -19,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.*
+import org.springframework.data.redis.core.StringRedisTemplate
 import java.time.LocalDateTime
 
 @ExtendWith(MockitoExtension::class)
@@ -30,13 +37,21 @@ class PaymentSchedulerTest {
     @Mock
     private lateinit var tossApiClient: TossApiClient
 
+    @Mock
+    private lateinit var productRepository: ProductRepository
+
+    @Mock
+    private lateinit var redisTemplate: StringRedisTemplate
+
     private lateinit var paymentScheduler: PaymentScheduler
 
     @BeforeEach
     fun setUp() {
         paymentScheduler = PaymentScheduler(
             paymentRepository = paymentRepository,
-            tossApiClient = tossApiClient
+            tossApiClient = tossApiClient,
+            productRepository = productRepository,
+            redisTemplate = redisTemplate
         )
     }
 
@@ -176,11 +191,18 @@ class PaymentSchedulerTest {
     }
 
     @Test
-    @DisplayName("READY 결제 취소 - 30분 경과 시 자동 취소")
+    @DisplayName("READY 결제 취소 - 10분 경과 시 자동 취소 및 재고 복구")
     fun reconcilePayments_cancelAbandonedReady() {
         // given
         val user = testUser(1L)
-        val order = testOrder(1L, user, "ORDER123", 10000.0)
+        val product = testProduct(1L, user, stockQuantity = 4)
+        val order = testOrder(
+            id = 1L,
+            user = user,
+            tossOrderId = "ORDER123",
+            totalPrice = 20000.0,
+            orderItems = listOf(OrderItem(product = product, orderPrice = 10000.0, quantity = 2))
+        )
 
         val payment = Payment(
             paymentId = 1L,
@@ -191,7 +213,7 @@ class PaymentSchedulerTest {
             totalAmount = 10000L,
             paymentMethod = PaymentMethod.CARD,
             paymentStatus = PaymentStatus.READY,
-            requestedAt = LocalDateTime.now().minusMinutes(35)  // 35분 전
+            requestedAt = LocalDateTime.now().minusMinutes(15)
         )
 
         whenever(
@@ -206,6 +228,7 @@ class PaymentSchedulerTest {
                 any()
             )
         ).thenReturn(listOf(payment))
+        whenever(productRepository.increaseStock(1L, 2)).thenReturn(1)
         whenever(paymentRepository.save(any<Payment>())).thenAnswer { it.arguments[0] as Payment }
 
         // when
@@ -213,8 +236,10 @@ class PaymentSchedulerTest {
 
         // then
         assertThat(payment.paymentStatus).isEqualTo(PaymentStatus.CANCELED)
-        assertThat(payment.cancelReason).isEqualTo("결제 위젯에서 30분간 미진행")
+        assertThat(payment.cancelReason).isEqualTo("결제 위젯에서 10분간 미진행")
         assertThat(payment.canceledAt).isNotNull
+        verify(productRepository).increaseStock(1L, 2)
+        verify(redisTemplate).delete(listOf("product:detail:1"))
         verify(paymentRepository).save(payment)
     }
 
@@ -320,7 +345,14 @@ class PaymentSchedulerTest {
             .provider(Provider.GOOGLE)
             .build()
 
-    private fun testOrder(id: Long, user: User, tossOrderId: String, totalPrice: Double): Order =
+    @Suppress("UNUSED_PARAMETER")
+    private fun testOrder(
+        id: Long,
+        user: User,
+        tossOrderId: String,
+        totalPrice: Double,
+        orderItems: List<OrderItem> = emptyList()
+    ): Order =
         Order(
             user = user,
             tossOrderId = tossOrderId
@@ -329,7 +361,34 @@ class PaymentSchedulerTest {
             val field = Order::class.java.getDeclaredField("orderId")
             field.isAccessible = true
             field.set(this, id)
+            orderItems.forEach { addOrderItem(it) }
         }
+
+    private fun testProduct(productId: Long, user: User, stockQuantity: Int?): Product =
+        Product(
+            productId = productId,
+            title = "상품$productId",
+            description = "설명",
+            productCategory = ProductCategory.TOP,
+            sizeInfo = "M",
+            price = 10000.0,
+            user = user,
+            purchaseCount = 0,
+            isDeleted = false,
+            stockQuantity = stockQuantity,
+            design = testDesign(productId, user)
+        )
+
+    private fun testDesign(id: Long, user: User): Design =
+        Design(
+            designId = id,
+            user = user,
+            pdfUrl = "/files/design$id.pdf",
+            designState = DesignState.ON_SALE,
+            designType = null,
+            designName = "도안$id",
+            gridData = "[]"
+        )
 
     private fun createTossResponse(status: String, method: String): JsonNode {
         val factory = JsonNodeFactory.instance

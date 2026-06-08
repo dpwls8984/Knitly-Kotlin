@@ -6,7 +6,9 @@ import com.mysite.knitly.domain.payment.entity.Payment
 import com.mysite.knitly.domain.payment.entity.PaymentMethod
 import com.mysite.knitly.domain.payment.entity.PaymentStatus
 import com.mysite.knitly.domain.payment.repository.PaymentRepository
+import com.mysite.knitly.domain.product.product.repository.ProductRepository
 import org.slf4j.LoggerFactory
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -22,7 +24,9 @@ import java.time.format.DateTimeFormatter
 @Component
 class PaymentScheduler(
     private val paymentRepository: PaymentRepository,
-    private val tossApiClient: TossApiClient
+    private val tossApiClient: TossApiClient,
+    private val productRepository: ProductRepository,
+    private val redisTemplate: StringRedisTemplate
 ) {
 
     /**
@@ -184,14 +188,14 @@ class PaymentScheduler(
     }
 
     /**
-     * READY 상태에서 30분 이상 방치된 결제 취소 처리
+     * READY 상태에서 10분 이상 방치된 결제 취소 및 hold 재고 복구 처리
      */
     private fun cancelAbandonedReadyPayments() {
         val startTime = System.currentTimeMillis()
         log.info("[Payment] [Reconciliation] READY 결제 취소 시작")
 
         try {
-            val threshold = LocalDateTime.now().minusMinutes(30)
+            val threshold = LocalDateTime.now().minusMinutes(READY_EXPIRATION_MINUTES)
             val readyPayments = paymentRepository
                 .findByPaymentStatusAndRequestedAtBefore(
                     PaymentStatus.READY,
@@ -207,11 +211,13 @@ class PaymentScheduler(
 
             val canceledCount = readyPayments.count { payment ->
                 try {
-                    payment.cancel("결제 위젯에서 30분간 미진행")
+                    val restoredProductIds = restoreHeldStock(payment)
+                    payment.cancel("결제 위젯에서 ${READY_EXPIRATION_MINUTES}분간 미진행")
                     paymentRepository.save(payment)
+                    evictProductDetailCaches(restoredProductIds)
                     log.info(
-                        "[Payment] [Reconciliation] READY → CANCELED 처리 - paymentId={}, orderId={}",
-                        payment.paymentId, payment.order.orderId
+                        "[Payment] [Reconciliation] READY → CANCELED 처리 및 재고 복구 - paymentId={}, orderId={}, restoredProductCount={}",
+                        payment.paymentId, payment.order.orderId, restoredProductIds.size
                     )
                     true
                 } catch (e: Exception) {
@@ -229,6 +235,49 @@ class PaymentScheduler(
         } catch (e: Exception) {
             val duration = System.currentTimeMillis() - startTime
             log.error("[Payment] [Reconciliation] READY 취소 중 오류 - duration={}ms", duration, e)
+        }
+    }
+
+    private fun restoreHeldStock(payment: Payment): Set<Long> {
+        val restoredProductIds = mutableSetOf<Long>()
+
+        payment.order.orderItems.forEach { orderItem ->
+            val product = orderItem.product
+            val productId = product.productId ?: return@forEach
+
+            if (product.stockQuantity == null) {
+                return@forEach
+            }
+
+            val restoredRows = productRepository.increaseStock(productId, orderItem.quantity)
+            if (restoredRows > 0) {
+                restoredProductIds.add(productId)
+                log.info(
+                    "[Payment] [Reconciliation] hold 재고 복구 완료 - paymentId={}, productId={}, quantity={}",
+                    payment.paymentId, productId, orderItem.quantity
+                )
+            } else {
+                log.warn(
+                    "[Payment] [Reconciliation] hold 재고 복구 대상 없음 - paymentId={}, productId={}, quantity={}",
+                    payment.paymentId, productId, orderItem.quantity
+                )
+            }
+        }
+
+        return restoredProductIds
+    }
+
+    private fun evictProductDetailCaches(productIds: Set<Long>) {
+        if (productIds.isEmpty()) {
+            return
+        }
+
+        val cacheKeys = productIds.map { "$PRODUCT_DETAIL_CACHE_PREFIX$it" }
+        try {
+            redisTemplate.delete(cacheKeys)
+            log.info("[Payment] [Reconciliation] 재고 복구 상품 상세 캐시 삭제 완료 - keyCount={}", cacheKeys.size)
+        } catch (e: Exception) {
+            log.error("[Payment] [Reconciliation] 재고 복구 상품 상세 캐시 삭제 실패 - keyCount={}", cacheKeys.size, e)
         }
     }
 
@@ -258,5 +307,7 @@ class PaymentScheduler(
 
     companion object {
         private val log = LoggerFactory.getLogger(PaymentScheduler::class.java)
+        private const val READY_EXPIRATION_MINUTES = 10L
+        private const val PRODUCT_DETAIL_CACHE_PREFIX = "product:detail:"
     }
 }

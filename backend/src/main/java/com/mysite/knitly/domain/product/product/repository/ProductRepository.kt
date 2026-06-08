@@ -132,6 +132,15 @@ interface ProductRepository : JpaRepository<Product, Long> {
     fun decreaseStock(@Param("productId") productId: Long, @Param("quantity") quantity: Int): Int
 
     /**
+     * 결제 대기 만료 시 hold했던 한정 재고 복구
+     * 상시 판매 상품(stockQuantity IS NULL)은 복구 대상에서 제외
+     * @return 영향받은 행 수 (1이면 성공, 0이면 복구 대상 아님)
+     */
+    @Modifying
+    @Query("UPDATE Product p SET p.stockQuantity = p.stockQuantity + :quantity WHERE p.productId = :productId AND p.stockQuantity IS NOT NULL")
+    fun increaseStock(@Param("productId") productId: Long, @Param("quantity") quantity: Int): Int
+
+    /**
      * 주어진 상품 ID 목록 중 한정 재고 상품(stockQuantity IS NOT NULL)이 존재하는지 확인
      */
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Product p WHERE p.productId IN :productIds AND p.stockQuantity IS NOT NULL")
